@@ -34,6 +34,8 @@ export interface HttpRequestConfig extends AxiosRequestConfig {
     loading?: boolean;
     showError?: boolean;
     timeout?: number;
+    /** GET 成功后的内存缓存时间（毫秒）；0/未设置表示不缓存 */
+    cacheTtl?: number;
     /**
      * 跳过全局 1101 会话失效处理。
      * 仅用于启动时探测 /user/info：匿名用户不应被当成会话过期而跳转登录页。
@@ -108,6 +110,14 @@ class HttpClient {
     private instance: AxiosInstance;
     private baseURL: string;
     private timeout: number;
+    /** 同一时刻的重复 GET 合并为一次请求，避免 StrictMode/多组件重复拉取 */
+    private inflightGets = new Map<string, Promise<HttpResponse<any>>>();
+    /** 短期 GET 缓存，仅对显式声明 cacheTtl 的请求生效 */
+    private getCache = new Map<string, { expiresAt: number; value: HttpResponse<any> }>();
+
+    private clearGetCache(): void {
+        this.getCache.clear();
+    }
 
     constructor(config: { baseURL?: string; timeout?: number } = {}) {
         const useProxy = import.meta.env.VITE_USE_PROXY === "true";
@@ -219,11 +229,50 @@ class HttpClient {
     }
 
     async get<T = any>(url: string, config?: HttpRequestConfig): Promise<HttpResponse<T>> {
-        const response = await this.instance.get<HttpResponse<T>>(url, config);
-        return response.data;
+        const key = `${url}::${JSON.stringify(config?.params ?? null)}`;
+        const cacheTtl = config?.cacheTtl ?? 0;
+
+        if (!config?.signal && cacheTtl > 0) {
+            const cached = this.getCache.get(key);
+            if (cached && cached.expiresAt > Date.now()) {
+                return cached.value as HttpResponse<T>;
+            }
+            if (cached) {
+                this.getCache.delete(key);
+            }
+        }
+
+        // 带 AbortSignal 的请求不合并，避免一个调用方取消影响其他调用方
+        if (config?.signal) {
+            const response = await this.instance.get<HttpResponse<T>>(url, config);
+            return response.data;
+        }
+
+        const existing = this.inflightGets.get(key);
+        if (existing) {
+            return existing as Promise<HttpResponse<T>>;
+        }
+
+        const request = this.instance.get<HttpResponse<T>>(url, config).then((response) => {
+            const data = response.data;
+            if (cacheTtl > 0) {
+                if (this.getCache.size > 300) {
+                    this.getCache.clear();
+                }
+                this.getCache.set(key, { expiresAt: Date.now() + cacheTtl, value: data });
+            }
+            return data;
+        });
+        this.inflightGets.set(key, request);
+        try {
+            return await request;
+        } finally {
+            this.inflightGets.delete(key);
+        }
     }
 
     async post<T = any>(url: string, data?: unknown, config?: HttpRequestConfig): Promise<HttpResponse<T>> {
+        this.clearGetCache();
         const response = await this.instance.post<HttpResponse<T>>(url, data, config);
         return response.data;
     }
@@ -248,21 +297,25 @@ class HttpClient {
     }
 
     async put<T = any>(url: string, data?: unknown, config?: HttpRequestConfig): Promise<HttpResponse<T>> {
+        this.clearGetCache();
         const response = await this.instance.put<HttpResponse<T>>(url, data, config);
         return response.data;
     }
 
     async patch<T = any>(url: string, data?: unknown, config?: HttpRequestConfig): Promise<HttpResponse<T>> {
+        this.clearGetCache();
         const response = await this.instance.patch<HttpResponse<T>>(url, data, config);
         return response.data;
     }
 
     async delete<T = any>(url: string, config?: HttpRequestConfig): Promise<HttpResponse<T>> {
+        this.clearGetCache();
         const response = await this.instance.delete<HttpResponse<T>>(url, config);
         return response.data;
     }
 
     async upload<T = any>(url: string, formData: FormData, config?: HttpRequestConfig): Promise<HttpResponse<T>> {
+        this.clearGetCache();
         const response = await this.instance.post<HttpResponse<T>>(url, formData, config);
         return response.data;
     }

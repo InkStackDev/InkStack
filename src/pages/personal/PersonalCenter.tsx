@@ -115,7 +115,7 @@ const PersonalCenter: React.FC = () => {
         ? {
               id: user.id,
               name: user.name || user.account || t("center.defaultUserName"),
-              avatar: user.avatar || "https://picsum.photos/id/64/200", // 默认头像
+              avatar: user.avatar || "", // 无头像时由 Avatar 展示姓名首字
               role: user.role,
               email: user.email,
           }

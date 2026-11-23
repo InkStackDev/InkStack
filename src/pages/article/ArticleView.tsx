@@ -3,9 +3,65 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { encodeId } from "@/utils/HashId.ts";
 import ReactMarkdown from "react-markdown";
-import { articleMarkdownComponents, articleMarkdownPlugins } from "@/components/articleView/Markdown";
-import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
+import {
+    articleMarkdownComponents,
+    baseArticleMarkdownPlugins,
+    type ArticleMarkdownPluginProps,
+} from "@/components/articleView/Markdown";
+import SyntaxHighlighter from "react-syntax-highlighter/dist/esm/prism-light";
 import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
+import bash from "react-syntax-highlighter/dist/esm/languages/prism/bash";
+import c from "react-syntax-highlighter/dist/esm/languages/prism/c";
+import cpp from "react-syntax-highlighter/dist/esm/languages/prism/cpp";
+import csharp from "react-syntax-highlighter/dist/esm/languages/prism/csharp";
+import css from "react-syntax-highlighter/dist/esm/languages/prism/css";
+import diff from "react-syntax-highlighter/dist/esm/languages/prism/diff";
+import docker from "react-syntax-highlighter/dist/esm/languages/prism/docker";
+import go from "react-syntax-highlighter/dist/esm/languages/prism/go";
+import graphql from "react-syntax-highlighter/dist/esm/languages/prism/graphql";
+import java from "react-syntax-highlighter/dist/esm/languages/prism/java";
+import javascript from "react-syntax-highlighter/dist/esm/languages/prism/javascript";
+import json from "react-syntax-highlighter/dist/esm/languages/prism/json";
+import jsx from "react-syntax-highlighter/dist/esm/languages/prism/jsx";
+import kotlin from "react-syntax-highlighter/dist/esm/languages/prism/kotlin";
+import markdown from "react-syntax-highlighter/dist/esm/languages/prism/markdown";
+import php from "react-syntax-highlighter/dist/esm/languages/prism/php";
+import python from "react-syntax-highlighter/dist/esm/languages/prism/python";
+import ruby from "react-syntax-highlighter/dist/esm/languages/prism/ruby";
+import rust from "react-syntax-highlighter/dist/esm/languages/prism/rust";
+import scss from "react-syntax-highlighter/dist/esm/languages/prism/scss";
+import sql from "react-syntax-highlighter/dist/esm/languages/prism/sql";
+import swift from "react-syntax-highlighter/dist/esm/languages/prism/swift";
+import tsx from "react-syntax-highlighter/dist/esm/languages/prism/tsx";
+import typescript from "react-syntax-highlighter/dist/esm/languages/prism/typescript";
+import yaml from "react-syntax-highlighter/dist/esm/languages/prism/yaml";
+
+// 只注册文章里常见的语言，避免把 Prism 全量语言包打进文章页 chunk
+SyntaxHighlighter.registerLanguage("bash", bash);
+SyntaxHighlighter.registerLanguage("c", c);
+SyntaxHighlighter.registerLanguage("cpp", cpp);
+SyntaxHighlighter.registerLanguage("csharp", csharp);
+SyntaxHighlighter.registerLanguage("css", css);
+SyntaxHighlighter.registerLanguage("diff", diff);
+SyntaxHighlighter.registerLanguage("docker", docker);
+SyntaxHighlighter.registerLanguage("go", go);
+SyntaxHighlighter.registerLanguage("graphql", graphql);
+SyntaxHighlighter.registerLanguage("java", java);
+SyntaxHighlighter.registerLanguage("javascript", javascript);
+SyntaxHighlighter.registerLanguage("json", json);
+SyntaxHighlighter.registerLanguage("jsx", jsx);
+SyntaxHighlighter.registerLanguage("kotlin", kotlin);
+SyntaxHighlighter.registerLanguage("markdown", markdown);
+SyntaxHighlighter.registerLanguage("php", php);
+SyntaxHighlighter.registerLanguage("python", python);
+SyntaxHighlighter.registerLanguage("ruby", ruby);
+SyntaxHighlighter.registerLanguage("rust", rust);
+SyntaxHighlighter.registerLanguage("scss", scss);
+SyntaxHighlighter.registerLanguage("sql", sql);
+SyntaxHighlighter.registerLanguage("swift", swift);
+SyntaxHighlighter.registerLanguage("tsx", tsx);
+SyntaxHighlighter.registerLanguage("typescript", typescript);
+SyntaxHighlighter.registerLanguage("yaml", yaml);
 import CommentNode from "@/components/commentTree/CommentNode";
 import type { ArticleComment } from "@/types/Comment.ts";
 import {
@@ -115,6 +171,32 @@ const ArticleView: React.FC<ArticleViewProps> = ({
     const [likedCommentIds, setLikedCommentIds] = useState<Set<number>>(new Set());
     const [editingId, setEditingId] = useState<number | null>(null);
     const [editText, setEditText] = useState("");
+    const [mathPlugins, setMathPlugins] = useState<ArticleMarkdownPluginProps | null>(null);
+    const hasMath = content.includes("$");
+    const markdownPlugins = hasMath && mathPlugins ? mathPlugins : baseArticleMarkdownPlugins;
+
+    // 文章包含公式时才加载 KaTeX，避免无公式文章也下载数学插件
+    useEffect(() => {
+        if (!hasMath || mathPlugins) {
+            return;
+        }
+        let cancelled = false;
+        void import("@/components/articleView/MathMarkdownPlugins")
+            .then((module) => {
+                if (!cancelled) {
+                    setMathPlugins(module.articleMarkdownPlugins);
+                }
+            })
+            .catch(() => {
+                // 加载失败时按普通 Markdown 渲染
+                if (!cancelled) {
+                    setMathPlugins(baseArticleMarkdownPlugins);
+                }
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, [hasMath, mathPlugins]);
 
     // 页面加载时判断是否已关注作者、是否已点赞
     useEffect(() => {
@@ -138,12 +220,17 @@ const ArticleView: React.FC<ArticleViewProps> = ({
     }, [isAuthenticated, authorId, articleId]);
 
     // 评论数据获取（供首次加载与轮询复用）
+    const commentRequestRef = useRef(0);
     const fetchComments = useCallback(() => {
         if (!articleId) {
             return;
         }
+        const requestId = ++commentRequestRef.current;
         CommentService.getList({ article_id: articleId, offset: 0, size: COMMENT_PAGE_SIZE })
             .then((data) => {
+                if (requestId !== commentRequestRef.current) {
+                    return;
+                }
                 setCommentsList(data.list);
                 setLikedCommentIds((prev) => {
                     const liked = new Set<number>();
@@ -165,7 +252,11 @@ const ArticleView: React.FC<ArticleViewProps> = ({
                 setCommentLoading(false);
             })
             .catch(() => {})
-            .finally(() => setCommentLoading(false));
+            .finally(() => {
+                if (requestId === commentRequestRef.current) {
+                    setCommentLoading(false);
+                }
+            });
     }, [articleId]);
 
     useEffect(() => {
@@ -176,14 +267,16 @@ const ArticleView: React.FC<ArticleViewProps> = ({
         fetchComments();
     }, [fetchComments]);
 
-    // 评论轮询：每 15 秒自动刷新评论列表
+    // 评论轮询：每 15 秒刷新一次；页面隐藏时暂停，避免后台无意义请求
     useEffect(() => {
         if (!articleId) {
             return;
         }
         const timer = setInterval(() => {
-            fetchComments();
-        }, 1500);
+            if (document.visibilityState === "visible") {
+                fetchComments();
+            }
+        }, 15_000);
         return () => clearInterval(timer);
     }, [fetchComments]);
 
@@ -457,12 +550,18 @@ const ArticleView: React.FC<ArticleViewProps> = ({
 
         const extractedHeadings = extractHeadings(content);
         setHeadings(extractedHeadings);
+    }, [content]);
 
-        // 延迟设置内容准备就绪，确保 DOM 已经渲染
-        setTimeout(() => {
+    // 有公式时等待 KaTeX 插件加载完成再展示正文，避免公式先以原始文本闪现
+    useEffect(() => {
+        if (hasMath && !mathPlugins) {
+            return;
+        }
+        const timer = setTimeout(() => {
             setIsContentReady(true);
         }, 100);
-    }, [content]);
+        return () => clearTimeout(timer);
+    }, [content, hasMath, mathPlugins]);
 
     // 根据实际滚动容器的位置更新目录，并处理首尾标题无法越过激活线的边界情况。
     useEffect(() => {
@@ -822,7 +921,7 @@ const ArticleView: React.FC<ArticleViewProps> = ({
                             </div>
                         )}
                         <ReactMarkdown
-                            {...articleMarkdownPlugins}
+                            {...markdownPlugins}
                             components={articleMarkdownComponents({
                                 styles,
                                 paragraph: ParagraphComponent,

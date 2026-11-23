@@ -30,6 +30,7 @@ import {
 import CustomSelect from "@/components/customSelect/CustomSelect";
 import Input from "@/components/input/Input";
 import Loading from "@/components/loading/Loading";
+import AdminListSkeleton from "@/components/adminListSkeleton/AdminListSkeleton";
 import { confirm } from "@/components/confirm/Confirm";
 import { message } from "@/components/message/Message";
 import { formatToChinaTime } from "@/utils/Utils.ts";
@@ -82,21 +83,6 @@ const DataManagement: React.FC = () => {
 
     const itemsPerPage = 15;
 
-    // 加载数据概览
-    useEffect(() => {
-        const fetchStats = async () => {
-            try {
-                const data = await DataService.getStats();
-                setStats(data);
-            } catch (err) {
-                console.error("加载数据概览失败:", err);
-            } finally {
-                setInitialLoading(false);
-            }
-        };
-        fetchStats();
-    }, []);
-
     // 切换 tab 时懒加载
     useEffect(() => {
         if (activeTab === "overview") {
@@ -106,6 +92,8 @@ const DataManagement: React.FC = () => {
                     setStats(data);
                 } catch (err) {
                     console.error("加载数据概览失败:", err);
+                } finally {
+                    setInitialLoading(false);
                 }
             };
             fetchStats();
@@ -421,7 +409,7 @@ const DataManagement: React.FC = () => {
     if (initialLoading) {
         return (
             <div className={styles.dataManagement}>
-                <Loading text={t("data.loading")} size="large" />
+                <AdminListSkeleton stats={6} columns={6} />
             </div>
         );
     }

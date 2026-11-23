@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { Suspense, useEffect, useState } from "react";
 import { useLocation, Outlet, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
@@ -24,6 +24,8 @@ import ThemeToggle from "@/components/themeToggle/ThemeToggle";
 import Notification from "@/components/notification/Notification";
 import UserDropdown from "@/components/userDropdown/UserDropdown";
 import Footer from "@/components/footer/Footer";
+import Loading from "@/components/loading/Loading";
+import { preloadRouteForPath } from "@/router/RoutePreloaders";
 import { useAuth } from "@/contexts/AuthContext";
 import { isAdmin } from "@/types/Roles.ts";
 
@@ -43,20 +45,31 @@ const AdminLayout: React.FC = () => {
     const { user, logout, isAuthenticated, loading } = useAuth();
     const { t } = useTranslation("admin");
 
-    // 如果正在加载认证状态，显示加载中
+    // 认证加载期间提前拉取当前后台页面的 chunk，认证和代码加载并行
+    useEffect(() => {
+        preloadRouteForPath(location.pathname);
+    }, [location.pathname]);
+
+    // 认证加载期间先渲染后台骨架，避免整页空白/长时间等待
     if (loading) {
         return (
-            <div
-                style={{
-                    display: "flex",
-                    justifyContent: "center",
-                    alignItems: "center",
-                    height: "100vh",
-                    fontSize: "16px",
-                    color: "var(--text-secondary)",
-                }}
-            >
-                {t("layout.loading")}
+            <div className={styles.adminLayout}>
+                <div className={styles.adminContainer}>
+                    <aside className={styles.adminSidebar}>
+                        <div className={styles.adminSidebarHeader}>
+                            <div className={styles.adminLogo}>
+                                <span className={styles.adminLogoIcon}>⚡</span>
+                                <span className={styles.adminLogoText}>{t("layout.brand")}</span>
+                            </div>
+                        </div>
+                    </aside>
+                    <main className={styles.adminMainContent}>
+                        <header className={styles.adminTopBar} />
+                        <div className={styles.adminPageContent}>
+                            <Loading size="large" text={t("layout.loading")} />
+                        </div>
+                    </main>
+                </div>
             </div>
         );
     }
@@ -154,10 +167,6 @@ const AdminLayout: React.FC = () => {
                 </div>
             </div>
         );
-    }
-
-    if (!user.avatar) {
-        user.avatar = "https://picsum.photos/id/64/200"; // 默认头像
     }
 
     // 处理退出登录
@@ -457,7 +466,9 @@ const AdminLayout: React.FC = () => {
 
                     {/* 页面内容 */}
                     <div className={styles.adminPageContent}>
-                        <Outlet />
+                        <Suspense fallback={<Loading size="large" />}>
+                            <Outlet />
+                        </Suspense>
                     </div>
 
                     {/* Footer */}

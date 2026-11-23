@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FC, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import * as echarts from "echarts";
+import type { ECharts, EChartsOption } from "@/utils/Echarts";
 import {
     FaChartLine,
     FaChevronLeft,
@@ -87,9 +87,23 @@ const Metrics: FC = () => {
     const [rawVisible, setRawVisible] = useState(false);
 
     const chartRef = useRef<HTMLDivElement>(null);
-    const chartInstance = useRef<echarts.ECharts | null>(null);
+    const chartInstance = useRef<ECharts | null>(null);
     const bucketChartRef = useRef<HTMLDivElement>(null);
-    const bucketChartInstance = useRef<echarts.ECharts | null>(null);
+    const bucketChartInstance = useRef<ECharts | null>(null);
+    const [echartsModule, setEchartsModule] = useState<typeof import("@/utils/Echarts") | null>(null);
+
+    // 图表库延迟加载：指标数据和表格先渲染，ECharts 后加载
+    useEffect(() => {
+        let cancelled = false;
+        void import("@/utils/Echarts").then((module) => {
+            if (!cancelled) {
+                setEchartsModule(module);
+            }
+        });
+        return () => {
+            cancelled = true;
+        };
+    }, []);
 
     const fetcher = useCallback((signal: AbortSignal) => MetricsService.getMetrics(signal), []);
     const { data: samples, loading, error, reload } = useAsyncResource<MetricSample[]>(fetcher, [], { timeoutMs: 15000 });
@@ -177,9 +191,10 @@ const Metrics: FC = () => {
             return;
         }
 
-        if (!chartRef.current) {
+        if (!echartsModule || !chartRef.current) {
             return;
         }
+        const echarts = echartsModule;
 
         if (!chartInstance.current) {
             chartInstance.current = echarts.init(chartRef.current, "light", { renderer: "canvas" });
@@ -300,7 +315,7 @@ const Metrics: FC = () => {
             ],
         };
 
-        chart.setOption(option as echarts.EChartsOption, true);
+        chart.setOption(option as EChartsOption, true);
 
         const handleResize = () => {
             chart.resize();
@@ -309,7 +324,7 @@ const Metrics: FC = () => {
         return () => {
             window.removeEventListener("resize", handleResize);
         };
-    }, [chartRoutes, preset, t]);
+    }, [echartsModule, chartRoutes, preset, t]);
 
     useEffect(() => {
         if (!selectedRoute || selectedRoute.buckets.length === 0) {
@@ -318,9 +333,10 @@ const Metrics: FC = () => {
             return;
         }
 
-        if (!bucketChartRef.current) {
+        if (!echartsModule || !bucketChartRef.current) {
             return;
         }
+        const echarts = echartsModule;
 
         if (!bucketChartInstance.current) {
             bucketChartInstance.current = echarts.init(bucketChartRef.current, "light", { renderer: "canvas" });
@@ -342,7 +358,7 @@ const Metrics: FC = () => {
             };
         });
 
-        const option: echarts.EChartsOption = {
+        const option: EChartsOption = {
             textStyle: {
                 fontFamily: themeFont,
             },
@@ -457,7 +473,7 @@ const Metrics: FC = () => {
         return () => {
             window.removeEventListener("resize", handleResize);
         };
-    }, [preset, selectedRoute, t]);
+    }, [echartsModule, preset, selectedRoute, t]);
 
     useEffect(() => {
         return () => {

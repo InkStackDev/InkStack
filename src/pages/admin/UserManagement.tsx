@@ -16,6 +16,7 @@ import CustomSelect from "@/components/customSelect/CustomSelect";
 import Input from "@/components/input/Input";
 import Button from "@/components/button/Button";
 import Loading from "@/components/loading/Loading";
+import AdminListSkeleton from "@/components/adminListSkeleton/AdminListSkeleton";
 import Avatar from "@/components/avatar/Avatar";
 import Modal from "@/components/modal/Modal";
 import { confirm } from "@/components/confirm/Confirm";
@@ -148,7 +149,7 @@ const UserManagement: React.FC = () => {
                         id: user.id,
                         username: user.name,
                         email: user.email,
-                        avatar: user.avatar || `https://picsum.photos/id/${(Number(user.id) % 100) + 1}/80`,
+                        avatar: user.avatar || "",
                         role: user.role,
                         status: user.state === 1 ? "active" : "inactive",
                         createdAt: formatToChinaTime(user.create_time),
@@ -427,7 +428,7 @@ const UserManagement: React.FC = () => {
     if (loading && !initialLoaded) {
         return (
             <div className={styles.userManagement}>
-                <Loading text={t("users.loading")} size="large" />
+                <AdminListSkeleton stats={4} columns={7} />
             </div>
         );
     }

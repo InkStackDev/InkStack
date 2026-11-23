@@ -68,7 +68,7 @@ export class CommentService {
         article_id?: string;
         is_reported?: number;
     }): Promise<AdminCommentListResponse> {
-        const response = await http.get<AdminCommentListResponse>("/admin/comment/list", { params });
+        const response = await http.get<AdminCommentListResponse>("/admin/comment/list", { params, cacheTtl: 15_000 });
         return response.data;
     }
 
@@ -106,7 +106,7 @@ export class CommentService {
 
     /** 管理端评论统计 */
     static async getAdminStats(): Promise<CommentStatsResponse> {
-        const response = await http.get<CommentStatsResponse>("/admin/comment/stats");
+        const response = await http.get<CommentStatsResponse>("/admin/comment/stats", { cacheTtl: 15_000 });
         return response.data;
     }
 }

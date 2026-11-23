@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { encodeId } from "@/utils/HashId.ts";
@@ -31,11 +31,13 @@ import {
 import CustomSelect from "@/components/customSelect/CustomSelect";
 import Input from "@/components/input/Input";
 import Loading from "@/components/loading/Loading";
+import AdminListSkeleton from "@/components/adminListSkeleton/AdminListSkeleton";
 import { confirm } from "@/components/confirm/Confirm";
 import type { SelectOption } from "@/types";
 import { PlatformRoleByKey, type PlatformRole } from "@/types/Roles.ts";
 import { useEnumLabels } from "@/i18n/UseEnumLabels";
 import { useInitialLoaded } from "@/hooks/UseInitialLoaded";
+import { useDebouncedValue } from "@/hooks/UseDebouncedValue";
 import styles from "./ArticleManagement.module.css";
 import ArticleService, { type ListAdminArticlesResponse, type ArticleStatsResponse } from "@/services/ArticleService.ts";
 import { CategoryService } from "@/services/CategoryService.ts";
@@ -129,6 +131,21 @@ const ArticleManagement: React.FC = () => {
         { id: "", name: t("articles.filter.allCategories"), color: "#6c757d" },
     ]);
 
+    // 搜索框防抖：避免每次键入都同时请求统计和列表
+    const debouncedSearch = useDebouncedValue(filters.search, 300);
+    const queryFilters = useMemo(
+        () => ({
+            search: debouncedSearch,
+            status: filters.status,
+            category: filters.category,
+            authorRole: filters.authorRole,
+            dateRange: filters.dateRange,
+        }),
+        [debouncedSearch, filters.status, filters.category, filters.authorRole, filters.dateRange],
+    );
+    const statsRequestRef = useRef(0);
+    const articlesRequestRef = useRef(0);
+
     const [totalArticles, setTotalArticles] = useState(0);
     const articlesPerPage = 15; // 每页显示15条数据
 
@@ -154,22 +171,26 @@ const ArticleManagement: React.FC = () => {
 
     // 加载统计数据
     const fetchStats = async () => {
+        const requestId = ++statsRequestRef.current;
         try {
             const days =
-                filters.dateRange === "7days"
+                queryFilters.dateRange === "7days"
                     ? 7
-                    : filters.dateRange === "30days"
+                    : queryFilters.dateRange === "30days"
                       ? 30
-                      : filters.dateRange === "90days"
+                      : queryFilters.dateRange === "90days"
                         ? 90
                         : undefined;
 
             const res: ArticleStatsResponse = await ArticleService.getAdminArticleStats({
-                category_id: filters.category || undefined,
-                role: filters.authorRole ? PlatformRoleByKey[filters.authorRole] : undefined,
+                category_id: queryFilters.category || undefined,
+                role: queryFilters.authorRole ? PlatformRoleByKey[queryFilters.authorRole] : undefined,
                 days,
-                keyword: filters.search || undefined,
+                keyword: queryFilters.search || undefined,
             });
+            if (requestId !== statsRequestRef.current) {
+                return;
+            }
             setStats({
                 totalArticles: res.total_articles,
                 pendingArticles: res.pending_articles,
@@ -178,38 +199,45 @@ const ArticleManagement: React.FC = () => {
                 reportedArticles: res.reported_articles,
             });
         } catch (error) {
-            console.error("获取统计数据失败:", error);
+            if (requestId === statsRequestRef.current) {
+                console.error("获取统计数据失败:", error);
+            }
         }
     };
 
     useEffect(() => {
-        fetchStats();
+        void fetchStats();
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [filters]);
+    }, [queryFilters]);
 
     // 加载文章数据
     useEffect(() => {
+        const requestId = ++articlesRequestRef.current;
         const fetchArticles = async () => {
             setLoading(true);
             try {
-                const stateValue = filters.status ? REVERSE_STATE_MAP[filters.status] : 0;
+                const stateValue = queryFilters.status ? REVERSE_STATE_MAP[queryFilters.status] : 0;
 
                 // 处理日期筛选
                 let days: number | undefined;
-                if (filters.dateRange === "7days") {
+                if (queryFilters.dateRange === "7days") {
                     days = 7;
-                } else if (filters.dateRange === "30days") days = 30;
-                else if (filters.dateRange === "90days") days = 90;
+                } else if (queryFilters.dateRange === "30days") days = 30;
+                else if (queryFilters.dateRange === "90days") days = 90;
 
                 const res: ListAdminArticlesResponse = await ArticleService.listAdminArticlesByPages({
                     page_num: currentPage,
                     page_size: articlesPerPage,
                     state: stateValue || 0, // 获取所有状态的文章
-                    keyword: filters.search,
-                    category_id: filters.category,
-                    role: filters.authorRole ? PlatformRoleByKey[filters.authorRole] : -1,
+                    keyword: queryFilters.search,
+                    category_id: queryFilters.category,
+                    role: queryFilters.authorRole ? PlatformRoleByKey[queryFilters.authorRole] : -1,
                     days: days,
                 });
+
+                if (requestId !== articlesRequestRef.current) {
+                    return;
+                }
 
                 setTotalArticles(res.total);
                 setArticles(
@@ -217,7 +245,7 @@ const ArticleManagement: React.FC = () => {
                         id: String(article.id),
                         title: article.title,
                         slug: "asdasdsad", // 占位符，API未提供
-                        summary: article.summary.substring(0, 45) + "...",
+                        summary: (article.summary || "").substring(0, 45) + "...",
                         author: article.author,
                         authorEmail: article.email,
                         authorRole: enums.platformRole[article.author_role as PlatformRole] || t("articles.common.user"), // 使用API提供的author_role字段
@@ -242,16 +270,20 @@ const ArticleManagement: React.FC = () => {
                     })),
                 );
             } catch (error) {
-                console.error("获取文章列表失败:", error);
-                setTotalArticles(0);
-                setArticles([]);
+                if (requestId === articlesRequestRef.current) {
+                    console.error("获取文章列表失败:", error);
+                    setTotalArticles(0);
+                    setArticles([]);
+                }
             } finally {
-                setLoading(false);
+                if (requestId === articlesRequestRef.current) {
+                    setLoading(false);
+                }
             }
         };
 
-        fetchArticles();
-    }, [currentPage, filters]);
+        void fetchArticles();
+    }, [currentPage, queryFilters]);
 
     // 筛选文章数据
     const filteredArticles = useMemo(() => {
@@ -577,7 +609,7 @@ const ArticleManagement: React.FC = () => {
     if (loading && !initialLoaded) {
         return (
             <div className={styles.articleManagement}>
-                <Loading text={t("articles.loading")} size="large" />
+                <AdminListSkeleton stats={5} columns={7} />
             </div>
         );
     }

@@ -4,6 +4,7 @@ import { useSiteSettings } from "@/contexts/SiteSettingsContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { isAdmin } from "@/types/Roles.ts";
 import MaintenancePage from "./MaintenancePage";
+import Loading from "@/components/loading/Loading";
 
 const MaintenanceGuard: React.FC = () => {
     const { settings, loading } = useSiteSettings();
@@ -24,7 +25,18 @@ const MaintenanceGuard: React.FC = () => {
     }, [blocked, isAuthenticated, logout]);
 
     if (loading) {
-        return null;
+        return (
+            <div
+                style={{
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    minHeight: "60vh",
+                }}
+            >
+                <Loading size="large" />
+            </div>
+        );
     }
 
     if (blocked) {

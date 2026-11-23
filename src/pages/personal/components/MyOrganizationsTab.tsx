@@ -87,7 +87,7 @@ const MyOrganizationsTab: React.FC = () => {
                             <div className={styles.orgHeader}>
                                 <div className={styles.orgAvatar}>
                                     {org.avatar ? (
-                                        <img src={org.avatar} alt={org.name} />
+                                        <img src={org.avatar} alt={org.name} loading="lazy" decoding="async" />
                                     ) : (
                                         <div className={styles.orgInitials}>{org.name.charAt(0)}</div>
                                     )}

@@ -218,22 +218,31 @@ const CodeReviewList: React.FC = () => {
                 setInitialLoading(false);
                 return;
             }
-            const repoList = await fetchRepos();
-            if (cancelled) {
-                return;
-            }
-            setRepos(repoList);
-            if (repoList.length === 0) {
-                setPrs([]);
-                setTotal(0);
-                setInitialLoading(false);
-                return;
-            }
-            const currentRepoId = selectedRepoIdRef.current;
-            const hasSelected = currentRepoId != null && repoList.some((repo) => repo.id === currentRepoId);
-            if (!hasSelected) {
-                setSelectedRepoId(repoList[0].id);
-                setCurrentPage(1);
+            try {
+                const repoList = await fetchRepos();
+                if (cancelled) {
+                    return;
+                }
+                setRepos(repoList);
+                if (repoList.length === 0) {
+                    setPrs([]);
+                    setTotal(0);
+                    return;
+                }
+                const currentRepoId = selectedRepoIdRef.current;
+                const hasSelected = currentRepoId != null && repoList.some((repo) => repo.id === currentRepoId);
+                if (!hasSelected) {
+                    setSelectedRepoId(repoList[0].id);
+                    setCurrentPage(1);
+                }
+            } catch (err: any) {
+                if (!cancelled) {
+                    message.error(err?.message || t("reviews.message.fetchFailed"));
+                }
+            } finally {
+                if (!cancelled) {
+                    setInitialLoading(false);
+                }
             }
         };
         loadRepos();

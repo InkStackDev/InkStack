@@ -12,7 +12,11 @@ const AssigneeDisplay: React.FC<Props> = ({ name, avatar }) => {
     }
     return (
         <span className={styles.wrapper}>
-            {avatar ? <img className={styles.avatar} src={avatar} alt="" /> : <span className={styles.avatarPlaceholder} />}
+            {avatar ? (
+                <img className={styles.avatar} src={avatar} alt="" loading="lazy" decoding="async" />
+            ) : (
+                <span className={styles.avatarPlaceholder} />
+            )}
             <span>{name}</span>
         </span>
     );

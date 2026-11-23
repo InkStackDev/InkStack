@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import * as echarts from "echarts";
+import type { ECharts } from "@/utils/Echarts";
 import { FaArrowDown, FaArrowUp, FaBug, FaChartLine, FaClock, FaClipboardCheck, FaCodeBranch } from "react-icons/fa";
 import { useSearchParams } from "react-router-dom";
 import Button from "@/components/button/Button";
@@ -29,6 +29,19 @@ const TrendAnalysis: React.FC = () => {
     const throughputRef = useRef<HTMLDivElement>(null);
     const backlogRef = useRef<HTMLDivElement>(null);
     const distributionRef = useRef<HTMLDivElement>(null);
+    const [echartsModule, setEchartsModule] = useState<typeof import("@/utils/Echarts") | null>(null);
+
+    useEffect(() => {
+        let cancelled = false;
+        void import("@/utils/Echarts").then((module) => {
+            if (!cancelled) {
+                setEchartsModule(module);
+            }
+        });
+        return () => {
+            cancelled = true;
+        };
+    }, []);
     const requestIdRef = useRef(0);
 
     const periodDays = parseTrendPeriod(searchParams.get("period"));
@@ -102,11 +115,12 @@ const TrendAnalysis: React.FC = () => {
     }, [trendData, t]);
 
     useEffect(() => {
-        if (!trendData || trendData.series.length === 0) {
+        if (!echartsModule || !trendData || trendData.series.length === 0) {
             return;
         }
 
-        const charts: echarts.ECharts[] = [];
+        const echarts = echartsModule;
+        const charts: ECharts[] = [];
         const textColor = getComputedStyle(document.documentElement).getPropertyValue("--text-secondary").trim() || "#64748b";
         const borderColor = getComputedStyle(document.documentElement).getPropertyValue("--border-primary").trim() || "#e5e7eb";
         const themeFont = getThemeFontFamily();
@@ -216,7 +230,7 @@ const TrendAnalysis: React.FC = () => {
             window.removeEventListener("resize", handleResize);
             charts.forEach((chart) => chart.dispose());
         };
-    }, [axisLabelInterval, periodDays, trendData, workDistribution, t, preset]);
+    }, [echartsModule, axisLabelInterval, periodDays, trendData, workDistribution, t, preset]);
 
     if ((loading || orgLoading) && !trendData) {
         return <Loading text={t("trend.loading")} />;

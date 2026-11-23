@@ -104,7 +104,7 @@ export class CategoryService {
      * 查询分类详情（管理端，默认返回全部用户分类）
      */
     static async queryCategory(config?: HttpRequestConfig): Promise<CategoryInfo> {
-        const response = await http.get<CategoryInfo>("/category/admin/query", config);
+        const response = await http.get<CategoryInfo>("/category/admin/query", { cacheTtl: 15_000, ...config });
         return response.data;
     }
 

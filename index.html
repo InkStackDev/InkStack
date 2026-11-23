@@ -5,6 +5,8 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="preload" href="/fonts/SourceSerif4.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/PlayfairDisplay.woff2" as="font" type="font/woff2" crossorigin />
     <title>InkStack</title>
     <script>
         (function () {
@@ -50,14 +52,73 @@
                 document.documentElement.classList.remove('dark');
             }
             const savedPreset = localStorage.getItem('theme-preset');
-            const validPresets = ['default', 'time', 'monochrome', 'mint', 'ocean', 'sakura', 'cyberpunk', 'gold', 'lavender'];
-            document.documentElement.setAttribute('data-skin', validPresets.includes(savedPreset) ? savedPreset : 'default');
+            const validPresets = ['time', 'monochrome', 'mint', 'ocean', 'sakura', 'cyberpunk', 'gold', 'lavender', 'pi'];
+            document.documentElement.setAttribute('data-skin', validPresets.includes(savedPreset) ? savedPreset : 'time');
         })();
     </script>
+    <style>
+        #boot-splash {
+            position: fixed;
+            inset: 0;
+            z-index: 99999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 14px;
+            background: #f6f1e7;
+            color: #57606a;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+        [data-theme="dark"] #boot-splash {
+            background: #0d1117;
+            color: #8b949e;
+        }
+        #boot-splash .boot-logo {
+            font-size: 20px;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+        }
+        #boot-splash .boot-bar {
+            width: 120px;
+            height: 3px;
+            overflow: hidden;
+            border-radius: 2px;
+            background: rgba(128, 128, 128, 0.25);
+        }
+        #boot-splash .boot-bar::after {
+            content: "";
+            display: block;
+            width: 40%;
+            height: 100%;
+            border-radius: 2px;
+            background: #4361ee;
+            animation: bootProgress 900ms ease-in-out infinite;
+        }
+        @keyframes bootProgress {
+            0% {
+                transform: translateX(-110%);
+            }
+            100% {
+                transform: translateX(360%);
+            }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            #boot-splash .boot-bar::after {
+                animation: none;
+                width: 100%;
+            }
+        }
+    </style>
 </head>
 
 <body>
-    <div id="root"></div>
+    <div id="root">
+        <div id="boot-splash" role="status" aria-label="Loading">
+            <div class="boot-logo">InkStack</div>
+            <div class="boot-bar"></div>
+        </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
 </body>
 

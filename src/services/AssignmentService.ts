@@ -204,7 +204,7 @@ export class AssignmentService {
             url += `&state=${params.state}`;
         }
 
-        const response = await http.get<GetAdminAssignmentsResponse>(url);
+        const response = await http.get<GetAdminAssignmentsResponse>(url, { cacheTtl: 15_000 });
         return response.data;
     }
 
@@ -271,7 +271,7 @@ export class AssignmentService {
      * 获取管理端任务统计数据
      */
     static async getAdminAssignmentStats(): Promise<AssignmentStatsResponse> {
-        const response = await http.get<AssignmentStatsResponse>("/assignment/admin/stats");
+        const response = await http.get<AssignmentStatsResponse>("/assignment/admin/stats", { cacheTtl: 15_000 });
         return response.data;
     }
 

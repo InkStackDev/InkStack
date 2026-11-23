@@ -51,7 +51,7 @@ const Navbar: React.FC = () => {
     const currentUser = user
         ? {
               name: user.name || user.account || tCommon("user.fallbackName"),
-              avatar: user.avatar || "https://picsum.photos/id/64/200", // 默认头像
+              avatar: user.avatar || "", // 无头像时由 Avatar 展示姓名首字
               role: user.role
                   ? enums.platformRole[user.role as PlatformRoleType] || tCommon("user.fallbackName")
                   : tCommon("user.fallbackName"),

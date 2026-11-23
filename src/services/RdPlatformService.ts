@@ -675,7 +675,8 @@ export class RdPlatformService {
     // -- Access Control -------------------------------------------------------
 
     static async checkAccess(): Promise<{ canAccess: boolean; reason?: string }> {
-        const res = await http.get<any>(`${BASE}/check_access`);
+        // 研发入口检查可能先于 /user/info 完成，匿名时不要触发全局会话失效跳转
+        const res = await http.get<any>(`${BASE}/check_access`, { skipSessionInvalidation: true });
         const d = res.data;
         return {
             canAccess: d?.can_access === "1",

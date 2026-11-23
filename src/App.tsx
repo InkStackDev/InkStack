@@ -16,6 +16,7 @@ import { SiteSettingsProvider } from "./contexts/SiteSettingsContext";
 import IdleTimeoutHandler from "./components/sessionTimeout/IdleTimeoutHandler";
 import RouterConfig from "./router/RouterConfig";
 import ThemeBackground from "./components/themeBackground";
+import RouteProgress from "./components/routeProgress/RouteProgress";
 import SessionNotifier from "./components/auth/SessionNotifier";
 import { initErrorCodes } from "./utils/ErrorCodes.ts";
 import "./utils/ErrorHandlers.ts"; // 注册业务 errno 处理器（1101 等）
@@ -34,6 +35,7 @@ function AppContent() {
             <MessageProvider>
                 <ConfirmProvider>
                     <ThemeBackground />
+                    <RouteProgress />
                     <SessionNotifier />
                     <SimpleBar
                         style={{

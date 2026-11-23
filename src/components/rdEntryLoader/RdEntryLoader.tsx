@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { FaBuilding, FaShieldAlt, FaUserShield } from "react-icons/fa";
 import type { IconType } from "react-icons";
@@ -23,6 +23,17 @@ const RdEntryLoader: React.FC<RdEntryLoaderProps> = ({ stage }) => {
     const { t } = useTranslation("rd");
     const Icon = STAGE_ICONS[stage];
     const currentIndex = STAGES.indexOf(stage);
+    const [visible, setVisible] = useState(false);
+
+    // 快速加载时不闪骨架屏；超过 220ms 才展示
+    useEffect(() => {
+        const timer = setTimeout(() => setVisible(true), 220);
+        return () => clearTimeout(timer);
+    }, []);
+
+    if (!visible) {
+        return <div style={{ minHeight: "100vh" }} />;
+    }
 
     return (
         <div className={styles.container} data-stage={stage} role="status" aria-live="polite" aria-busy="true">

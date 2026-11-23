@@ -1,13 +1,19 @@
 import type { ComponentType, ReactNode } from "react";
 import type { Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
-import remarkMath from "remark-math";
-import rehypeKatex from "rehype-katex";
-import "katex/dist/katex.min.css";
 import i18n from "@/i18n";
 import MermaidComponent from "../mermaid/MermaidComponent";
 
-export const articleMarkdownPlugins = { remarkPlugins: [remarkGfm, remarkMath], rehypePlugins: [rehypeKatex] };
+export type ArticleMarkdownPluginProps = {
+    remarkPlugins: any[];
+    rehypePlugins: any[];
+};
+
+/** 阅读页基础插件：不含数学公式，KaTeX 按需加载 */
+export const baseArticleMarkdownPlugins: ArticleMarkdownPluginProps = {
+    remarkPlugins: [remarkGfm],
+    rehypePlugins: [],
+};
 
 interface RenderOptions {
     styles: Record<string, string>;

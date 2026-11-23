@@ -1,12 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, type ReactNode } from "react";
-import { useTranslation } from "react-i18next";
 import { useAuth } from "./AuthContext";
-import { useNavigate } from "react-router-dom";
 import { RdPlatformService } from "../services/RdPlatformService.ts";
 import type { RdOrgInfo } from "../types/RdPlatform.ts";
 import { isAdmin as checkIsAdmin } from "../types/Roles.ts";
-import { FaBuilding, FaHome, FaLock } from "react-icons/fa";
-import RdEntryLoader from "@/components/rdEntryLoader";
 
 interface RdOrgContextType {
     orgs: RdOrgInfo[];
@@ -42,9 +38,7 @@ export const useRdOrg = (): RdOrgContextType => {
 };
 
 export const RdOrgProvider: React.FC<{ children: ReactNode; initialOrgId?: string }> = ({ children, initialOrgId = "" }) => {
-    const { user, logout } = useAuth();
-    const navigate = useNavigate();
-    const { t } = useTranslation("rd");
+    const { user } = useAuth();
     const [orgs, setOrgs] = useState<RdOrgInfo[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedOrgId, setSelectedOrgId] = useState(initialOrgId);
@@ -113,116 +107,6 @@ export const RdOrgProvider: React.FC<{ children: ReactNode; initialOrgId?: strin
         });
         return map;
     }, [orgs]);
-
-    if (loading) {
-        return <RdEntryLoader stage="org" />;
-    }
-
-    if (orgs.length === 0) {
-        return (
-            <div
-                style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    justifyContent: "center",
-                    alignItems: "center",
-                    height: "100vh",
-                    backgroundColor: "transparent",
-                    color: "var(--text-primary)",
-                    padding: "20px",
-                }}
-            >
-                <div
-                    style={{
-                        fontSize: "64px",
-                        color: "#f0a020",
-                        marginBottom: "24px",
-                        opacity: 0.9,
-                    }}
-                >
-                    <FaLock />
-                </div>
-                <h1
-                    style={{
-                        fontSize: "28px",
-                        fontWeight: "bold",
-                        marginBottom: "12px",
-                        color: "var(--text-primary)",
-                    }}
-                >
-                    {t("orgGate.noOrgTitle")}
-                </h1>
-                <p
-                    style={{
-                        fontSize: "16px",
-                        color: "var(--text-secondary)",
-                        marginBottom: "32px",
-                        textAlign: "center",
-                        maxWidth: "480px",
-                        lineHeight: "1.6",
-                    }}
-                >
-                    {t("orgGate.noOrgLine1")}
-                    <br />
-                    {t("orgGate.noOrgLine2")}
-                </p>
-                <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", justifyContent: "center" }}>
-                    <button
-                        onClick={() => navigate("/organizations/list")}
-                        style={{
-                            padding: "10px 24px",
-                            backgroundColor: "var(--primary)",
-                            color: "#fff",
-                            border: "none",
-                            borderRadius: "6px",
-                            cursor: "pointer",
-                            fontSize: "15px",
-                            fontWeight: "500",
-                            boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "8px",
-                        }}
-                    >
-                        <FaBuilding /> {t("orgGate.joinOrg")}
-                    </button>
-                    <button
-                        onClick={() => navigate("/")}
-                        style={{
-                            padding: "10px 24px",
-                            backgroundColor: "transparent",
-                            color: "var(--text-primary)",
-                            border: "1px solid var(--border-primary)",
-                            borderRadius: "6px",
-                            cursor: "pointer",
-                            fontSize: "15px",
-                            fontWeight: "500",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "8px",
-                        }}
-                    >
-                        <FaHome /> {t("orgGate.backHome")}
-                    </button>
-                    <button
-                        onClick={() => logout()}
-                        style={{
-                            padding: "10px 24px",
-                            backgroundColor: "transparent",
-                            color: "var(--text-primary)",
-                            border: "1px solid var(--border-primary)",
-                            borderRadius: "6px",
-                            cursor: "pointer",
-                            fontSize: "15px",
-                            fontWeight: "500",
-                        }}
-                    >
-                        {t("orgGate.switchAccount")}
-                    </button>
-                </div>
-            </div>
-        );
-    }
 
     return (
         <RdOrgContext.Provider

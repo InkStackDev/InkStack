@@ -65,13 +65,13 @@ const IndexPage: React.FC = () => {
         fetchTags();
     }, [user]);
 
-    // 数据加载完成后立即移除骨架屏
+    // 标签加载完成后移除骨架屏；认证状态不再阻塞首页内容展示
     useEffect(() => {
-        if (!authLoading && !tagsLoading) {
+        if (!tagsLoading) {
             setShowContent(true);
             setIsInitialLoad(false);
         }
-    }, [authLoading, tagsLoading]);
+    }, [tagsLoading]);
 
     const handleTagClick = (tag: TagItem) => {
         if (selectedLabelId === tag.id) {

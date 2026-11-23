@@ -73,63 +73,6 @@ html.theme-revealing *::after {
     }
 }
 
-/* OPPO Sans（用于极简黑白主题） */
-@font-face {
-    font-family: "OPPO Sans";
-    src: url("/fonts/OPPO-Sans-4.0.ttf") format("truetype");
-    font-style: normal;
-    font-weight: 100 900;
-    font-display: swap;
-}
-
-@font-face {
-    font-family: "Inter";
-    src: url("/fonts/Inter.ttf") format("truetype");
-    font-style: normal;
-    font-weight: 100 900;
-    font-display: swap;
-}
-
-@font-face {
-    font-family: "Source Sans 3";
-    src: url("/fonts/SourceSans3.ttf") format("truetype");
-    font-style: normal;
-    font-weight: 200 900;
-    font-display: swap;
-}
-
-@font-face {
-    font-family: "Poppins";
-    src: url("/fonts/Poppins-Regular.ttf") format("truetype");
-    font-style: normal;
-    font-weight: 400;
-    font-display: swap;
-}
-
-@font-face {
-    font-family: "Poppins";
-    src: url("/fonts/Poppins-Medium.ttf") format("truetype");
-    font-style: normal;
-    font-weight: 500;
-    font-display: swap;
-}
-
-@font-face {
-    font-family: "Poppins";
-    src: url("/fonts/Poppins-SemiBold.ttf") format("truetype");
-    font-style: normal;
-    font-weight: 600;
-    font-display: swap;
-}
-
-@font-face {
-    font-family: "Poppins";
-    src: url("/fonts/Poppins-Bold.ttf") format("truetype");
-    font-style: normal;
-    font-weight: 700;
-    font-display: swap;
-}
-
 /* 主题英文展示字体（Google Fonts · OFL，自托管 latin 子集） */
 @font-face {
     font-family: "Playfair Display";

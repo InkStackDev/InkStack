@@ -40,7 +40,11 @@ const StatsPanel: React.FC = () => {
         };
 
         fetchStats();
-        const timer = setInterval(fetchStats, POLL_INTERVAL);
+        const timer = setInterval(() => {
+            if (document.visibilityState === "visible") {
+                fetchStats();
+            }
+        }, POLL_INTERVAL);
         return () => {
             cancelled = true;
             clearInterval(timer);
@@ -64,14 +68,14 @@ const StatsPanel: React.FC = () => {
         },
         {
             title: t("statsPanel.totalVisits"),
-            value: httpStats?.totalVisits.toLocaleString() ?? "-",
+            value: httpStats?.totalVisits?.toLocaleString() ?? "-",
             loading,
             icon: <FaEye className={styles.statIcon} />,
             color: styles.total,
         },
         {
             title: t("statsPanel.totalVisitors"),
-            value: httpStats?.totalVisitors.toLocaleString() ?? "-",
+            value: httpStats?.totalVisitors?.toLocaleString() ?? "-",
             loading,
             icon: <FaUserCheck className={styles.statIcon} />,
             color: styles.visitors,

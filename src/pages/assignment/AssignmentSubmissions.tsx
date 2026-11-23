@@ -79,8 +79,10 @@ const AssignmentSubmissions: React.FC = () => {
             return null;
         }
 
-        const assignmentResponse = await AssignmentService.getAssignmentDetail({ id });
-        const submissionsResponse = await AssignmentService.getAssignmentSubmissions({ id });
+        const [assignmentResponse, submissionsResponse] = await Promise.all([
+            AssignmentService.getAssignmentDetail({ id }),
+            AssignmentService.getAssignmentSubmissions({ id }),
+        ]);
 
         let submissionsData: AssignmentSubmissionItem[] = [];
 
@@ -398,7 +400,12 @@ const AssignmentSubmissions: React.FC = () => {
                                                     <div className={styles.userInfo}>
                                                         <div className={styles.avatar}>
                                                             {submission.user_avatar ? (
-                                                                <img src={submission.user_avatar} alt={submission.user_name} />
+                                                                <img
+                                                                    src={submission.user_avatar}
+                                                                    alt={submission.user_name}
+                                                                    loading="lazy"
+                                                                    decoding="async"
+                                                                />
                                                             ) : (
                                                                 <FaUser />
                                                             )}

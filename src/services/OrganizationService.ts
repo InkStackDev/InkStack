@@ -290,7 +290,7 @@ export class OrganizationService {
             url += `&status=${params.status}`;
         }
 
-        const response = await http.get<GetAdminOrganizationsResponse>(url);
+        const response = await http.get<GetAdminOrganizationsResponse>(url, { cacheTtl: 15_000 });
         return response.data;
     }
 
@@ -298,7 +298,7 @@ export class OrganizationService {
      * 获取管理端组织统计数据
      */
     static async getAdminOrganizationStats(): Promise<OrganizationStatsResponse> {
-        const response = await http.get<OrganizationStatsResponse>("/organization/admin/stats");
+        const response = await http.get<OrganizationStatsResponse>("/organization/admin/stats", { cacheTtl: 15_000 });
         return response.data;
     }
 
@@ -425,7 +425,7 @@ export class OrganizationService {
             url += `&status=${params.status}`;
         }
 
-        const response = await http.get<GetApplyListResponse>(url);
+        const response = await http.get<GetApplyListResponse>(url, { cacheTtl: 15_000 });
         return response.data;
     }
 

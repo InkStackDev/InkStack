@@ -466,13 +466,10 @@ const MediaManagement: React.FC = () => {
         [t],
     );
 
-    // 加载数据
+    // 加载数据（当前为本地 mock 数据，无需模拟网络延迟）
     useEffect(() => {
-        setLoading(true);
-        setTimeout(() => {
-            setMediaFiles(mockMediaFiles);
-            setLoading(false);
-        }, 800);
+        setMediaFiles(mockMediaFiles);
+        setLoading(false);
     }, [mockMediaFiles]);
 
     // 筛选数据
@@ -875,7 +872,7 @@ const MediaManagement: React.FC = () => {
                                     </div>
                                     <div className={styles.filePreview}>
                                         {file.type === "image" && file.thumbnailUrl ? (
-                                            <img src={file.thumbnailUrl} alt={file.alt || file.name} />
+                                            <img src={file.thumbnailUrl} alt={file.alt || file.name} loading="lazy" decoding="async" />
                                         ) : (
                                             <div className={styles.fileIcon}>{getFileIcon(file.type, file.mimeType)}</div>
                                         )}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import {
     FaFilter,
@@ -23,6 +23,7 @@ import {
 import CustomSelect from "@/components/customSelect/CustomSelect";
 import Input from "@/components/input/Input";
 import Loading from "@/components/loading/Loading";
+import AdminListSkeleton from "@/components/adminListSkeleton/AdminListSkeleton";
 import Avatar from "@/components/avatar/Avatar";
 import { confirm } from "@/components/confirm/Confirm";
 import CommentService from "@/services/CommentService.ts";
@@ -31,6 +32,7 @@ import type { SelectOption } from "@/types";
 import type { CommentStatus } from "@/types/Enums.ts";
 import { useEnumLabels } from "@/i18n/UseEnumLabels";
 import { useInitialLoaded } from "@/hooks/UseInitialLoaded";
+import { useDebouncedValue } from "@/hooks/UseDebouncedValue";
 import styles from "./CommentManagement.module.css";
 
 interface FilterOptions {
@@ -69,8 +71,22 @@ const CommentManagement: React.FC = () => {
     const [selectedComments, setSelectedComments] = useState<string[]>([]);
     const [showReplies, setShowReplies] = useState<string[]>([]);
 
+    // 搜索框防抖：避免每次键入都触发列表请求
+    const debouncedSearch = useDebouncedValue(filters.search, 300);
+    const queryFilters = useMemo(
+        () => ({
+            search: debouncedSearch,
+            status: filters.status,
+            articleId: filters.articleId,
+            isReported: filters.isReported,
+        }),
+        [debouncedSearch, filters.status, filters.articleId, filters.isReported],
+    );
+    const commentsRequestRef = useRef(0);
+
     // 加载数据
     const fetchComments = useCallback(async () => {
+        const requestId = ++commentsRequestRef.current;
         setLoading(true);
         try {
             const params: {
@@ -84,31 +100,36 @@ const CommentManagement: React.FC = () => {
                 page_num: currentPage,
                 page_size: PAGE_SIZE,
             };
-            if (filters.status) {
-                params.status = filters.status;
+            if (queryFilters.status) {
+                params.status = queryFilters.status;
             }
-            if (filters.search) {
-                params.keyword = filters.search;
+            if (queryFilters.search) {
+                params.keyword = queryFilters.search;
             }
-            if (filters.articleId) {
-                params.article_id = filters.articleId;
+            if (queryFilters.articleId) {
+                params.article_id = queryFilters.articleId;
             }
-            if (filters.isReported) {
-                params.is_reported = filters.isReported === "true" ? 1 : 0;
+            if (queryFilters.isReported) {
+                params.is_reported = queryFilters.isReported === "true" ? 1 : 0;
             }
 
             const data = await CommentService.getAdminList(params);
+            if (requestId !== commentsRequestRef.current) {
+                return;
+            }
             setComments(data.list);
             setTotal(data.total);
         } catch {
             // error handled by interceptor
         } finally {
-            setLoading(false);
+            if (requestId === commentsRequestRef.current) {
+                setLoading(false);
+            }
         }
-    }, [currentPage, filters]);
+    }, [currentPage, queryFilters]);
 
     useEffect(() => {
-        fetchComments();
+        void fetchComments();
     }, [fetchComments]);
 
     // 加载评论统计
@@ -326,7 +347,7 @@ const CommentManagement: React.FC = () => {
     if (loading && !initialLoaded) {
         return (
             <div className={styles.commentManagement}>
-                <Loading text={t("comments.loading")} size="large" />
+                <AdminListSkeleton stats={5} columns={7} />
             </div>
         );
     }

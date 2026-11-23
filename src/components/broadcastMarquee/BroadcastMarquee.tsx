@@ -34,7 +34,11 @@ const BroadcastMarquee: React.FC<BroadcastMarqueeProps> = ({ onActiveChange }) =
 
     useEffect(() => {
         fetchBroadcasts();
-        timerRef.current = setInterval(fetchBroadcasts, POLL_INTERVAL);
+        timerRef.current = setInterval(() => {
+            if (document.visibilityState === "visible") {
+                fetchBroadcasts();
+            }
+        }, POLL_INTERVAL);
         return () => {
             if (timerRef.current) {
                 clearInterval(timerRef.current);

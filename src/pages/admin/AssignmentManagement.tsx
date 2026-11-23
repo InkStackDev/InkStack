@@ -22,6 +22,7 @@ import { formatDateTime } from "@/utils/Utils.ts";
 import CustomSelect from "@/components/customSelect/CustomSelect";
 import Input from "@/components/input/Input";
 import Loading from "@/components/loading/Loading";
+import AdminListSkeleton from "@/components/adminListSkeleton/AdminListSkeleton";
 import { confirm } from "@/components/confirm/Confirm";
 import message from "@/components/message/Message";
 import Modal from "@/components/modal/Modal";
@@ -373,7 +374,11 @@ const AssignmentManagement: React.FC = () => {
     };
 
     if (loading && !initialLoaded) {
-        return <Loading />;
+        return (
+            <div className={styles.container}>
+                <AdminListSkeleton stats={4} columns={6} />
+            </div>
+        );
     }
 
     return (

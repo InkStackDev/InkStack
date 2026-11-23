@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import * as echarts from "echarts";
+import type { ECharts } from "@/utils/Echarts";
 import {
     FaUsers,
     FaFileAlt,
@@ -57,7 +57,21 @@ const Dashboard: React.FC = () => {
     const { preset } = useTheme();
     const [selectedPeriod, setSelectedPeriod] = React.useState("7天");
     const chartRef = useRef<HTMLDivElement>(null);
-    const chartInstance = useRef<echarts.ECharts | null>(null);
+    const chartInstance = useRef<ECharts | null>(null);
+    const [echartsModule, setEchartsModule] = useState<typeof import("@/utils/Echarts") | null>(null);
+
+    // 图表库延迟加载：先渲染统计卡片，再加载 ECharts
+    useEffect(() => {
+        let cancelled = false;
+        void import("@/utils/Echarts").then((module) => {
+            if (!cancelled) {
+                setEchartsModule(module);
+            }
+        });
+        return () => {
+            cancelled = true;
+        };
+    }, []);
 
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState<DashboardStats | null>(null);
@@ -65,19 +79,17 @@ const Dashboard: React.FC = () => {
     const [activities, setActivities] = useState<DashboardActivity[]>([]);
     const [recentUsers, setRecentUsers] = useState<DashboardRecentUser[]>([]);
 
-    // 首次加载：stats + activities + recent-users + trend
+    // 首次加载：stats + activities + recent-users（趋势数据由下方周期 effect 负责）
     useEffect(() => {
         const fetchOnce = async () => {
             setLoading(true);
             try {
-                const [statsRes, trendRes, activitiesRes, usersRes] = await Promise.all([
+                const [statsRes, activitiesRes, usersRes] = await Promise.all([
                     DashboardService.getStats(),
-                    DashboardService.getTrend(7),
                     DashboardService.getActivities(5),
                     DashboardService.getRecentUsers(5),
                 ]);
                 setStats(statsRes);
-                setTrendData(trendRes);
                 setActivities(activitiesRes.list || []);
                 setRecentUsers(usersRes.list || []);
             } catch {
@@ -99,7 +111,7 @@ const Dashboard: React.FC = () => {
                 // error handled by interceptor
             }
         };
-        fetchTrend();
+        void fetchTrend();
     }, [selectedPeriod]);
 
     // 快速操作数据
@@ -252,9 +264,10 @@ const Dashboard: React.FC = () => {
 
     // 初始化和更新ECharts图表
     useEffect(() => {
-        if (!chartRef.current) {
+        if (!echartsModule || !chartRef.current) {
             return;
         }
+        const echarts = echartsModule;
 
         // 初始化图表
         if (!chartInstance.current) {
@@ -448,7 +461,7 @@ const Dashboard: React.FC = () => {
         return () => {
             window.removeEventListener("resize", handleResize);
         };
-    }, [selectedPeriod, trendData, t, tCal, preset]);
+    }, [echartsModule, selectedPeriod, trendData, t, tCal, preset]);
 
     // 渲染活动趋势图表
     const renderVisitTrendChart = () => {
