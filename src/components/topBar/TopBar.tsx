@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { FaPen, FaSave, FaFly, FaBars, FaSignOutAlt, FaUserCircle, FaRegComments, FaFlask } from "react-icons/fa";
 import styles from "./TopBar.module.css";
 import Notification from "../notification/Notification";
+import NavSpinner from "../navSpinner/NavSpinner";
 import BroadcastMarquee from "../broadcastMarquee/BroadcastMarquee";
 import Avatar from "../avatar/Avatar";
 import { encodeId } from "@/utils/HashId.ts";
@@ -122,6 +123,7 @@ const TopBar: React.FC<TopBarProps> = ({ onMenuClick, tools }) => {
                 {tools && <div className={styles.topBarTools}>{tools}</div>}
 
                 <div className={styles.rightGroup} ref={userMenuRef}>
+                    <NavSpinner />
                     {import.meta.env.DEV && (
                         <button
                             className={styles.iconBtn}

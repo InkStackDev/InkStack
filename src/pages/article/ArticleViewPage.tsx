@@ -7,6 +7,7 @@ import ArticleView from "./ArticleView";
 import ArticleService from "@/services/ArticleService.ts";
 import BackToTop from "@/components/backToTop/BackToTop";
 import ThemeToggle from "@/components/themeToggle/ThemeToggle";
+import NavSpinner from "@/components/navSpinner/NavSpinner";
 import LayoutWidthToggle from "@/components/layoutWidthToggle/LayoutWidthToggle";
 import Notification from "@/components/notification/Notification";
 import AuthButtons from "@/components/authButtons/AuthButtons";
@@ -93,6 +94,7 @@ const ArticleViewPage: React.FC = () => {
                     </button>
 
                     <div className={styles.actions}>
+                        <NavSpinner />
                         <LayoutWidthToggle />
                         <ThemeToggle />
                         {isAuthenticated && <Notification />}

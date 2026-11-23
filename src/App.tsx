@@ -1,7 +1,7 @@
 import SimpleBar from "simplebar-react";
 import "simplebar-react/dist/simplebar.min.css";
 import "./App.css";
-import { BrowserRouter } from "react-router-dom";
+import { BrowserRouter, useLocation } from "react-router-dom";
 import { useEffect } from "react";
 import { I18nextProvider } from "react-i18next";
 import i18n from "./i18n";
@@ -17,9 +17,18 @@ import IdleTimeoutHandler from "./components/sessionTimeout/IdleTimeoutHandler";
 import RouterConfig from "./router/RouterConfig";
 import ThemeBackground from "./components/themeBackground";
 import RouteProgress from "./components/routeProgress/RouteProgress";
+import { finishNavigation, installNavigationTracking } from "./components/routeProgress/NavigationState";
 import SessionNotifier from "./components/auth/SessionNotifier";
 import { initErrorCodes } from "./utils/ErrorCodes.ts";
 import "./utils/ErrorHandlers.ts"; // 注册业务 errno 处理器（1101 等）
+
+function NavigationWatcher() {
+    const location = useLocation();
+    useEffect(() => {
+        finishNavigation();
+    }, [location.key]);
+    return null;
+}
 
 function AppContent() {
     useLanguageSync();
@@ -27,6 +36,7 @@ function AppContent() {
     // 启动时立即加载错误码（不依赖 settings）
     useEffect(() => {
         initErrorCodes();
+        installNavigationTracking();
     }, []);
 
     return (
@@ -36,6 +46,7 @@ function AppContent() {
                 <ConfirmProvider>
                     <ThemeBackground />
                     <RouteProgress />
+                    <NavigationWatcher />
                     <SessionNotifier />
                     <SimpleBar
                         style={{

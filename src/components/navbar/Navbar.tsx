@@ -17,6 +17,7 @@ import { useTranslation } from "react-i18next";
 import styles from "./Navbar.module.css";
 import HomeQuickTools from "../homeQuickTools/HomeQuickTools";
 import ThemeToggle from "../themeToggle/ThemeToggle";
+import NavSpinner from "../navSpinner/NavSpinner";
 import AuthButtons from "../authButtons/AuthButtons";
 import Notification from "../notification/Notification";
 import BroadcastMarquee from "../broadcastMarquee/BroadcastMarquee";
@@ -257,6 +258,7 @@ const Navbar: React.FC = () => {
                             <HomeQuickTools tools={["theme", "subscribe", "language"]} utilities={["width", "layoutMode"]} />
                         </div>
                         {/* 主题切换按钮 */}
+                        <NavSpinner />
                         <ThemeToggle />
 
                         {/* 通知按钮 */}
