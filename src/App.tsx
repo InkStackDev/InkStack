@@ -17,8 +17,7 @@ import IdleTimeoutHandler from "./components/sessionTimeout/IdleTimeoutHandler";
 import RouterConfig from "./router/RouterConfig";
 import ThemeBackground from "./components/themeBackground";
 import RouteProgress from "./components/routeProgress/RouteProgress";
-import { finishNavigation, installNavigationTracking, useNavigationPending } from "./components/routeProgress/NavigationState";
-import { setFaviconLoading } from "./utils/Favicon.ts";
+import { finishNavigation, installNavigationTracking } from "./components/routeProgress/NavigationState";
 import SessionNotifier from "./components/auth/SessionNotifier";
 import { initErrorCodes } from "./utils/ErrorCodes.ts";
 import "./utils/ErrorHandlers.ts"; // 注册业务 errno 处理器（1101 等）
@@ -33,21 +32,11 @@ function NavigationWatcher() {
 
 function AppContent() {
     useLanguageSync();
-    const navigationPending = useNavigationPending();
 
     // 启动时立即加载错误码（不依赖 settings）
     useEffect(() => {
         initErrorCodes();
         installNavigationTracking();
-    }, []);
-
-    // 导航期间让浏览器页签 favicon 旋转，结束后恢复
-    useEffect(() => {
-        setFaviconLoading(navigationPending);
-    }, [navigationPending]);
-
-    useEffect(() => {
-        return () => setFaviconLoading(false);
     }, []);
 
     return (

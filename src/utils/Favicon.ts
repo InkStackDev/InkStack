@@ -3,76 +3,12 @@ const BADGE_X = SIZE - 2;
 const BADGE_Y = 2;
 
 let originalHref: string | null = null;
-let lastUnread = 0;
-let loadingTimer: ReturnType<typeof setInterval> | null = null;
-let loadingBaseHref: string | null = null;
-let loadingRotation = 0;
 
 export function resetOriginalFavicon(): void {
     originalHref = null;
 }
 
-/**
- * 导航期间在浏览器页签显示旋转的 favicon，模拟 GitHub/浏览器的加载指示。
- */
-export function setFaviconLoading(active: boolean): void {
-    const link = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
-    if (!link) {
-        return;
-    }
-
-    if (active) {
-        if (loadingTimer !== null) {
-            return;
-        }
-        loadingBaseHref = link.href;
-        loadingRotation = 0;
-        const render = () => {
-            const canvas = document.createElement("canvas");
-            canvas.width = SIZE;
-            canvas.height = SIZE;
-            const ctx = canvas.getContext("2d");
-            if (!ctx) {
-                return;
-            }
-
-            ctx.clearRect(0, 0, SIZE, SIZE);
-            ctx.beginPath();
-            ctx.arc(SIZE / 2, SIZE / 2, SIZE / 2 - 2, 0, Math.PI * 2);
-            ctx.fillStyle = "#ffffff";
-            ctx.fill();
-
-            loadingRotation += Math.PI / 4;
-            ctx.beginPath();
-            ctx.arc(SIZE / 2, SIZE / 2, SIZE / 2 - 6, loadingRotation, loadingRotation + Math.PI * 1.35);
-            ctx.strokeStyle = "#0969da";
-            ctx.lineWidth = 4;
-            ctx.lineCap = "round";
-            ctx.stroke();
-
-            link.href = canvas.toDataURL("image/png");
-        };
-
-        render();
-        loadingTimer = setInterval(render, 90);
-        return;
-    }
-
-    if (loadingTimer !== null) {
-        clearInterval(loadingTimer);
-        loadingTimer = null;
-    }
-    if (loadingBaseHref && link.href !== loadingBaseHref) {
-        link.href = loadingBaseHref;
-    }
-    loadingBaseHref = null;
-    if (lastUnread > 0) {
-        setFaviconBadge(lastUnread);
-    }
-}
-
 export function setFaviconBadge(unread: number): void {
-    lastUnread = unread;
     const link = document.querySelector<HTMLLinkElement>('link[rel="icon"]');
     if (!link) {
         return;
