@@ -257,7 +257,7 @@ const OrganizationManagement: React.FC = () => {
     });
 
     // 分页逻辑
-    const totalPages = Math.ceil(total / pageSize);
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
     const startIndex = (currentPage - 1) * pageSize;
     const currentData = filteredOrgs.slice(startIndex, startIndex + pageSize);
 
@@ -355,7 +355,7 @@ const OrganizationManagement: React.FC = () => {
         }
     };
 
-    const appliesPages = Math.ceil(appliesTotal / appliesPageSize);
+    const appliesPages = Math.max(1, Math.ceil(appliesTotal / appliesPageSize));
 
     return (
         <div className={styles.container}>
@@ -578,59 +578,58 @@ const OrganizationManagement: React.FC = () => {
                                 )}
                             </tbody>
                         </table>
-                        {totalPages >= 1 && (
-                            <div className={styles.pagination}>
-                                <span className={styles.pageInfo}>
-                                    {t("organizations.pagination.showing", {
-                                        start: startIndex + 1,
-                                        end: Math.min(startIndex + pageSize, total),
-                                        total,
-                                    })}
-                                </span>
-                                <div className={styles.pageButtons}>
-                                    <button className={styles.pageBtn} disabled={currentPage === 1} onClick={() => setCurrentPage(1)}>
-                                        <FaAngleDoubleLeft />
-                                    </button>
-                                    <button
-                                        className={styles.pageBtn}
-                                        disabled={currentPage === 1}
-                                        onClick={() => setCurrentPage((prev) => prev - 1)}
-                                    >
-                                        <FaChevronLeft />
-                                    </button>
+                        <div className={styles.pagination}>
+                            <span className={styles.pageInfo}>
+                                {t("organizations.pagination.showing", {
+                                    start: total > 0 ? startIndex + 1 : 0,
+                                    end: Math.min(startIndex + pageSize, total),
+                                    total,
+                                })}
+                            </span>
+                            <div className={styles.pageButtons}>
+                                <button className={styles.pageBtn} disabled={currentPage === 1} onClick={() => setCurrentPage(1)}>
+                                    <FaAngleDoubleLeft />
+                                </button>
+                                <button
+                                    className={styles.pageBtn}
+                                    disabled={currentPage === 1}
+                                    onClick={() => setCurrentPage((prev) => prev - 1)}
+                                >
+                                    <FaChevronLeft />
+                                </button>
 
-                                    {getPageNumbers().map((page, index) => (
-                                        <React.Fragment key={index}>
-                                            {page === "..." ? (
-                                                <span className={styles.paginationEllipsis}>...</span>
-                                            ) : (
-                                                <button
-                                                    className={`${styles.pageBtn} ${currentPage === page ? styles.active : ""}`}
-                                                    onClick={() => setCurrentPage(page as number)}
-                                                >
-                                                    {page}
-                                                </button>
-                                            )}
-                                        </React.Fragment>
-                                    ))}
+                                {getPageNumbers().map((page, index) => (
+                                    <React.Fragment key={index}>
+                                        {page === "..." ? (
+                                            <span className={styles.paginationEllipsis}>...</span>
+                                        ) : (
+                                            <button
+                                                className={`${styles.pageBtn} ${currentPage === page ? styles.active : ""}`}
+                                                onClick={() => setCurrentPage(page as number)}
+                                                disabled={total === 0}
+                                            >
+                                                {page}
+                                            </button>
+                                        )}
+                                    </React.Fragment>
+                                ))}
 
-                                    <button
-                                        className={styles.pageBtn}
-                                        disabled={currentPage === totalPages}
-                                        onClick={() => setCurrentPage((prev) => prev + 1)}
-                                    >
-                                        <FaChevronRight />
-                                    </button>
-                                    <button
-                                        className={styles.pageBtn}
-                                        disabled={currentPage === totalPages}
-                                        onClick={() => setCurrentPage(totalPages)}
-                                    >
-                                        <FaAngleDoubleRight />
-                                    </button>
-                                </div>
+                                <button
+                                    className={styles.pageBtn}
+                                    disabled={currentPage === totalPages}
+                                    onClick={() => setCurrentPage((prev) => prev + 1)}
+                                >
+                                    <FaChevronRight />
+                                </button>
+                                <button
+                                    className={styles.pageBtn}
+                                    disabled={currentPage === totalPages}
+                                    onClick={() => setCurrentPage(totalPages)}
+                                >
+                                    <FaAngleDoubleRight />
+                                </button>
                             </div>
-                        )}
+                        </div>
                     </div>
 
                     {/* 创建/编辑模态框 */}
@@ -910,47 +909,45 @@ const OrganizationManagement: React.FC = () => {
                                         )}
                                     </tbody>
                                 </table>
-                                {appliesPages >= 1 && (
-                                    <div className={styles.pagination}>
-                                        <span className={styles.pageInfo}>
-                                            {t("organizations.applies.pagination.showing", {
-                                                start: (appliesPage - 1) * appliesPageSize + 1,
-                                                end: Math.min(appliesPage * appliesPageSize, appliesTotal),
-                                                total: appliesTotal,
-                                            })}
-                                        </span>
-                                        <div className={styles.pageButtons}>
-                                            <button
-                                                className={styles.pageBtn}
-                                                disabled={appliesPage === 1}
-                                                onClick={() => setAppliesPage(1)}
-                                            >
-                                                <FaAngleDoubleLeft />
-                                            </button>
-                                            <button
-                                                className={styles.pageBtn}
-                                                disabled={appliesPage === 1}
-                                                onClick={() => setAppliesPage((prev) => prev - 1)}
-                                            >
-                                                <FaChevronLeft />
-                                            </button>
-                                            <button
-                                                className={styles.pageBtn}
-                                                disabled={appliesPage === appliesPages}
-                                                onClick={() => setAppliesPage((prev) => prev + 1)}
-                                            >
-                                                <FaChevronRight />
-                                            </button>
-                                            <button
-                                                className={styles.pageBtn}
-                                                disabled={appliesPage === appliesPages}
-                                                onClick={() => setAppliesPage(appliesPages)}
-                                            >
-                                                <FaAngleDoubleRight />
-                                            </button>
-                                        </div>
+                                <div className={styles.pagination}>
+                                    <span className={styles.pageInfo}>
+                                        {t("organizations.applies.pagination.showing", {
+                                            start: appliesTotal > 0 ? (appliesPage - 1) * appliesPageSize + 1 : 0,
+                                            end: Math.min(appliesPage * appliesPageSize, appliesTotal),
+                                            total: appliesTotal,
+                                        })}
+                                    </span>
+                                    <div className={styles.pageButtons}>
+                                        <button
+                                            className={styles.pageBtn}
+                                            disabled={appliesPage === 1}
+                                            onClick={() => setAppliesPage(1)}
+                                        >
+                                            <FaAngleDoubleLeft />
+                                        </button>
+                                        <button
+                                            className={styles.pageBtn}
+                                            disabled={appliesPage === 1}
+                                            onClick={() => setAppliesPage((prev) => prev - 1)}
+                                        >
+                                            <FaChevronLeft />
+                                        </button>
+                                        <button
+                                            className={styles.pageBtn}
+                                            disabled={appliesPage === appliesPages}
+                                            onClick={() => setAppliesPage((prev) => prev + 1)}
+                                        >
+                                            <FaChevronRight />
+                                        </button>
+                                        <button
+                                            className={styles.pageBtn}
+                                            disabled={appliesPage === appliesPages}
+                                            onClick={() => setAppliesPage(appliesPages)}
+                                        >
+                                            <FaAngleDoubleRight />
+                                        </button>
                                     </div>
-                                )}
+                                </div>
                             </>
                         )}
                     </div>

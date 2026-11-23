@@ -822,32 +822,28 @@ const Metrics: FC = () => {
                                 </tbody>
                             </table>
                         </div>
-
-                        {sortedRoutes.length > PAGE_SIZE ? (
-                            <div className={styles.pagination}>
-                                <Button
-                                    size="small"
-                                    variant="outline"
-                                    disabled={currentPage === 1}
-                                    onClick={() => setPage(Math.max(1, currentPage - 1))}
-                                >
-                                    <FaChevronLeft /> {t("metrics.table.prev")}
-                                </Button>
-                                <span className={styles.pageInfo}>
-                                    {t("metrics.table.pageInfo", { current: currentPage, total: totalPages })}
-                                </span>
-                                <Button
-                                    size="small"
-                                    variant="outline"
-                                    disabled={currentPage === totalPages}
-                                    onClick={() => setPage(Math.min(totalPages, currentPage + 1))}
-                                >
-                                    {t("metrics.table.next")} <FaChevronRight />
-                                </Button>
-                            </div>
-                        ) : null}
                     </>
                 )}
+
+                <div className={styles.pagination}>
+                    <Button
+                        size="small"
+                        variant="outline"
+                        disabled={currentPage === 1}
+                        onClick={() => setPage(Math.max(1, currentPage - 1))}
+                    >
+                        <FaChevronLeft /> {t("metrics.table.prev")}
+                    </Button>
+                    <span className={styles.pageInfo}>{t("metrics.table.pageInfo", { current: currentPage, total: totalPages })}</span>
+                    <Button
+                        size="small"
+                        variant="outline"
+                        disabled={currentPage === totalPages}
+                        onClick={() => setPage(Math.min(totalPages, currentPage + 1))}
+                    >
+                        {t("metrics.table.next")} <FaChevronRight />
+                    </Button>
+                </div>
             </div>
 
             {selectedRoute ? (

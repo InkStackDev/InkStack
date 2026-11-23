@@ -471,6 +471,7 @@ const BugList: React.FC = () => {
                                     key={page}
                                     className={currentPage === page ? styles.activePage : ""}
                                     onClick={() => setCurrentPage(page as number)}
+                                    disabled={total === 0}
                                 >
                                     {page}
                                 </button>

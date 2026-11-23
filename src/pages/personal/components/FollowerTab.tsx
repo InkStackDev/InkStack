@@ -54,7 +54,7 @@ const FollowerTab: React.FC = () => {
     const list = data?.list ?? [];
     const total = data?.total ?? 0;
 
-    const totalPages = Math.ceil(total / PAGE_SIZE);
+    const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
     const startIndex = (currentPage - 1) * PAGE_SIZE;
 
     return (
@@ -101,53 +101,51 @@ const FollowerTab: React.FC = () => {
             )}
 
             {/* Pagination */}
-            {totalPages > 1 && (
-                <div className={styles.pagination}>
-                    <div className={styles.paginationInfo}>
-                        {t("follower.paginationInfo", {
-                            start: startIndex + 1,
-                            end: Math.min(startIndex + PAGE_SIZE, total),
-                            total,
-                        })}
-                    </div>
-                    <div className={styles.paginationControls}>
-                        <button className={styles.paginationButton} onClick={() => setCurrentPage(1)} disabled={currentPage === 1}>
-                            {t("follower.firstPage")}
-                        </button>
-                        <button
-                            className={styles.paginationButton}
-                            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                            disabled={currentPage === 1}
-                        >
-                            {t("follower.prevPage")}
-                        </button>
-                        {getPageNumbers(currentPage, totalPages).map((page, i) => (
-                            <button
-                                key={i}
-                                className={`${styles.paginationButton} ${currentPage === page ? styles.active : ""}`}
-                                onClick={() => page !== "..." && setCurrentPage(page as number)}
-                                disabled={page === "..."}
-                            >
-                                {page}
-                            </button>
-                        ))}
-                        <button
-                            className={styles.paginationButton}
-                            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                            disabled={currentPage === totalPages}
-                        >
-                            {t("follower.nextPage")}
-                        </button>
-                        <button
-                            className={styles.paginationButton}
-                            onClick={() => setCurrentPage(totalPages)}
-                            disabled={currentPage === totalPages}
-                        >
-                            {t("follower.lastPage")}
-                        </button>
-                    </div>
+            <div className={styles.pagination}>
+                <div className={styles.paginationInfo}>
+                    {t("follower.paginationInfo", {
+                        start: total > 0 ? startIndex + 1 : 0,
+                        end: Math.min(startIndex + PAGE_SIZE, total),
+                        total,
+                    })}
                 </div>
-            )}
+                <div className={styles.paginationControls}>
+                    <button className={styles.paginationButton} onClick={() => setCurrentPage(1)} disabled={currentPage === 1}>
+                        {t("follower.firstPage")}
+                    </button>
+                    <button
+                        className={styles.paginationButton}
+                        onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                        disabled={currentPage === 1}
+                    >
+                        {t("follower.prevPage")}
+                    </button>
+                    {getPageNumbers(currentPage, totalPages).map((page, i) => (
+                        <button
+                            key={i}
+                            className={`${styles.paginationButton} ${currentPage === page ? styles.active : ""}`}
+                            onClick={() => page !== "..." && setCurrentPage(page as number)}
+                            disabled={page === "..." || total === 0}
+                        >
+                            {page}
+                        </button>
+                    ))}
+                    <button
+                        className={styles.paginationButton}
+                        onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                        disabled={currentPage === totalPages}
+                    >
+                        {t("follower.nextPage")}
+                    </button>
+                    <button
+                        className={styles.paginationButton}
+                        onClick={() => setCurrentPage(totalPages)}
+                        disabled={currentPage === totalPages}
+                    >
+                        {t("follower.lastPage")}
+                    </button>
+                </div>
+            </div>
         </div>
     );
 };

@@ -185,7 +185,7 @@ const UserManagement: React.FC = () => {
     }, [users, filters.search]);
 
     // 分页计算
-    const totalPages = Math.ceil(totalUsers / usersPerPage);
+    const totalPages = Math.max(1, Math.ceil(totalUsers / usersPerPage));
     const startIndex = (currentPage - 1) * usersPerPage;
     const endIndex = startIndex + users.length;
     const currentUsers = filteredUsers;
@@ -655,59 +655,58 @@ const UserManagement: React.FC = () => {
                 </table>
 
                 {/* 分页 */}
-                {totalPages >= 1 && (
-                    <div className={styles.paginationContainer}>
-                        <div className={styles.paginationInfo}>
-                            {t("users.table.pagination", {
-                                start: startIndex + 1,
-                                end: Math.min(endIndex, totalUsers),
-                                total: totalUsers,
-                            })}
-                        </div>
-                        <div className={styles.paginationControls}>
-                            <button className={styles.paginationButton} onClick={() => setCurrentPage(1)} disabled={currentPage === 1}>
-                                <FaAngleDoubleLeft />
-                            </button>
-                            <button
-                                className={styles.paginationButton}
-                                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                                disabled={currentPage === 1}
-                            >
-                                <FaChevronLeft />
-                            </button>
-
-                            {getPageNumbers().map((page, index) => (
-                                <React.Fragment key={index}>
-                                    {page === "..." ? (
-                                        <span className={styles.paginationEllipsis}>...</span>
-                                    ) : (
-                                        <button
-                                            className={`${styles.paginationButton} ${currentPage === page ? styles.active : ""}`}
-                                            onClick={() => setCurrentPage(page as number)}
-                                        >
-                                            {page}
-                                        </button>
-                                    )}
-                                </React.Fragment>
-                            ))}
-
-                            <button
-                                className={styles.paginationButton}
-                                onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                                disabled={currentPage === totalPages}
-                            >
-                                <FaChevronRight />
-                            </button>
-                            <button
-                                className={styles.paginationButton}
-                                onClick={() => setCurrentPage(totalPages)}
-                                disabled={currentPage === totalPages}
-                            >
-                                <FaAngleDoubleRight />
-                            </button>
-                        </div>
+                <div className={styles.paginationContainer}>
+                    <div className={styles.paginationInfo}>
+                        {t("users.table.pagination", {
+                            start: totalUsers > 0 ? startIndex + 1 : 0,
+                            end: Math.min(endIndex, totalUsers),
+                            total: totalUsers,
+                        })}
                     </div>
-                )}
+                    <div className={styles.paginationControls}>
+                        <button className={styles.paginationButton} onClick={() => setCurrentPage(1)} disabled={currentPage === 1}>
+                            <FaAngleDoubleLeft />
+                        </button>
+                        <button
+                            className={styles.paginationButton}
+                            onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                            disabled={currentPage === 1}
+                        >
+                            <FaChevronLeft />
+                        </button>
+
+                        {getPageNumbers().map((page, index) => (
+                            <React.Fragment key={index}>
+                                {page === "..." ? (
+                                    <span className={styles.paginationEllipsis}>...</span>
+                                ) : (
+                                    <button
+                                        className={`${styles.paginationButton} ${currentPage === page ? styles.active : ""}`}
+                                        onClick={() => setCurrentPage(page as number)}
+                                        disabled={totalUsers === 0}
+                                    >
+                                        {page}
+                                    </button>
+                                )}
+                            </React.Fragment>
+                        ))}
+
+                        <button
+                            className={styles.paginationButton}
+                            onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                            disabled={currentPage === totalPages}
+                        >
+                            <FaChevronRight />
+                        </button>
+                        <button
+                            className={styles.paginationButton}
+                            onClick={() => setCurrentPage(totalPages)}
+                            disabled={currentPage === totalPages}
+                        >
+                            <FaAngleDoubleRight />
+                        </button>
+                    </div>
+                </div>
             </div>
 
             {/* 创建/编辑用户模态框 */}

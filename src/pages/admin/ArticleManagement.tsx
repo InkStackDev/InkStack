@@ -259,7 +259,7 @@ const ArticleManagement: React.FC = () => {
     }, [articles]);
 
     // 分页计算
-    const totalPages = Math.ceil(totalArticles / articlesPerPage);
+    const totalPages = Math.max(1, Math.ceil(totalArticles / articlesPerPage));
     const startIndex = (currentPage - 1) * articlesPerPage;
     const endIndex = startIndex + articles.length;
     const currentArticles = filteredArticles;
@@ -945,59 +945,58 @@ const ArticleManagement: React.FC = () => {
                 </table>
 
                 {/* 分页 */}
-                {totalPages >= 1 && (
-                    <div className={styles.paginationContainer}>
-                        <div className={styles.paginationInfo}>
-                            {t("articles.pagination.info", {
-                                start: totalArticles > 0 ? startIndex + 1 : 0,
-                                end: Math.min(endIndex, totalArticles),
-                                total: totalArticles,
-                            })}
-                        </div>
-                        <div className={styles.paginationControls}>
-                            <button className={styles.paginationButton} onClick={() => setCurrentPage(1)} disabled={currentPage === 1}>
-                                <FaAngleDoubleLeft />
-                            </button>
-                            <button
-                                className={styles.paginationButton}
-                                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                                disabled={currentPage === 1}
-                            >
-                                <FaChevronLeft />
-                            </button>
-
-                            {getPageNumbers().map((page, index) => (
-                                <React.Fragment key={index}>
-                                    {page === "..." ? (
-                                        <span className={styles.paginationEllipsis}>...</span>
-                                    ) : (
-                                        <button
-                                            className={`${styles.paginationButton} ${currentPage === page ? styles.active : ""}`}
-                                            onClick={() => setCurrentPage(page as number)}
-                                        >
-                                            {page}
-                                        </button>
-                                    )}
-                                </React.Fragment>
-                            ))}
-
-                            <button
-                                className={styles.paginationButton}
-                                onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                                disabled={currentPage === totalPages}
-                            >
-                                <FaChevronRight />
-                            </button>
-                            <button
-                                className={styles.paginationButton}
-                                onClick={() => setCurrentPage(totalPages)}
-                                disabled={currentPage === totalPages}
-                            >
-                                <FaAngleDoubleRight />
-                            </button>
-                        </div>
+                <div className={styles.paginationContainer}>
+                    <div className={styles.paginationInfo}>
+                        {t("articles.pagination.info", {
+                            start: totalArticles > 0 ? startIndex + 1 : 0,
+                            end: Math.min(endIndex, totalArticles),
+                            total: totalArticles,
+                        })}
                     </div>
-                )}
+                    <div className={styles.paginationControls}>
+                        <button className={styles.paginationButton} onClick={() => setCurrentPage(1)} disabled={currentPage === 1}>
+                            <FaAngleDoubleLeft />
+                        </button>
+                        <button
+                            className={styles.paginationButton}
+                            onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                            disabled={currentPage === 1}
+                        >
+                            <FaChevronLeft />
+                        </button>
+
+                        {getPageNumbers().map((page, index) => (
+                            <React.Fragment key={index}>
+                                {page === "..." ? (
+                                    <span className={styles.paginationEllipsis}>...</span>
+                                ) : (
+                                    <button
+                                        className={`${styles.paginationButton} ${currentPage === page ? styles.active : ""}`}
+                                        onClick={() => setCurrentPage(page as number)}
+                                        disabled={totalArticles === 0}
+                                    >
+                                        {page}
+                                    </button>
+                                )}
+                            </React.Fragment>
+                        ))}
+
+                        <button
+                            className={styles.paginationButton}
+                            onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                            disabled={currentPage === totalPages}
+                        >
+                            <FaChevronRight />
+                        </button>
+                        <button
+                            className={styles.paginationButton}
+                            onClick={() => setCurrentPage(totalPages)}
+                            disabled={currentPage === totalPages}
+                        >
+                            <FaAngleDoubleRight />
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     );

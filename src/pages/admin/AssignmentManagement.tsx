@@ -284,7 +284,7 @@ const AssignmentManagement: React.FC = () => {
     });
 
     // 分页逻辑
-    const totalPages = Math.ceil(total / pageSize);
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
     const currentData = filteredAssignments;
     const startIndex = (currentPage - 1) * pageSize;
 
@@ -631,57 +631,56 @@ const AssignmentManagement: React.FC = () => {
                     </tbody>
                 </table>
 
-                {totalPages >= 1 && (
-                    <div className={styles.pagination}>
-                        <span className={styles.pageInfo}>
-                            {t("assignments.pagination.showing", {
-                                start: startIndex + 1,
-                                end: Math.min(startIndex + pageSize, total),
-                                total,
-                            })}
-                        </span>
-                        <div className={styles.pageButtons}>
-                            <button className={styles.pageBtn} disabled={currentPage === 1} onClick={() => setCurrentPage(1)}>
-                                <FaAngleDoubleLeft />
-                            </button>
-                            <button
-                                className={styles.pageBtn}
-                                disabled={currentPage === 1}
-                                onClick={() => setCurrentPage((prev) => prev - 1)}
-                            >
-                                <FaChevronLeft />
-                            </button>
-                            {getPageNumbers().map((page, index) => (
-                                <React.Fragment key={index}>
-                                    {page === "..." ? (
-                                        <span className={styles.paginationEllipsis}>...</span>
-                                    ) : (
-                                        <button
-                                            className={`${styles.pageBtn} ${currentPage === page ? styles.active : ""}`}
-                                            onClick={() => setCurrentPage(page as number)}
-                                        >
-                                            {page}
-                                        </button>
-                                    )}
-                                </React.Fragment>
-                            ))}
-                            <button
-                                className={styles.pageBtn}
-                                disabled={currentPage === totalPages}
-                                onClick={() => setCurrentPage((prev) => prev + 1)}
-                            >
-                                <FaChevronRight />
-                            </button>
-                            <button
-                                className={styles.pageBtn}
-                                disabled={currentPage === totalPages}
-                                onClick={() => setCurrentPage(totalPages)}
-                            >
-                                <FaAngleDoubleRight />
-                            </button>
-                        </div>
+                <div className={styles.pagination}>
+                    <span className={styles.pageInfo}>
+                        {t("assignments.pagination.showing", {
+                            start: total > 0 ? startIndex + 1 : 0,
+                            end: Math.min(startIndex + pageSize, total),
+                            total,
+                        })}
+                    </span>
+                    <div className={styles.pageButtons}>
+                        <button className={styles.pageBtn} disabled={currentPage === 1} onClick={() => setCurrentPage(1)}>
+                            <FaAngleDoubleLeft />
+                        </button>
+                        <button
+                            className={styles.pageBtn}
+                            disabled={currentPage === 1}
+                            onClick={() => setCurrentPage((prev) => prev - 1)}
+                        >
+                            <FaChevronLeft />
+                        </button>
+                        {getPageNumbers().map((page, index) => (
+                            <React.Fragment key={index}>
+                                {page === "..." ? (
+                                    <span className={styles.paginationEllipsis}>...</span>
+                                ) : (
+                                    <button
+                                        className={`${styles.pageBtn} ${currentPage === page ? styles.active : ""}`}
+                                        onClick={() => setCurrentPage(page as number)}
+                                        disabled={total === 0}
+                                    >
+                                        {page}
+                                    </button>
+                                )}
+                            </React.Fragment>
+                        ))}
+                        <button
+                            className={styles.pageBtn}
+                            disabled={currentPage === totalPages}
+                            onClick={() => setCurrentPage((prev) => prev + 1)}
+                        >
+                            <FaChevronRight />
+                        </button>
+                        <button
+                            className={styles.pageBtn}
+                            disabled={currentPage === totalPages}
+                            onClick={() => setCurrentPage(totalPages)}
+                        >
+                            <FaAngleDoubleRight />
+                        </button>
                     </div>
-                )}
+                </div>
             </div>
 
             {/* 创建/编辑模态框 */}

@@ -204,7 +204,7 @@ const FeedbackManagement: React.FC = () => {
         return feedbacks.filter((f) => f.content.toLowerCase().includes(kw) || f.contact?.toLowerCase().includes(kw));
     }, [feedbacks, search]);
 
-    const totalPages = Math.ceil(total / PAGE_SIZE);
+    const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
     const getPageNumbers = () => {
         const pages: (number | string)[] = [];
@@ -466,53 +466,48 @@ const FeedbackManagement: React.FC = () => {
                             </tbody>
                         </table>
 
-                        {totalPages >= 1 && (
-                            <div className={styles.pagination}>
-                                <span className={styles.pageInfo}>
-                                    {t("feedbacks.list.pagination.info", {
-                                        start: (page - 1) * PAGE_SIZE + 1,
-                                        end: Math.min(page * PAGE_SIZE, total),
-                                        total,
-                                    })}
-                                </span>
-                                <div className={styles.pageButtons}>
-                                    <button className={styles.pageBtn} disabled={page === 1} onClick={() => setPage(1)}>
-                                        <FaAngleDoubleLeft />
-                                    </button>
-                                    <button className={styles.pageBtn} disabled={page === 1} onClick={() => setPage((p) => p - 1)}>
-                                        <FaChevronLeft />
-                                    </button>
-                                    {getPageNumbers().map((p, index) => (
-                                        <React.Fragment key={index}>
-                                            {p === "..." ? (
-                                                <span className={styles.paginationEllipsis}>...</span>
-                                            ) : (
-                                                <button
-                                                    className={`${styles.pageBtn} ${page === p ? styles.active : ""}`}
-                                                    onClick={() => setPage(p as number)}
-                                                >
-                                                    {p}
-                                                </button>
-                                            )}
-                                        </React.Fragment>
-                                    ))}
-                                    <button
-                                        className={styles.pageBtn}
-                                        disabled={page === totalPages}
-                                        onClick={() => setPage((p) => p + 1)}
-                                    >
-                                        <FaChevronRight />
-                                    </button>
-                                    <button
-                                        className={styles.pageBtn}
-                                        disabled={page === totalPages}
-                                        onClick={() => setPage(totalPages)}
-                                    >
-                                        <FaAngleDoubleRight />
-                                    </button>
-                                </div>
+                        <div className={styles.pagination}>
+                            <span className={styles.pageInfo}>
+                                {t("feedbacks.list.pagination.info", {
+                                    start: total > 0 ? (page - 1) * PAGE_SIZE + 1 : 0,
+                                    end: Math.min(page * PAGE_SIZE, total),
+                                    total,
+                                })}
+                            </span>
+                            <div className={styles.pageButtons}>
+                                <button className={styles.pageBtn} disabled={page === 1} onClick={() => setPage(1)}>
+                                    <FaAngleDoubleLeft />
+                                </button>
+                                <button className={styles.pageBtn} disabled={page === 1} onClick={() => setPage((p) => p - 1)}>
+                                    <FaChevronLeft />
+                                </button>
+                                {getPageNumbers().map((p, index) => (
+                                    <React.Fragment key={index}>
+                                        {p === "..." ? (
+                                            <span className={styles.paginationEllipsis}>...</span>
+                                        ) : (
+                                            <button
+                                                className={`${styles.pageBtn} ${page === p ? styles.active : ""}`}
+                                                onClick={() => setPage(p as number)}
+                                                disabled={total === 0}
+                                            >
+                                                {p}
+                                            </button>
+                                        )}
+                                    </React.Fragment>
+                                ))}
+                                <button
+                                    className={styles.pageBtn}
+                                    disabled={page === totalPages}
+                                    onClick={() => setPage((p) => p + 1)}
+                                >
+                                    <FaChevronRight />
+                                </button>
+                                <button className={styles.pageBtn} disabled={page === totalPages} onClick={() => setPage(totalPages)}>
+                                    <FaAngleDoubleRight />
+                                </button>
                             </div>
-                        )}
+                        </div>
                     </>
                 )}
             </div>

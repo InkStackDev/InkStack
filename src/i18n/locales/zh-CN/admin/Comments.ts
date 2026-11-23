@@ -4,6 +4,28 @@ const section = {
     description: "管理用户评论、审核内容和处理举报",
     totalComments: "共 {{total}} 条评论",
     empty: "暂无数据",
+    stats: {
+        total: "总评论数",
+        pending: "待审核",
+        approved: "已通过",
+        spam: "垃圾评论",
+        reported: "被举报",
+    },
+    table: {
+        title: "评论列表",
+        total: "共 {{total}} 条评论",
+        headers: {
+            author: "评论用户",
+            content: "评论内容",
+            status: "状态",
+            engagement: "互动",
+            time: "时间",
+            actions: "操作",
+        },
+        expandReplies: "展开回复",
+        collapseReplies: "收起回复",
+        empty: "暂无数据",
+    },
     filter: {
         title: "筛选条件",
         clear: "清除筛选",
@@ -28,6 +50,8 @@ const section = {
     },
     batch: {
         selected: "已选择 {{total}} 条评论",
+        selectAll: "全选当前页",
+        selectRow: "选择该评论",
         approve: "批准",
         reject: "拒绝",
         markSpam: "标记垃圾",

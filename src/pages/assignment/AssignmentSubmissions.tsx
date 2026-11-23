@@ -103,7 +103,7 @@ const AssignmentSubmissions: React.FC = () => {
             : null;
 
     // 分页计算
-    const totalPages = Math.ceil(submissions.length / pageSize);
+    const totalPages = Math.max(1, Math.ceil(submissions.length / pageSize));
     const startIndex = (currentPage - 1) * pageSize;
     const endIndex = startIndex + pageSize;
     const currentSubmissions = submissions.slice(startIndex, endIndex);
@@ -574,39 +574,38 @@ const AssignmentSubmissions: React.FC = () => {
                                     </div>
 
                                     {/* 分页组件 */}
-                                    {totalPages > 1 && (
-                                        <div className={styles.pagination}>
-                                            <button
-                                                className={`${styles.pageBtn} ${currentPage === 1 ? styles.disabled : ""}`}
-                                                onClick={() => setCurrentPage(currentPage - 1)}
-                                                disabled={currentPage === 1}
-                                            >
-                                                <FaChevronLeft />
-                                                {t("submissions.prevPage")}
-                                            </button>
+                                    <div className={styles.pagination}>
+                                        <button
+                                            className={`${styles.pageBtn} ${currentPage === 1 ? styles.disabled : ""}`}
+                                            onClick={() => setCurrentPage(currentPage - 1)}
+                                            disabled={currentPage === 1}
+                                        >
+                                            <FaChevronLeft />
+                                            {t("submissions.prevPage")}
+                                        </button>
 
-                                            <div className={styles.pageNumbers}>
-                                                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-                                                    <button
-                                                        key={page}
-                                                        className={`${styles.pageNumber} ${currentPage === page ? styles.active : ""}`}
-                                                        onClick={() => setCurrentPage(page)}
-                                                    >
-                                                        {page}
-                                                    </button>
-                                                ))}
-                                            </div>
-
-                                            <button
-                                                className={`${styles.pageBtn} ${currentPage === totalPages ? styles.disabled : ""}`}
-                                                onClick={() => setCurrentPage(currentPage + 1)}
-                                                disabled={currentPage === totalPages}
-                                            >
-                                                {t("submissions.nextPage")}
-                                                <FaChevronRight />
-                                            </button>
+                                        <div className={styles.pageNumbers}>
+                                            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                                                <button
+                                                    key={page}
+                                                    className={`${styles.pageNumber} ${currentPage === page ? styles.active : ""}`}
+                                                    onClick={() => setCurrentPage(page)}
+                                                    disabled={submissions.length === 0}
+                                                >
+                                                    {page}
+                                                </button>
+                                            ))}
                                         </div>
-                                    )}
+
+                                        <button
+                                            className={`${styles.pageBtn} ${currentPage === totalPages ? styles.disabled : ""}`}
+                                            onClick={() => setCurrentPage(currentPage + 1)}
+                                            disabled={currentPage === totalPages}
+                                        >
+                                            {t("submissions.nextPage")}
+                                            <FaChevronRight />
+                                        </button>
+                                    </div>
                                 </>
                             )}
                         </div>

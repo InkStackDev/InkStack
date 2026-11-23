@@ -771,43 +771,39 @@ const CodeReviewList: React.FC = () => {
                 )}
             </div>
 
-            {total > 0 && (
-                <div className={styles.pagination}>
-                    <span className={styles.paginationInfo}>{t("reviews.pagination.total", { total })}</span>
-                    <div className={styles.paginationControls}>
-                        <button disabled={currentPage === 1} onClick={() => setCurrentPage(1)}>
-                            <FaAngleDoubleLeft />
-                        </button>
-                        <button disabled={currentPage === 1} onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}>
-                            <FaChevronLeft />
-                        </button>
-                        {getPageNumbers().map((page, i) =>
-                            page === "..." ? (
-                                <span key={`d-${i}`} className={styles.paginationEllipsis}>
-                                    ...
-                                </span>
-                            ) : (
-                                <button
-                                    key={page}
-                                    className={currentPage === page ? styles.activePage : ""}
-                                    onClick={() => setCurrentPage(page as number)}
-                                >
-                                    {page}
-                                </button>
-                            ),
-                        )}
-                        <button
-                            disabled={currentPage === totalPages}
-                            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                        >
-                            <FaChevronRight />
-                        </button>
-                        <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(totalPages)}>
-                            <FaAngleDoubleRight />
-                        </button>
-                    </div>
+            <div className={styles.pagination}>
+                <span className={styles.paginationInfo}>{t("reviews.pagination.total", { total })}</span>
+                <div className={styles.paginationControls}>
+                    <button disabled={currentPage === 1} onClick={() => setCurrentPage(1)}>
+                        <FaAngleDoubleLeft />
+                    </button>
+                    <button disabled={currentPage === 1} onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}>
+                        <FaChevronLeft />
+                    </button>
+                    {getPageNumbers().map((page, i) =>
+                        page === "..." ? (
+                            <span key={`d-${i}`} className={styles.paginationEllipsis}>
+                                ...
+                            </span>
+                        ) : (
+                            <button
+                                key={page}
+                                className={currentPage === page ? styles.activePage : ""}
+                                onClick={() => setCurrentPage(page as number)}
+                                disabled={total === 0}
+                            >
+                                {page}
+                            </button>
+                        ),
+                    )}
+                    <button disabled={currentPage === totalPages} onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}>
+                        <FaChevronRight />
+                    </button>
+                    <button disabled={currentPage === totalPages} onClick={() => setCurrentPage(totalPages)}>
+                        <FaAngleDoubleRight />
+                    </button>
                 </div>
-            )}
+            </div>
 
             {/* ============ VIEW MODAL ============ */}
             <Modal

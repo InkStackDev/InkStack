@@ -400,42 +400,37 @@ const OrganizationTabs: React.FC<OrganizationTabsProps> = ({
                         </table>
                     )}
                     {/* 分页区块 */}
-                    {membersTotal > 0 && (
-                        <div className={styles.pagination}>
-                            <div className={styles.paginationInfo}>
-                                {t("tabs.pagination.info", {
-                                    start: (page - 1) * PAGE_SIZE + 1,
-                                    end: Math.min(page * PAGE_SIZE, membersTotal),
-                                    total: membersTotal,
-                                })}
-                            </div>
-                            <div className={styles.paginationControls}>
-                                <button
-                                    className={styles.paginationButton}
-                                    disabled={page === 1}
-                                    onClick={() => onPageChange(page - 1)}
-                                >
-                                    {t("tabs.pagination.prev")}
-                                </button>
-                                {Array.from({ length: Math.ceil(membersTotal / PAGE_SIZE) }, (_, i) => (
-                                    <button
-                                        key={i + 1}
-                                        className={`${styles.paginationButton} ${page === i + 1 ? styles.active : ""}`}
-                                        onClick={() => onPageChange(i + 1)}
-                                    >
-                                        {i + 1}
-                                    </button>
-                                ))}
-                                <button
-                                    className={styles.paginationButton}
-                                    disabled={page === Math.ceil(membersTotal / PAGE_SIZE)}
-                                    onClick={() => onPageChange(page + 1)}
-                                >
-                                    {t("tabs.pagination.next")}
-                                </button>
-                            </div>
+                    <div className={styles.pagination}>
+                        <div className={styles.paginationInfo}>
+                            {t("tabs.pagination.info", {
+                                start: membersTotal > 0 ? (page - 1) * PAGE_SIZE + 1 : 0,
+                                end: Math.min(page * PAGE_SIZE, membersTotal),
+                                total: membersTotal,
+                            })}
                         </div>
-                    )}
+                        <div className={styles.paginationControls}>
+                            <button className={styles.paginationButton} disabled={page === 1} onClick={() => onPageChange(page - 1)}>
+                                {t("tabs.pagination.prev")}
+                            </button>
+                            {Array.from({ length: Math.max(1, Math.ceil(membersTotal / PAGE_SIZE)) }, (_, i) => (
+                                <button
+                                    key={i + 1}
+                                    className={`${styles.paginationButton} ${page === i + 1 ? styles.active : ""}`}
+                                    onClick={() => onPageChange(i + 1)}
+                                    disabled={membersTotal === 0}
+                                >
+                                    {i + 1}
+                                </button>
+                            ))}
+                            <button
+                                className={styles.paginationButton}
+                                disabled={page === Math.max(1, Math.ceil(membersTotal / PAGE_SIZE))}
+                                onClick={() => onPageChange(page + 1)}
+                            >
+                                {t("tabs.pagination.next")}
+                            </button>
+                        </div>
+                    </div>
                 </>
             )}
 
@@ -509,42 +504,41 @@ const OrganizationTabs: React.FC<OrganizationTabsProps> = ({
                         </table>
                     )}
                     {/* 分页区块 - 待处理请求 */}
-                    {pendingRequestsTotal > 0 && (
-                        <div className={styles.pagination}>
-                            <div className={styles.paginationInfo}>
-                                {t("tabs.pagination.info", {
-                                    start: (pendingRequestsPage - 1) * PAGE_SIZE + 1,
-                                    end: Math.min(pendingRequestsPage * PAGE_SIZE, pendingRequestsTotal),
-                                    total: pendingRequestsTotal,
-                                })}
-                            </div>
-                            <div className={styles.paginationControls}>
-                                <button
-                                    className={styles.paginationButton}
-                                    disabled={pendingRequestsPage === 1}
-                                    onClick={() => onPendingPageChange(pendingRequestsPage - 1)}
-                                >
-                                    {t("tabs.pagination.prev")}
-                                </button>
-                                {Array.from({ length: Math.ceil(pendingRequestsTotal / PAGE_SIZE) }, (_, i) => (
-                                    <button
-                                        key={i + 1}
-                                        className={`${styles.paginationButton} ${pendingRequestsPage === i + 1 ? styles.active : ""}`}
-                                        onClick={() => onPendingPageChange(i + 1)}
-                                    >
-                                        {i + 1}
-                                    </button>
-                                ))}
-                                <button
-                                    className={styles.paginationButton}
-                                    disabled={pendingRequestsPage === Math.ceil(pendingRequestsTotal / PAGE_SIZE)}
-                                    onClick={() => onPendingPageChange(pendingRequestsPage + 1)}
-                                >
-                                    {t("tabs.pagination.next")}
-                                </button>
-                            </div>
+                    <div className={styles.pagination}>
+                        <div className={styles.paginationInfo}>
+                            {t("tabs.pagination.info", {
+                                start: pendingRequestsTotal > 0 ? (pendingRequestsPage - 1) * PAGE_SIZE + 1 : 0,
+                                end: Math.min(pendingRequestsPage * PAGE_SIZE, pendingRequestsTotal),
+                                total: pendingRequestsTotal,
+                            })}
                         </div>
-                    )}
+                        <div className={styles.paginationControls}>
+                            <button
+                                className={styles.paginationButton}
+                                disabled={pendingRequestsPage === 1}
+                                onClick={() => onPendingPageChange(pendingRequestsPage - 1)}
+                            >
+                                {t("tabs.pagination.prev")}
+                            </button>
+                            {Array.from({ length: Math.max(1, Math.ceil(pendingRequestsTotal / PAGE_SIZE)) }, (_, i) => (
+                                <button
+                                    key={i + 1}
+                                    className={`${styles.paginationButton} ${pendingRequestsPage === i + 1 ? styles.active : ""}`}
+                                    onClick={() => onPendingPageChange(i + 1)}
+                                    disabled={pendingRequestsTotal === 0}
+                                >
+                                    {i + 1}
+                                </button>
+                            ))}
+                            <button
+                                className={styles.paginationButton}
+                                disabled={pendingRequestsPage === Math.max(1, Math.ceil(pendingRequestsTotal / PAGE_SIZE))}
+                                onClick={() => onPendingPageChange(pendingRequestsPage + 1)}
+                            >
+                                {t("tabs.pagination.next")}
+                            </button>
+                        </div>
+                    </div>
                 </>
             )}
 
@@ -714,42 +708,41 @@ const OrganizationTabs: React.FC<OrganizationTabsProps> = ({
                         </table>
                     )}
                     {/* 分页区块 - 任务列表 */}
-                    {tasksTotal > 0 && (
-                        <div className={styles.pagination}>
-                            <div className={styles.paginationInfo}>
-                                {t("tabs.pagination.info", {
-                                    start: (tasksPage - 1) * TASKS_PAGE_SIZE + 1,
-                                    end: Math.min(tasksPage * TASKS_PAGE_SIZE, tasksTotal),
-                                    total: tasksTotal,
-                                })}
-                            </div>
-                            <div className={styles.paginationControls}>
-                                <button
-                                    className={styles.paginationButton}
-                                    disabled={tasksPage === 1}
-                                    onClick={() => onTasksPageChange(tasksPage - 1)}
-                                >
-                                    {t("tabs.pagination.prev")}
-                                </button>
-                                {Array.from({ length: Math.ceil(tasksTotal / TASKS_PAGE_SIZE) }, (_, i) => (
-                                    <button
-                                        key={i + 1}
-                                        className={`${styles.paginationButton} ${tasksPage === i + 1 ? styles.active : ""}`}
-                                        onClick={() => onRefreshTasks(i + 1)}
-                                    >
-                                        {i + 1}
-                                    </button>
-                                ))}
-                                <button
-                                    className={styles.paginationButton}
-                                    disabled={tasksPage === Math.ceil(tasksTotal / TASKS_PAGE_SIZE)}
-                                    onClick={() => onTasksPageChange(tasksPage + 1)}
-                                >
-                                    {t("tabs.pagination.next")}
-                                </button>
-                            </div>
+                    <div className={styles.pagination}>
+                        <div className={styles.paginationInfo}>
+                            {t("tabs.pagination.info", {
+                                start: tasksTotal > 0 ? (tasksPage - 1) * TASKS_PAGE_SIZE + 1 : 0,
+                                end: Math.min(tasksPage * TASKS_PAGE_SIZE, tasksTotal),
+                                total: tasksTotal,
+                            })}
                         </div>
-                    )}
+                        <div className={styles.paginationControls}>
+                            <button
+                                className={styles.paginationButton}
+                                disabled={tasksPage === 1}
+                                onClick={() => onTasksPageChange(tasksPage - 1)}
+                            >
+                                {t("tabs.pagination.prev")}
+                            </button>
+                            {Array.from({ length: Math.max(1, Math.ceil(tasksTotal / TASKS_PAGE_SIZE)) }, (_, i) => (
+                                <button
+                                    key={i + 1}
+                                    className={`${styles.paginationButton} ${tasksPage === i + 1 ? styles.active : ""}`}
+                                    onClick={() => onRefreshTasks(i + 1)}
+                                    disabled={tasksTotal === 0}
+                                >
+                                    {i + 1}
+                                </button>
+                            ))}
+                            <button
+                                className={styles.paginationButton}
+                                disabled={tasksPage === Math.max(1, Math.ceil(tasksTotal / TASKS_PAGE_SIZE))}
+                                onClick={() => onTasksPageChange(tasksPage + 1)}
+                            >
+                                {t("tabs.pagination.next")}
+                            </button>
+                        </div>
+                    </div>
                 </>
             )}
 
