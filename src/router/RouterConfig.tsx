@@ -36,8 +36,11 @@ const AssignmentSubmit = lazy(() => import("../pages/assignment/AssignmentSubmit
 const AssignmentSubmissions = lazy(() => import("../pages/assignment/AssignmentSubmissions"));
 const ChunkUploadTest = lazy(() => import("../pages/test/ChunkUploadTest"));
 const SampleThemeStylePanel = lazy(() => import("../sample/ThemeStylePanel"));
-const AgentSessionPanel = lazy(() => import("../pages/rd-platform/AgentSessionPanel"));
-const SampleAgentSessionPanel = lazy(() => import("../sample/AgentSessionPanel"));
+// Agent UI 属于可选产品面：未启用时不能产出任何 Agent chunk
+const AgentSessionPanel =
+    import.meta.env.VITE_AGENT_ENABLED === "true" ? lazy(() => import("../pages/rd-platform/AgentSessionPanel")) : null;
+const SampleAgentSessionPanel =
+    import.meta.env.DEV && import.meta.env.VITE_AGENT_ENABLED === "true" ? lazy(() => import("../sample/AgentSessionPanel")) : null;
 const RdDashboard = lazy(() => import("../pages/rd-platform/Dashboard"));
 const RequirementList = lazy(() => import("../pages/rd-platform/RequirementList"));
 const BugList = lazy(() => import("../pages/rd-platform/BugList"));
@@ -183,14 +186,14 @@ const RouterConfig: React.FC = () => {
                     {/* 个人管理中心 */}
                     <Route path="/personal" element={<PersonalCenter />} />
 
-                    {import.meta.env.VITE_AGENT_ENABLED === "true" && import.meta.env.DEV && (
+                    {SampleAgentSessionPanel && import.meta.env.VITE_AGENT_ENABLED === "true" && import.meta.env.DEV && (
                         <Route path="/test/agent-session-panel" element={<SampleAgentSessionPanel />} />
                     )}
 
                     {/* 研发平台 */}
                     <Route path="/rd" element={<RdLayout />}>
                         <Route index element={<RdDashboard />} />
-                        {import.meta.env.VITE_AGENT_ENABLED === "true" && (
+                        {AgentSessionPanel && import.meta.env.VITE_AGENT_ENABLED === "true" && (
                             <Route
                                 path="agent"
                                 element={

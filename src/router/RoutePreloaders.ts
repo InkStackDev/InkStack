@@ -36,14 +36,19 @@ const PAGE_PRELOADERS: Array<[prefix: string, load: () => Promise<unknown>]> = [
     ["/rd/tasks", () => import("../pages/rd-platform/TaskList")],
     ["/rd/reviews", () => import("../pages/rd-platform/CodeReviewList")],
     ["/rd/my-tickets", () => import("../pages/rd-platform/MyTickets")],
-    ["/rd/agent", () => import("../pages/rd-platform/AgentSessionPanel")],
     ["/rd", () => import("../pages/rd-platform/Dashboard")],
 ];
+
+// Agent 页面仅在启用时注册预取，未启用构建不会产生 Agent chunk
+const AGENT_PRELOADERS: Array<[prefix: string, load: () => Promise<unknown>]> =
+    import.meta.env.VITE_AGENT_ENABLED === "true" ? [["/rd/agent", () => import("../pages/rd-platform/AgentSessionPanel")]] : [];
+
+const ALL_PRELOADERS = [...PAGE_PRELOADERS, ...AGENT_PRELOADERS];
 
 const preloadedRoutes = new Set<string>();
 
 export function preloadRouteForPath(path: string): void {
-    const matched = PAGE_PRELOADERS.filter(([prefix]) => path === prefix || path.startsWith(`${prefix}/`)).sort(
+    const matched = ALL_PRELOADERS.filter(([prefix]) => path === prefix || path.startsWith(`${prefix}/`)).sort(
         (a, b) => b[0].length - a[0].length,
     )[0];
     if (!matched || preloadedRoutes.has(matched[0])) {
