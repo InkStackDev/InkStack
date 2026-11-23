@@ -20,7 +20,6 @@ import {
 } from "react-icons/fa";
 import styles from "./RdLayout.module.css";
 import ThemeToggle from "@/components/themeToggle/ThemeToggle";
-import NavSpinner from "@/components/navSpinner/NavSpinner";
 import Notification from "@/components/notification/Notification";
 import UserDropdown from "@/components/userDropdown/UserDropdown";
 import Footer from "@/components/footer/Footer";
@@ -138,7 +137,6 @@ const RdLayoutShell: React.FC = () => {
         const roleOverride = !selectedOrgId ? String(user?.role || "") : orgRoleName;
         return (
             <div className={styles.rdTopBarActions}>
-                <NavSpinner />
                 <ThemeToggle />
                 <Notification />
                 {user ? (
