@@ -174,6 +174,30 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     }, [isAuthenticated, user]);
 
+    // 网络恢复 / 页面重新可见时补一次连接，避免首次握手失败或后台挂起后一直没有 WS。
+    // canReconnect 会在 replaced / 主动 disconnect 后为 false，防止多标签页互相顶号时重连循环。
+    useEffect(() => {
+        if (!isAuthenticated || !user) {
+            return;
+        }
+        const ensureConnected = () => {
+            if (!sessionWS.isConnected && sessionWS.canReconnect) {
+                sessionWS.connect(user.id);
+            }
+        };
+        const handleVisibility = () => {
+            if (document.visibilityState === "visible") {
+                ensureConnected();
+            }
+        };
+        window.addEventListener("online", ensureConnected);
+        document.addEventListener("visibilitychange", handleVisibility);
+        return () => {
+            window.removeEventListener("online", ensureConnected);
+            document.removeEventListener("visibilitychange", handleVisibility);
+        };
+    }, [isAuthenticated, user]);
+
     // 统一会话系统帧：顶号 / 会话失效 / 设备被踢
     useEffect(() => {
         // 同一设备的新连接顶掉当前连接：主动断开且不再重连，避免多标签页互相顶号形成重连循环。

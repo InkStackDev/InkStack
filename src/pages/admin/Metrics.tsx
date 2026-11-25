@@ -27,7 +27,7 @@ import Selector from "@/components/selector/Selector";
 import Switch from "@/components/switch/Switch";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useAsyncResource } from "@/hooks/UseAsyncResource";
-import MetricsService, { type MetricSample, type RouteMetricsRow } from "@/services/MetricsService.ts";
+import MetricsService, { type MetricsPayload, type RouteMetricsRow } from "@/services/MetricsService.ts";
 import { getThemeFontFamily } from "@/utils/ThemeFont";
 import styles from "./Metrics.module.css";
 
@@ -106,15 +106,21 @@ const Metrics: FC = () => {
     }, []);
 
     const fetcher = useCallback((signal: AbortSignal) => MetricsService.getMetrics(signal), []);
-    const { data: samples, loading, error, reload } = useAsyncResource<MetricSample[]>(fetcher, [], { timeoutMs: 15000 });
+    const { data: payload, loading, error, reload } = useAsyncResource<MetricsPayload>(fetcher, [], { timeoutMs: 15000 });
 
-    const snapshot = useMemo(() => (samples ? MetricsService.buildSnapshot(samples) : null), [samples]);
+    const snapshot = useMemo(
+        () =>
+            payload
+                ? MetricsService.buildSnapshot(payload.metrics ?? [], payload.instanceCount ?? 1, payload.degraded ?? false)
+                : null,
+        [payload],
+    );
 
     useEffect(() => {
-        if (samples) {
+        if (payload) {
             setLastUpdated(new Date());
         }
-    }, [samples]);
+    }, [payload]);
 
     useEffect(() => {
         if (!autoRefresh) {
@@ -561,6 +567,7 @@ const Metrics: FC = () => {
             hint: t("metrics.summary.connectionDetail", {
                 http: snapshot.connections.http,
                 ws: snapshot.connections.ws,
+                devices: snapshot.connections.wsDevices,
             }),
         },
         {
@@ -611,8 +618,14 @@ const Metrics: FC = () => {
                     <p className={styles.pageDescription}>{t("metrics.description")}</p>
                     <p className={styles.workerHint}>
                         <FaInfoCircle />
-                        <span>{t("metrics.workerHint")}</span>
+                        <span>{t("metrics.workerHint", { instances: snapshot.instanceCount })}</span>
                     </p>
+                    {snapshot.degraded ? (
+                        <p className={styles.workerHint}>
+                            <FaExclamationTriangle />
+                            <span>{t("metrics.degradedHint")}</span>
+                        </p>
+                    ) : null}
                 </div>
                 <div className={styles.headerActions}>
                     <span className={styles.lastUpdated}>
@@ -940,7 +953,7 @@ const Metrics: FC = () => {
                     </Button>
                 }
             >
-                <pre className={styles.rawJson}>{JSON.stringify(samples ?? [], null, 2)}</pre>
+                <pre className={styles.rawJson}>{JSON.stringify(payload ?? {}, null, 2)}</pre>
             </Modal>
         </div>
     );

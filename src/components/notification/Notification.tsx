@@ -273,14 +273,11 @@ const Notification: React.FC = () => {
         return () => document.removeEventListener("mousedown", handleClickOutside);
     }, []);
 
-    // WebSocket 连接状态（仅开发环境）
+    // WebSocket 连接状态
     useEffect(() => {
-        if (!import.meta.env.DEV) {
-            return;
-        }
-        setWsConnected(sessionWS.isConnected);
         const unsubOpen = sessionWS.onOpen(() => setWsConnected(true));
         const unsubClose = sessionWS.onClose(() => setWsConnected(false));
+        setWsConnected(sessionWS.isConnected);
         return () => {
             unsubOpen();
             unsubClose();
@@ -412,23 +409,21 @@ const Notification: React.FC = () => {
                     <div className={styles.header}>
                         <span className={styles.title}>
                             {t("notification.title")}
-                            {import.meta.env.DEV && (
-                                <span
-                                    style={{
-                                        display: "inline-block",
-                                        width: 7,
-                                        height: 7,
-                                        verticalAlign: "middle",
-                                        marginLeft: 6,
-                                        marginBottom: 6,
-                                        borderRadius: "50%",
-                                        backgroundColor: wsConnected ? "#22c55e" : "#ef4444",
-                                        boxShadow: wsConnected ? "0 0 5px rgba(34, 197, 94, 0.6)" : "0 0 5px rgba(239, 68, 68, 0.6)",
-                                        flexShrink: 0,
-                                    }}
-                                    title={wsConnected ? t("notification.wsConnected") : t("notification.wsDisconnected")}
-                                />
-                            )}
+                            <span
+                                style={{
+                                    display: "inline-block",
+                                    width: 7,
+                                    height: 7,
+                                    verticalAlign: "middle",
+                                    marginLeft: 6,
+                                    marginBottom: 6,
+                                    borderRadius: "50%",
+                                    backgroundColor: wsConnected ? "#22c55e" : "#ef4444",
+                                    boxShadow: wsConnected ? "0 0 5px rgba(34, 197, 94, 0.6)" : "0 0 5px rgba(239, 68, 68, 0.6)",
+                                    flexShrink: 0,
+                                }}
+                                title={wsConnected ? t("notification.wsConnected") : t("notification.wsDisconnected")}
+                            />
                         </span>
                         {unreadCount > 0 && (
                             <button className={styles.markAllRead} onClick={handleMarkAllRead}>

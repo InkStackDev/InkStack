@@ -129,17 +129,33 @@ describe("WebSocket Cookie 建连", () => {
         vi.useRealTimers();
     });
 
-    it("握手从未成功时不会自动重连刷屏", () => {
+    it("首次握手失败时进行有限次重试，用尽后停止", () => {
         vi.useFakeTimers();
-        const client = new WebSocketClient("/ws/v1/session");
+        const client = new WebSocketClient("/ws/v1/session", {
+            maxReconnectAttempts: 2,
+            reconnectDelay: 1000,
+            maxReconnectDelay: 1000,
+        });
         captureConsole(client, 1);
-        const socket = MockWebSocket.instances[0];
 
-        socket.readyState = MockWebSocket.CLOSED;
-        socket.onclose?.({ code: 1006, reason: "", wasClean: false } as CloseEvent);
+        const failCurrent = (index: number) => {
+            const socket = MockWebSocket.instances[index];
+            socket.readyState = MockWebSocket.CLOSED;
+            socket.onclose?.({ code: 1006, reason: "", wasClean: false } as CloseEvent);
+        };
+
+        failCurrent(0);
+        vi.advanceTimersByTime(1000);
+        expect(MockWebSocket.instances).toHaveLength(2);
+
+        failCurrent(1);
+        vi.advanceTimersByTime(1000);
+        expect(MockWebSocket.instances).toHaveLength(3);
+
+        failCurrent(2);
         vi.advanceTimersByTime(60000);
+        expect(MockWebSocket.instances).toHaveLength(3);
 
-        expect(MockWebSocket.instances).toHaveLength(1);
         vi.useRealTimers();
     });
 
