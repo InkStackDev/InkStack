@@ -7,6 +7,13 @@ const section = {
     joinDisabled: "该组织已停用，无法加入",
     rejoin: "重新加入",
     applyJoin: "申请加入",
+    owner: "组织所有者",
+    leave: "退出组织",
+    cancelApply: "取消申请",
+    disable: "停用组织",
+    enable: "启用组织",
+    delete: "删除组织",
+    more: "更多",
     stats: {
         totalMembers: "总成员数",
         activeMembers: "活跃成员",

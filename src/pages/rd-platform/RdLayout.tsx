@@ -2,7 +2,7 @@ import { AGENT_ENABLED } from "@/config/Features";
 import { FaRobot } from "react-icons/fa";
 import React, { Suspense, useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { useLocation, Outlet, useSearchParams } from "react-router-dom";
+import { useLocation, Outlet, useSearchParams, useNavigate } from "react-router-dom";
 import { useRdNavigate } from "@/hooks/UseRdNavigate.ts";
 import { encodeId, decodeId } from "@/utils/HashId.ts";
 import {
@@ -45,19 +45,24 @@ const RdLayout: React.FC = () => {
 
     return (
         <RdOrgProvider initialOrgId={urlOrgId}>
-            <RdLayoutShell />
+            <RdLayoutShell requestedOrgId={urlOrgId} />
         </RdOrgProvider>
     );
 };
 
-const RdLayoutShell: React.FC = () => {
+interface RdLayoutShellProps {
+    requestedOrgId: string;
+}
+
+const RdLayoutShell: React.FC<RdLayoutShellProps> = ({ requestedOrgId }) => {
     const navigate = useRdNavigate();
+    const rawNavigate = useNavigate();
     const { t } = useTranslation("rd");
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const location = useLocation();
     const { user, logout, isAuthenticated, loading } = useAuth();
-    const { loading: orgLoading, orgs: rdOrgs } = useRdOrg();
+    const { loading: orgLoading, orgs: rdOrgs, requestedOrgInvalid } = useRdOrg();
 
     // 权限校验：调用后端 check_access 接口
     const [accessChecked, setAccessChecked] = useState(false);
@@ -150,7 +155,7 @@ const RdLayoutShell: React.FC = () => {
     };
 
     const SidebarOrgSelector: React.FC = () => {
-        const { orgs, selectedOrgId, setSelectedOrgId } = useRdOrg();
+        const { orgs, selectedOrgId, setSelectedOrgId, requestedOrgInvalid } = useRdOrg();
         const [, setSearchParams] = useSearchParams();
 
         const handleOrgChange = (orgId: string) => {
@@ -162,7 +167,15 @@ const RdLayoutShell: React.FC = () => {
             }
         };
 
-        return <OrgSelector orgs={orgs} selectedOrgId={selectedOrgId} onChange={handleOrgChange} collapsed={sidebarCollapsed} />;
+        return (
+            <OrgSelector
+                orgs={orgs}
+                selectedOrgId={selectedOrgId}
+                onChange={handleOrgChange}
+                collapsed={sidebarCollapsed}
+                invalid={requestedOrgInvalid}
+            />
+        );
     };
 
     const toggleSidebar = () => setSidebarCollapsed(!sidebarCollapsed);
@@ -269,6 +282,78 @@ const RdLayoutShell: React.FC = () => {
         content = (
             <div style={{ maxWidth: "var(--page-max-width)", margin: "0 auto", width: "100%", padding: "2rem 1.8rem" }}>
                 <AuthRequired message={t("layout.authRequired")}>{null}</AuthRequired>
+            </div>
+        );
+    } else if (requestedOrgInvalid && requestedOrgId) {
+        content = (
+            <div
+                style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    minHeight: "60vh",
+                    padding: "20px",
+                }}
+            >
+                <div style={{ fontSize: "64px", color: "#f0a020", marginBottom: "24px", opacity: 0.9 }}>
+                    <FaLock />
+                </div>
+                <h1 style={{ fontSize: "28px", fontWeight: "bold", marginBottom: "12px", color: "var(--text-primary)" }}>
+                    {t("orgGate.invalidTitle")}
+                </h1>
+                <p
+                    style={{
+                        fontSize: "16px",
+                        color: "var(--text-secondary)",
+                        marginBottom: "32px",
+                        textAlign: "center",
+                        maxWidth: "480px",
+                        lineHeight: "1.6",
+                    }}
+                >
+                    {t("orgGate.invalidLine1")}
+                    <br />
+                    {t("orgGate.invalidLine2")}
+                </p>
+                <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", justifyContent: "center" }}>
+                    <button
+                        onClick={() => rawNavigate("/organizations/list")}
+                        style={{
+                            padding: "10px 24px",
+                            backgroundColor: "var(--primary)",
+                            color: "#fff",
+                            border: "none",
+                            borderRadius: "6px",
+                            cursor: "pointer",
+                            fontSize: "15px",
+                            fontWeight: "500",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                        }}
+                    >
+                        <FaBuilding /> {t("orgGate.backToOrgs")}
+                    </button>
+                    <button
+                        onClick={() => window.location.assign("/rd")}
+                        style={{
+                            padding: "10px 24px",
+                            backgroundColor: "transparent",
+                            color: "var(--text-primary)",
+                            border: "1px solid var(--border-primary)",
+                            borderRadius: "6px",
+                            cursor: "pointer",
+                            fontSize: "15px",
+                            fontWeight: "500",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                        }}
+                    >
+                        <FaHome /> {t("orgGate.backToRd")}
+                    </button>
+                </div>
             </div>
         );
     } else if (!canAccess) {

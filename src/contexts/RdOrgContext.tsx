@@ -18,6 +18,8 @@ interface RdOrgContextType {
     /** 当前选中的组织 ID */
     selectedOrgId: string;
     setSelectedOrgId: (orgId: string) => void;
+    /** URL 指定的组织不存在、已停用或用户无权访问 */
+    requestedOrgInvalid: boolean;
 }
 
 const RdOrgContext = createContext<RdOrgContextType>({
@@ -30,6 +32,7 @@ const RdOrgContext = createContext<RdOrgContextType>({
     currentOrgRole: 1,
     selectedOrgId: "",
     setSelectedOrgId: () => {},
+    requestedOrgInvalid: false,
 });
 
 export const useRdOrg = (): RdOrgContextType => {
@@ -42,13 +45,20 @@ export const RdOrgProvider: React.FC<{ children: ReactNode; initialOrgId?: strin
     const [orgs, setOrgs] = useState<RdOrgInfo[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedOrgId, setSelectedOrgId] = useState(initialOrgId);
+    const [requestedOrgInvalid, setRequestedOrgInvalid] = useState(false);
 
     const isAdmin = checkIsAdmin(user?.role);
+
+    const selectOrg = (orgId: string) => {
+        setSelectedOrgId(orgId);
+        setRequestedOrgInvalid(false);
+    };
 
     useEffect(() => {
         if (!user) {
             setOrgs([]);
             setSelectedOrgId("");
+            setRequestedOrgInvalid(false);
             setLoading(false);
             return;
         }
@@ -58,13 +68,18 @@ export const RdOrgProvider: React.FC<{ children: ReactNode; initialOrgId?: strin
                 const list = await RdPlatformService.getMyOrganizations();
                 const mapped = list.map((item) => ({ orgId: item.orgId, orgName: item.orgName, role: item.role }));
                 setOrgs(mapped);
-                if (mapped.length > 0) {
-                    // URL 传入的 orgId 有效则使用，否则默认选中第一个
-                    if (initialOrgId && mapped.some((o) => o.orgId === initialOrgId)) {
+                if (initialOrgId) {
+                    // URL 指定的组织必须仍在用户可访问的组织列表中；否则明确拦截，
+                    // 不能静默 fallback 到第一个组织，否则看起来像“停用后还能进去”。
+                    if (mapped.some((o) => o.orgId === initialOrgId)) {
                         setSelectedOrgId(initialOrgId);
-                    } else if (!selectedOrgId) {
-                        setSelectedOrgId(mapped[0].orgId);
+                        setRequestedOrgInvalid(false);
+                    } else {
+                        setSelectedOrgId("");
+                        setRequestedOrgInvalid(true);
                     }
+                } else if (mapped.length > 0 && !selectedOrgId) {
+                    setSelectedOrgId(mapped[0].orgId);
                 }
             } catch {
                 setOrgs([]);
@@ -110,7 +125,18 @@ export const RdOrgProvider: React.FC<{ children: ReactNode; initialOrgId?: strin
 
     return (
         <RdOrgContext.Provider
-            value={{ orgs, userOrgIds, isAdmin, loading, orgNameMap, maxOrgRole, currentOrgRole, selectedOrgId, setSelectedOrgId }}
+            value={{
+                orgs,
+                userOrgIds,
+                isAdmin,
+                loading,
+                orgNameMap,
+                maxOrgRole,
+                currentOrgRole,
+                selectedOrgId,
+                setSelectedOrgId: selectOrg,
+                requestedOrgInvalid,
+            }}
         >
             {children}
         </RdOrgContext.Provider>

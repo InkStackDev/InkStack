@@ -7,6 +7,13 @@ const section = {
     joinDisabled: "This organization is inactive and cannot be joined",
     rejoin: "Rejoin",
     applyJoin: "Apply to Join",
+    owner: "Owner",
+    leave: "Leave Organization",
+    cancelApply: "Cancel Application",
+    disable: "Disable Organization",
+    enable: "Enable Organization",
+    delete: "Delete Organization",
+    more: "More",
     stats: {
         totalMembers: "Total Members",
         activeMembers: "Active Members",

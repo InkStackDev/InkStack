@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { useParams, useSearchParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { decodeId } from "@/utils/HashId.ts";
 import OrganizationDetailSkeleton from "@/components/organization/OrganizationDetailSkeleton";
 import AuthRequired from "@/components/auth/AuthRequired";
@@ -19,7 +19,7 @@ import CustomSelect from "@/components/customSelect/CustomSelect";
 import Modal from "@/components/modal/Modal";
 import AssignmentService from "@/services/AssignmentService.ts";
 import { OrgRole, canManageOrgTask, canRemoveMember, canSetMemberRole, getAvailableRoles } from "@/types/Roles.ts";
-import { AssignmentStatus, AssignmentPriority } from "@/types/Enums.ts";
+import { AssignmentStatus, AssignmentPriority, OrgMembershipStatus } from "@/types/Enums.ts";
 import { useEnumLabels } from "@/i18n/UseEnumLabels";
 import { useTranslation } from "react-i18next";
 // import type { Assignment } from '../../types';
@@ -57,6 +57,7 @@ const TASKS_PAGE_SIZE = 15; // 任务列表每页显示的条数
 const OrganizationDetail: React.FC = () => {
     const { id: encodedId } = useParams<{ id: string }>();
     const id = encodedId ? decodeId(encodedId, "organization") : null;
+    const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
     const activeTab = searchParams.get("tab") || "members";
     const { user: currentUser } = useAuth();
@@ -173,6 +174,8 @@ const OrganizationDetail: React.FC = () => {
                     members: [],
                     user_in_org: typeof res.user_in_org !== "undefined" && res.user_in_org >= 0 ? res.user_in_org : undefined,
                     user_role: typeof res.user_role !== "undefined" && res.user_role > 0 ? res.user_role : undefined,
+                    owner_id: typeof res.owner_id !== "undefined" ? String(res.owner_id) : undefined,
+                    is_owner: Boolean(res.is_owner),
                 };
                 setOrg(orgDetail);
                 const role = checkUserRole(res.user_role);
@@ -480,12 +483,22 @@ const OrganizationDetail: React.FC = () => {
     };
 
     // Function to check if current user can manage a specific member
+    const isOwnerMember = (member: Member) => {
+        return Boolean(org?.owner_id && member.user_id === org.owner_id);
+    };
+
     const canManageMember = (member: Member) => {
+        if (isOwnerMember(member)) {
+            return false;
+        }
         return canRemoveMember(userRole, member.role, member.name === currentUser?.name);
     };
 
     // Function to check if current user can set role for a specific member
     const canSetRole = (member: Member) => {
+        if (isOwnerMember(member)) {
+            return false;
+        }
         return canSetMemberRole(userRole, member.role, member.name === currentUser?.name);
     };
 
@@ -823,6 +836,77 @@ const OrganizationDetail: React.FC = () => {
         }
     };
 
+    const handleLeaveOrganization = async () => {
+        if (!id || !org) {
+            return;
+        }
+        const pending = org.user_in_org === OrgMembershipStatus.PENDING;
+        const ok = await confirm({
+            title: pending ? t("detail.confirm.cancelApplyTitle") : t("detail.confirm.leaveTitle"),
+            content: pending ? t("detail.confirm.cancelApplyContent") : t("detail.confirm.leaveContent"),
+            confirmText: pending ? t("detail.confirm.cancelApply") : t("detail.confirm.leave"),
+            cancelText: t("detail.confirm.cancel"),
+        });
+        if (!ok) {
+            return;
+        }
+        try {
+            await OrganizationService.leaveOrganization({ id });
+            message.success(pending ? t("detail.message.cancelApplySuccess") : t("detail.message.leaveSuccess"));
+            navigate("/organizations/list");
+        } catch {
+            message.error(pending ? t("detail.message.cancelApplyFailed") : t("detail.message.leaveFailed"));
+        }
+    };
+
+    const handleToggleOrganizationStatus = async () => {
+        if (!id || !org?.is_owner) {
+            return;
+        }
+        const disabling = org.status === "active";
+        const ok = await confirm({
+            title: disabling ? t("detail.confirm.disableTitle") : t("detail.confirm.enableTitle"),
+            content: disabling ? t("detail.confirm.disableContent") : t("detail.confirm.enableContent"),
+            confirmText: disabling ? t("detail.confirm.disable") : t("detail.confirm.enable"),
+            cancelText: t("detail.confirm.cancel"),
+        });
+        if (!ok) {
+            return;
+        }
+        try {
+            const res = await OrganizationService.setOrganizationStatus({
+                id,
+                status: disabling ? 0 : 1,
+            });
+            setOrg((prev) => (prev ? { ...prev, status: res.status === 1 ? "active" : "inactive" } : prev));
+            message.success(t("detail.message.statusUpdated"));
+        } catch {
+            message.error(t("detail.message.statusUpdateFailed"));
+        }
+    };
+
+    const handleDeleteOrganization = async () => {
+        if (!id || !org?.is_owner) {
+            return;
+        }
+        const ok = await confirm({
+            title: t("detail.confirm.deleteOrgTitle"),
+            content: t("detail.confirm.deleteOrgContent", { name: org.name }),
+            confirmText: t("detail.confirm.deleteOrg"),
+            cancelText: t("detail.confirm.cancel"),
+        });
+        if (!ok) {
+            return;
+        }
+        try {
+            await OrganizationService.deleteOrganizations({ ids: String(id) });
+            message.success(t("detail.message.deleteOrgSuccess"));
+            navigate("/organizations/list");
+        } catch {
+            message.error(t("detail.message.deleteOrgFailed"));
+        }
+    };
+
     return (
         <>
             <div className={styles.mainContent}>
@@ -833,7 +917,15 @@ const OrganizationDetail: React.FC = () => {
                         <div className={styles.detailCard}>
                             {org && (
                                 <>
-                                    <OrganizationInfo org={org} stats={stats} repoCount={repoCount} onJoin={handleJoin} />
+                                    <OrganizationInfo
+                                        org={org}
+                                        stats={stats}
+                                        repoCount={repoCount}
+                                        onJoin={handleJoin}
+                                        onLeave={handleLeaveOrganization}
+                                        onToggleStatus={handleToggleOrganizationStatus}
+                                        onDelete={handleDeleteOrganization}
+                                    />
 
                                     <OrganizationTabs
                                         org={org}

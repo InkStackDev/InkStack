@@ -10,12 +10,15 @@ interface OrgSelectorProps {
     selectedOrgId: string;
     onChange: (orgId: string) => void;
     collapsed: boolean;
+    /** URL 指定的组织不可用时，避免回退展示其它组织的名称 */
+    invalid?: boolean;
 }
 
-const OrgSelector: React.FC<OrgSelectorProps> = ({ orgs, selectedOrgId, onChange, collapsed }) => {
+const OrgSelector: React.FC<OrgSelectorProps> = ({ orgs, selectedOrgId, onChange, collapsed, invalid = false }) => {
     const { t } = useTranslation("components");
     const [open, setOpen] = useState(false);
-    const isSingle = orgs.length === 1;
+    // 组织不可用时仍允许打开选择器，让用户切到其它可用组织
+    const isSingle = orgs.length === 1 && !invalid;
 
     useEffect(() => {
         if (open) {
@@ -33,7 +36,11 @@ const OrgSelector: React.FC<OrgSelectorProps> = ({ orgs, selectedOrgId, onChange
     }
 
     const currentOrg = orgs.find((o) => o.orgId === selectedOrgId);
-    const displayName = currentOrg ? currentOrg.orgName : orgs[0]?.orgName || "";
+    const displayName = invalid
+        ? t("orgSelector.unavailable")
+        : currentOrg
+          ? currentOrg.orgName
+          : orgs[0]?.orgName || "";
 
     const options = orgs;
 
