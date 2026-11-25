@@ -12,14 +12,15 @@ const POLL_INTERVAL = 30_000; // 30 秒轮询一次 HTTP 统计
 
 const StatsPanel: React.FC = () => {
     const { t } = useTranslation("components");
-    const { isAuthenticated, loading: authLoading } = useAuth();
+    const { isAuthenticated } = useAuth();
     const [httpStats, setHttpStats] = useState<StatsData | null>(null);
     const [loading, setLoading] = useState(true);
     const onlineUsers = useOnlineCount(); // 实时 WebSocket 推送（仅登录后存在连接）
-    // WS 只在登录后建立，且初始人数帧只发一次；未收到时回退到 HTTP 统计，避免永久骨架屏
+    // 四个指标统一等 HTTP 统计返回后一起出现。
+    // 在线人数先用 HTTP 值占位（与其它三项同一时刻上屏），收到 WS 推送后再实时变更，
+    // 避免「三个已显示、在线人数还在转圈」的割裂感。
     const fallbackOnlineUsers = httpStats?.onlineUsers ?? null;
     const resolvedOnlineUsers = isAuthenticated ? (onlineUsers ?? fallbackOnlineUsers) : fallbackOnlineUsers;
-    const onlineLoading = authLoading || (resolvedOnlineUsers === null && loading);
 
     useEffect(() => {
         let cancelled = false;
@@ -58,7 +59,7 @@ const StatsPanel: React.FC = () => {
         {
             title: t("statsPanel.onlineUsers"),
             value: resolvedOnlineUsers ?? "-",
-            loading: onlineLoading,
+            loading,
             icon: <FaUsers className={styles.statIcon} />,
             color: styles.online,
         },
@@ -90,7 +91,7 @@ const StatsPanel: React.FC = () => {
             <h3 className={styles.panelTitle}>
                 <FaChartLine className={styles.titleIcon} /> {t("statsPanel.title")}
             </h3>
-            <div className={styles.statsGrid} aria-busy={loading || onlineLoading}>
+            <div className={styles.statsGrid} aria-busy={loading}>
                 {statsItems.map((item, index) => (
                     <div key={index} className={styles.statItem}>
                         <div className={item.color}>{item.icon}</div>

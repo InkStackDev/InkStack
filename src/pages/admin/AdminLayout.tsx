@@ -24,7 +24,7 @@ import ThemeToggle from "@/components/themeToggle/ThemeToggle";
 import Notification from "@/components/notification/Notification";
 import UserDropdown from "@/components/userDropdown/UserDropdown";
 import Footer from "@/components/footer/Footer";
-import Loading from "@/components/loading/Loading";
+import MascotLoader from "@/components/mascotLoader";
 import { preloadRouteForPath } from "@/router/RoutePreloaders";
 import { useAuth } from "@/contexts/AuthContext";
 import { isAdmin } from "@/types/Roles.ts";
@@ -44,6 +44,7 @@ const AdminLayout: React.FC = () => {
     const location = useLocation();
     const { user, logout, isAuthenticated, loading } = useAuth();
     const { t } = useTranslation("admin");
+    const { t: tComponents } = useTranslation("components");
 
     // 认证加载期间提前拉取当前后台页面的 chunk，认证和代码加载并行
     useEffect(() => {
@@ -66,7 +67,12 @@ const AdminLayout: React.FC = () => {
                     <main className={styles.adminMainContent}>
                         <header className={styles.adminTopBar} />
                         <div className={styles.adminPageContent}>
-                            <Loading size="large" text={t("layout.loading")} />
+                            <MascotLoader
+                                variant="overlay"
+                                delayMs={0}
+                                title={tComponents("mascotLoader.title")}
+                                description={tComponents("mascotLoader.description")}
+                            />
                         </div>
                     </main>
                 </div>
@@ -466,7 +472,15 @@ const AdminLayout: React.FC = () => {
 
                     {/* 页面内容 */}
                     <div className={styles.adminPageContent}>
-                        <Suspense fallback={<Loading size="large" />}>
+                        <Suspense
+                            fallback={
+                                <MascotLoader
+                                    variant="overlay"
+                                    title={tComponents("mascotLoader.title")}
+                                    description={tComponents("mascotLoader.description")}
+                                />
+                            }
+                        >
                             <Outlet />
                         </Suspense>
                     </div>

@@ -1,7 +1,7 @@
 .container {
-    --entry-accent: #4f8ef7;
-    --entry-accent-light: #6bb7ff;
-    --entry-accent-soft: rgba(79, 142, 247, 0.16);
+    --entry-accent: var(--primary);
+    --entry-accent-light: color-mix(in srgb, var(--primary) 72%, white);
+    --entry-accent-soft: color-mix(in srgb, var(--primary) 16%, transparent);
     position: relative;
     display: flex;
     flex-direction: column;
@@ -15,25 +15,25 @@
     text-align: center;
 }
 
-.container[data-stage="auth"] {
+.container.toneAuth {
     --entry-accent: #8b5cf6;
     --entry-accent-light: #a78bfa;
     --entry-accent-soft: rgba(139, 92, 246, 0.16);
 }
 
-.container[data-stage="access"] {
+.container.toneAccess {
     --entry-accent: #4f8ef7;
     --entry-accent-light: #6bb7ff;
     --entry-accent-soft: rgba(79, 142, 247, 0.16);
 }
 
-.container[data-stage="org"] {
+.container.toneOrg {
     --entry-accent: #10b981;
     --entry-accent-light: #34d399;
     --entry-accent-soft: rgba(16, 185, 129, 0.16);
 }
 
-/* 覆盖在研发平台内容区之上，保持侧边栏 / 顶栏外壳常驻 */
+/* 覆盖在内容区之上，保持页面外壳常驻 */
 .overlay {
     position: absolute;
     inset: 0;
@@ -112,9 +112,11 @@
         box-shadow 0.4s ease;
 }
 
-.badgeIcon {
-    width: 18px;
-    height: 18px;
+.badgeInner {
+    display: grid;
+    place-items: center;
+    font-size: 16px;
+    line-height: 1;
 }
 
 .textBlock {

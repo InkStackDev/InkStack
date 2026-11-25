@@ -10,7 +10,11 @@ const RobotMascot: React.FC<RobotMascotProps> = ({ size = 120, className, autoBl
     const [blink, setBlink] = useState(false);
 
     useEffect(() => {
-        if (!autoBlink || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        if (!autoBlink) {
+            return;
+        }
+        // 兼容不支持 matchMedia 的环境（测试 / 旧浏览器）
+        if (typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
             return;
         }
         let blinkTimeout: ReturnType<typeof setTimeout> | undefined;

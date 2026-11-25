@@ -26,7 +26,7 @@ import Footer from "@/components/footer/Footer";
 import AuthRequired from "@/components/auth/AuthRequired";
 import OrgSelector from "@/components/orgSelector/OrgSelector";
 import RdEntryLoader, { type RdEntryStage } from "@/components/rdEntryLoader";
-import Loading from "@/components/loading/Loading";
+import MascotLoader from "@/components/mascotLoader";
 import { useAuth } from "@/contexts/AuthContext";
 import { RdOrgProvider, useRdOrg } from "@/contexts/RdOrgContext";
 import { RdPlatformService } from "@/services/RdPlatformService.ts";
@@ -450,7 +450,16 @@ const RdLayoutShell: React.FC = () => {
         );
     } else {
         content = (
-            <Suspense fallback={<Loading size="large" />}>
+            <Suspense
+                fallback={
+                    <MascotLoader
+                        variant="overlay"
+                        tone="org"
+                        title={t("entryLoader.title")}
+                        description={t("entryLoader.pageLoading")}
+                    />
+                }
+            >
                 <Outlet />
             </Suspense>
         );

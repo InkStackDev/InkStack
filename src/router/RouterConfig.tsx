@@ -6,7 +6,7 @@ import { FrontLayout } from "../components/appShell";
 import AuthRequired from "../components/auth/AuthRequired";
 import AdminLayout from "../pages/admin/AdminLayout";
 import RdLayout from "../pages/rd-platform/RdLayout";
-import Loading from "../components/loading/Loading";
+import MascotLoader from "../components/mascotLoader";
 import { preloadRouteForPath } from "./RoutePreloaders";
 
 // 路由级按需加载：避免首屏把后台、图表、编辑器等页面全部打进同一个 chunk
@@ -55,6 +55,7 @@ const ProductList = lazy(() => import("../pages/product/ProductList"));
 
 const RouterConfig: React.FC = () => {
     const { t } = useTranslation("auth");
+    const { t: tComponents } = useTranslation("components");
     const location = useLocation();
 
     // 当前路由 chunk 立即预取，和认证/站点设置并行
@@ -96,9 +97,11 @@ const RouterConfig: React.FC = () => {
     return (
         <Suspense
             fallback={
-                <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                    <Loading size="large" />
-                </div>
+                <MascotLoader
+                    title={tComponents("mascotLoader.title")}
+                    description={tComponents("mascotLoader.description")}
+                    delayMs={0}
+                />
             }
         >
             <Routes>

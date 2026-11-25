@@ -21,6 +21,7 @@ import backToTop from "./components/BackToTop";
 import orgSelector from "./components/OrgSelector";
 import mermaid from "./components/Mermaid";
 import loading from "./components/Loading";
+import mascotLoader from "./components/MascotLoader";
 
 const components = {
     notification,
@@ -46,6 +47,7 @@ const components = {
     orgSelector,
     mermaid,
     loading,
+    mascotLoader,
 } as const;
 
 export default components;
