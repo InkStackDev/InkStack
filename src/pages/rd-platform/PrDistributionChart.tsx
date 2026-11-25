@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import * as echarts from "echarts";
+import type { ECharts } from "@/utils/Echarts";
 import { FaChartBar, FaCodeBranch, FaExclamationTriangle } from "react-icons/fa";
 import Button from "@/components/button/Button";
 import Loading from "@/components/loading/Loading";
@@ -34,6 +34,19 @@ const PrDistributionChart: React.FC<PrDistributionChartProps> = ({ orgId = "" })
     const [error, setError] = useState("");
     const chartRef = useRef<HTMLDivElement>(null);
     const requestIdRef = useRef(0);
+    const [echartsModule, setEchartsModule] = useState<typeof import("@/utils/Echarts") | null>(null);
+
+    useEffect(() => {
+        let cancelled = false;
+        void import("@/utils/Echarts").then((module) => {
+            if (!cancelled) {
+                setEchartsModule(module);
+            }
+        });
+        return () => {
+            cancelled = true;
+        };
+    }, []);
 
     const loadData = useCallback(async () => {
         const requestId = requestIdRef.current + 1;
@@ -68,11 +81,12 @@ const PrDistributionChart: React.FC<PrDistributionChartProps> = ({ orgId = "" })
 
     useEffect(() => {
         const container = chartRef.current;
-        if (!container || !data || data.points.length === 0) {
+        if (!echartsModule || !container || !data || data.points.length === 0) {
             return;
         }
 
-        const chart = echarts.init(container);
+        const echarts = echartsModule;
+        const chart: ECharts = echarts.init(container);
         const rootStyles = getComputedStyle(document.documentElement);
         const textColor = rootStyles.getPropertyValue("--text-secondary").trim() || "#64748b";
         const borderColor = rootStyles.getPropertyValue("--border-primary").trim() || "#e5e7eb";
@@ -201,7 +215,7 @@ const PrDistributionChart: React.FC<PrDistributionChartProps> = ({ orgId = "" })
             observer?.disconnect();
             chart.dispose();
         };
-    }, [data, t, theme, preset]);
+    }, [echartsModule, data, t, theme, preset]);
 
     const points = data?.points ?? [];
     const summary = data?.summary;

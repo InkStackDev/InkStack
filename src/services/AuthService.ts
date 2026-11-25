@@ -336,7 +336,7 @@ export class AuthService {
     }
 
     static async listUsersAdmin(params: UserAdminListParams): Promise<UserAdminListResponse> {
-        const response = await http.get<UserAdminListResponse>("/user/admin/lists", { params });
+        const response = await http.get<UserAdminListResponse>("/user/admin/lists", { params, cacheTtl: 15_000 });
         return response.data;
     }
 
@@ -396,7 +396,7 @@ export class AuthService {
      * 管理员获取用户统计数据
      */
     static async getAdminUserStats(): Promise<AdminUserStatsResponse> {
-        const response = await http.get<AdminUserStatsResponse>("/user/admin/stats");
+        const response = await http.get<AdminUserStatsResponse>("/user/admin/stats", { cacheTtl: 15_000 });
         return response.data;
     }
 

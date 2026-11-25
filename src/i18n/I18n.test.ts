@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { resources } from "./Resources";
+import { enResources } from "./ResourcesEn";
 import i18n from "./index";
 
 type Tree = Record<string, unknown>;
@@ -15,9 +16,19 @@ function readPath(tree: unknown, path: string): unknown {
     return path.split(".").reduce<unknown>((acc, key) => (acc as Tree | undefined)?.[key], tree);
 }
 
+// 测试环境同步注册英文资源，覆盖全部语言键
+for (const [namespace, bundle] of Object.entries(enResources)) {
+    i18n.addResourceBundle("en-US", namespace, bundle, true, true);
+}
+
+const allResources = {
+    "zh-CN": resources["zh-CN"],
+    "en-US": enResources,
+};
+
 describe("i18n resources", () => {
     const source = resources["zh-CN"];
-    const target = resources["en-US"];
+    const target = enResources;
 
     it("zh-CN 与 en-US 的键结构完全一致", () => {
         const sourcePaths = collectPaths(source).sort();
@@ -26,7 +37,7 @@ describe("i18n resources", () => {
     });
 
     it("不存在空翻译值", () => {
-        for (const [language, tree] of Object.entries(resources)) {
+        for (const [language, tree] of Object.entries(allResources)) {
             for (const path of collectPaths(tree)) {
                 const value = readPath(tree, path);
                 expect(typeof value, `${language}:${path} 应为字符串`).toBe("string");

@@ -81,7 +81,8 @@ function updateFavicon(url: string): void {
 
 export const SiteSettingsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [settings, setSettings] = useState<SiteSettingsState>(getInitialSettings);
-    const [loading, setLoading] = useState(true);
+    // 有本地缓存时不再阻塞渲染，先展示缓存内容，后台静默刷新；首次访问才等待接口。
+    const [loading, setLoading] = useState(() => readSiteSettingsCache() === null);
 
     const refreshSettings = useCallback(async () => {
         try {

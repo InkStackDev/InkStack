@@ -1,6 +1,6 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import * as echarts from "echarts";
+import type { ECharts } from "@/utils/Echarts";
 import { useTheme } from "@/contexts/ThemeContext";
 import type { UserStats } from "@/services/AuthService.ts";
 import { getThemeFontFamily } from "@/utils/ThemeFont";
@@ -25,9 +25,26 @@ const StatsTab: React.FC<Props> = ({ stats }) => {
     const { preset } = useTheme();
     const compositionRef = useRef<HTMLDivElement>(null);
     const engagementRef = useRef<HTMLDivElement>(null);
+    const [echartsModule, setEchartsModule] = useState<typeof import("@/utils/Echarts") | null>(null);
 
     useEffect(() => {
-        const charts: echarts.ECharts[] = [];
+        let cancelled = false;
+        void import("@/utils/Echarts").then((module) => {
+            if (!cancelled) {
+                setEchartsModule(module);
+            }
+        });
+        return () => {
+            cancelled = true;
+        };
+    }, []);
+
+    useEffect(() => {
+        if (!echartsModule) {
+            return;
+        }
+        const echarts = echartsModule;
+        const charts: ECharts[] = [];
         const themeFont = getThemeFontFamily();
 
         // 文章构成（已发布 / 私密 / 其他）
@@ -108,7 +125,7 @@ const StatsTab: React.FC<Props> = ({ stats }) => {
             window.removeEventListener("resize", handleResize);
             charts.forEach((c) => c.dispose());
         };
-    }, [stats, t, preset]);
+    }, [echartsModule, stats, t, preset]);
 
     const avgViews = stats.published_articles > 0 ? Math.round(stats.total_views / stats.published_articles) : 0;
     const avgLikes = stats.published_articles > 0 ? Math.round(stats.total_likes / stats.published_articles) : 0;

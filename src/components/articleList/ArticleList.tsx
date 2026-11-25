@@ -173,7 +173,7 @@ const ArticleList: React.FC<ArticleListProps> = ({
         scrollRef.current?.scrollTo({ top: 0 });
     }, [currentPage, labelId, categoryId, searchKeyword]);
 
-    const totalPages = Math.ceil(totalArticles / itemsPerPage);
+    const totalPages = Math.max(1, Math.ceil(totalArticles / itemsPerPage));
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + articles.length;
 
@@ -279,63 +279,58 @@ const ArticleList: React.FC<ArticleListProps> = ({
                 </div>
 
                 {/* 分页 */}
-                {totalArticles > 0 && (
-                    <div className={styles.pagination}>
-                        <div className={styles.paginationInfo}>
-                            {t("list.paginationInfo", {
-                                start: startIndex + 1,
-                                end: Math.min(endIndex, totalArticles),
-                                total: totalArticles,
-                            })}
-                        </div>
-                        <div className={styles.paginationControls}>
-                            <button
-                                className={styles.paginationButton}
-                                onClick={() => handlePageChange(1)}
-                                disabled={currentPage === 1}
-                            >
-                                <FaAngleDoubleLeft />
-                            </button>
-                            <button
-                                className={styles.paginationButton}
-                                onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
-                                disabled={currentPage === 1}
-                            >
-                                <FaChevronLeft />
-                            </button>
-
-                            {getPageNumbers().map((page, index) => (
-                                <React.Fragment key={index}>
-                                    {page === "..." ? (
-                                        <span className={styles.paginationEllipsis}>...</span>
-                                    ) : (
-                                        <button
-                                            className={`${styles.paginationButton} ${currentPage === page ? styles.active : ""}`}
-                                            onClick={() => handlePageChange(page as number)}
-                                        >
-                                            {page}
-                                        </button>
-                                    )}
-                                </React.Fragment>
-                            ))}
-
-                            <button
-                                className={styles.paginationButton}
-                                onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
-                                disabled={currentPage === totalPages}
-                            >
-                                <FaChevronRight />
-                            </button>
-                            <button
-                                className={styles.paginationButton}
-                                onClick={() => handlePageChange(totalPages)}
-                                disabled={currentPage === totalPages}
-                            >
-                                <FaAngleDoubleRight />
-                            </button>
-                        </div>
+                <div className={styles.pagination}>
+                    <div className={styles.paginationInfo}>
+                        {t("list.paginationInfo", {
+                            start: totalArticles > 0 ? startIndex + 1 : 0,
+                            end: Math.min(endIndex, totalArticles),
+                            total: totalArticles,
+                        })}
                     </div>
-                )}
+                    <div className={styles.paginationControls}>
+                        <button className={styles.paginationButton} onClick={() => handlePageChange(1)} disabled={currentPage === 1}>
+                            <FaAngleDoubleLeft />
+                        </button>
+                        <button
+                            className={styles.paginationButton}
+                            onClick={() => handlePageChange(Math.max(1, currentPage - 1))}
+                            disabled={currentPage === 1}
+                        >
+                            <FaChevronLeft />
+                        </button>
+
+                        {getPageNumbers().map((page, index) => (
+                            <React.Fragment key={index}>
+                                {page === "..." ? (
+                                    <span className={styles.paginationEllipsis}>...</span>
+                                ) : (
+                                    <button
+                                        className={`${styles.paginationButton} ${currentPage === page ? styles.active : ""}`}
+                                        onClick={() => handlePageChange(page as number)}
+                                        disabled={totalArticles === 0}
+                                    >
+                                        {page}
+                                    </button>
+                                )}
+                            </React.Fragment>
+                        ))}
+
+                        <button
+                            className={styles.paginationButton}
+                            onClick={() => handlePageChange(Math.min(totalPages, currentPage + 1))}
+                            disabled={currentPage === totalPages}
+                        >
+                            <FaChevronRight />
+                        </button>
+                        <button
+                            className={styles.paginationButton}
+                            onClick={() => handlePageChange(totalPages)}
+                            disabled={currentPage === totalPages}
+                        >
+                            <FaAngleDoubleRight />
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     );

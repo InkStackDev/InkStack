@@ -1,8 +1,8 @@
 import { AGENT_ENABLED } from "@/config/Features";
 import { FaRobot } from "react-icons/fa";
-import React, { useState, useEffect } from "react";
+import React, { Suspense, useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { useLocation, Outlet, useSearchParams } from "react-router-dom";
+import { useLocation, Outlet, useSearchParams, useNavigate } from "react-router-dom";
 import { useRdNavigate } from "@/hooks/UseRdNavigate.ts";
 import { encodeId, decodeId } from "@/utils/HashId.ts";
 import {
@@ -22,11 +22,11 @@ import styles from "./RdLayout.module.css";
 import ThemeToggle from "@/components/themeToggle/ThemeToggle";
 import Notification from "@/components/notification/Notification";
 import UserDropdown from "@/components/userDropdown/UserDropdown";
-import Navbar from "@/components/navbar/Navbar";
 import Footer from "@/components/footer/Footer";
 import AuthRequired from "@/components/auth/AuthRequired";
 import OrgSelector from "@/components/orgSelector/OrgSelector";
-import RdEntryLoader from "@/components/rdEntryLoader";
+import RdEntryLoader, { type RdEntryStage } from "@/components/rdEntryLoader";
+import MascotLoader from "@/components/mascotLoader";
 import { useAuth } from "@/contexts/AuthContext";
 import { RdOrgProvider, useRdOrg } from "@/contexts/RdOrgContext";
 import { RdPlatformService } from "@/services/RdPlatformService.ts";
@@ -39,178 +39,58 @@ interface NavItem {
 }
 
 const RdLayout: React.FC = () => {
-    const navigate = useRdNavigate();
-    const { t } = useTranslation("rd");
     const [searchParams] = useSearchParams();
     const rawOrg = searchParams.get("org");
     const urlOrgId = rawOrg ? decodeId(rawOrg, "organization")?.toString() || "" : "";
+
+    return (
+        <RdOrgProvider initialOrgId={urlOrgId}>
+            <RdLayoutShell requestedOrgId={urlOrgId} />
+        </RdOrgProvider>
+    );
+};
+
+interface RdLayoutShellProps {
+    requestedOrgId: string;
+}
+
+const RdLayoutShell: React.FC<RdLayoutShellProps> = ({ requestedOrgId }) => {
+    const navigate = useRdNavigate();
+    const rawNavigate = useNavigate();
+    const { t } = useTranslation("rd");
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const location = useLocation();
     const { user, logout, isAuthenticated, loading } = useAuth();
+    const { loading: orgLoading, orgs: rdOrgs, requestedOrgInvalid } = useRdOrg();
 
     // 权限校验：调用后端 check_access 接口
     const [accessChecked, setAccessChecked] = useState(false);
     const [canAccess, setCanAccess] = useState(false);
 
     useEffect(() => {
-        if (!user) {
-            return;
-        }
+        let cancelled = false;
+        // 与 /user/info 并行检查研发平台权限，避免认证完才开始检查
         RdPlatformService.checkAccess()
             .then((result) => {
-                setCanAccess(result.canAccess);
+                if (!cancelled) {
+                    setCanAccess(result.canAccess);
+                }
             })
             .catch(() => {
-                setCanAccess(false);
+                if (!cancelled) {
+                    setCanAccess(false);
+                }
             })
-            .finally(() => setAccessChecked(true));
-    }, [user]);
-
-    if (loading) {
-        return <RdEntryLoader stage="auth" />;
-    }
-
-    if (!isAuthenticated || !user) {
-        return (
-            <div
-                style={{
-                    minHeight: "100vh",
-                    display: "flex",
-                    flexDirection: "column",
-                    backgroundColor: "transparent",
-                }}
-            >
-                <Navbar />
-                <div
-                    style={{
-                        flex: 1,
-                        maxWidth: "var(--page-max-width)",
-                        margin: "0 auto",
-                        width: "100%",
-                        padding: "2rem 1.8rem",
-                    }}
-                >
-                    <AuthRequired message={t("layout.authRequired")}>{null}</AuthRequired>
-                </div>
-                <Footer startYear={2025} />
-            </div>
-        );
-    }
-
-    if (!accessChecked) {
-        return <RdEntryLoader stage="access" />;
-    }
-
-    if (!canAccess) {
-        return (
-            <div
-                style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    justifyContent: "center",
-                    alignItems: "center",
-                    height: "100vh",
-                    backgroundColor: "transparent",
-                    color: "var(--text-primary)",
-                    padding: "20px",
-                }}
-            >
-                <div
-                    style={{
-                        fontSize: "64px",
-                        color: "#f0a020",
-                        marginBottom: "24px",
-                        opacity: 0.9,
-                    }}
-                >
-                    <FaLock />
-                </div>
-                <h1
-                    style={{
-                        fontSize: "28px",
-                        fontWeight: "bold",
-                        marginBottom: "12px",
-                        color: "var(--text-primary)",
-                    }}
-                >
-                    {t("layout.needOrgTitle")}
-                </h1>
-                <p
-                    style={{
-                        fontSize: "16px",
-                        color: "var(--text-secondary)",
-                        marginBottom: "32px",
-                        textAlign: "center",
-                        maxWidth: "480px",
-                        lineHeight: "1.6",
-                    }}
-                >
-                    {t("layout.needOrgLine1")}
-                    <br />
-                    {t("layout.needOrgLine2")}
-                </p>
-                <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", justifyContent: "center" }}>
-                    <button
-                        onClick={() => navigate("/organizations/list")}
-                        style={{
-                            padding: "10px 24px",
-                            backgroundColor: "var(--primary)",
-                            color: "#fff",
-                            border: "none",
-                            borderRadius: "6px",
-                            cursor: "pointer",
-                            fontSize: "15px",
-                            fontWeight: "500",
-                            boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "8px",
-                        }}
-                    >
-                        <FaBuilding /> {t("layout.joinOrg")}
-                    </button>
-                    <button
-                        onClick={() => navigate("/")}
-                        style={{
-                            padding: "10px 24px",
-                            backgroundColor: "transparent",
-                            color: "var(--text-primary)",
-                            border: "1px solid var(--border-primary)",
-                            borderRadius: "6px",
-                            cursor: "pointer",
-                            fontSize: "15px",
-                            fontWeight: "500",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "8px",
-                        }}
-                    >
-                        <FaHome /> {t("layout.backHome")}
-                    </button>
-                    <button
-                        onClick={() => logout()}
-                        style={{
-                            padding: "10px 24px",
-                            backgroundColor: "transparent",
-                            color: "var(--text-primary)",
-                            border: "1px solid var(--border-primary)",
-                            borderRadius: "6px",
-                            cursor: "pointer",
-                            fontSize: "15px",
-                            fontWeight: "500",
-                        }}
-                    >
-                        {t("layout.switchAccount")}
-                    </button>
-                </div>
-            </div>
-        );
-    }
-
-    if (!user.avatar) {
-        user.avatar = "https://picsum.photos/id/64/200";
-    }
+            .finally(() => {
+                if (!cancelled) {
+                    setAccessChecked(true);
+                }
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, []);
 
     const handleLogout = () => {
         logout();
@@ -265,13 +145,17 @@ const RdLayout: React.FC = () => {
             <div className={styles.rdTopBarActions}>
                 <ThemeToggle />
                 <Notification />
-                <UserDropdown user={user} onLogout={handleLogout} showAdminLink={false} roleOverride={roleOverride} />
+                {user ? (
+                    <UserDropdown user={user} onLogout={handleLogout} showAdminLink={false} roleOverride={roleOverride} />
+                ) : (
+                    <div style={{ width: 36, height: 36, borderRadius: "50%", background: "var(--bg-secondary)" }} />
+                )}
             </div>
         );
     };
 
     const SidebarOrgSelector: React.FC = () => {
-        const { orgs, selectedOrgId, setSelectedOrgId } = useRdOrg();
+        const { orgs, selectedOrgId, setSelectedOrgId, requestedOrgInvalid } = useRdOrg();
         const [, setSearchParams] = useSearchParams();
 
         const handleOrgChange = (orgId: string) => {
@@ -283,7 +167,15 @@ const RdLayout: React.FC = () => {
             }
         };
 
-        return <OrgSelector orgs={orgs} selectedOrgId={selectedOrgId} onChange={handleOrgChange} collapsed={sidebarCollapsed} />;
+        return (
+            <OrgSelector
+                orgs={orgs}
+                selectedOrgId={selectedOrgId}
+                onChange={handleOrgChange}
+                collapsed={sidebarCollapsed}
+                invalid={requestedOrgInvalid}
+            />
+        );
     };
 
     const toggleSidebar = () => setSidebarCollapsed(!sidebarCollapsed);
@@ -370,93 +262,380 @@ const RdLayout: React.FC = () => {
 
     const breadcrumbs = getBreadcrumbs();
 
+    // 界面刷新时保持研发平台外壳常驻，仅在内容区切换状态（对齐 GitHub/Turbo 的局部刷新体验）
+    // 同一实例贯穿 auth → access → org 三个阶段，颜色随阶段平滑切换，避免反复闪烁
+    const entryStage: RdEntryStage | null = loading
+        ? "auth"
+        : !isAuthenticated || !user
+          ? null
+          : !accessChecked
+            ? "access"
+            : orgLoading
+              ? "org"
+              : null;
+
+    let content: React.ReactNode;
+    if (entryStage) {
+        // 加载态由内容区上方的 RdEntryLoader 覆盖展示
+        content = null;
+    } else if (!isAuthenticated || !user) {
+        content = (
+            <div style={{ maxWidth: "var(--page-max-width)", margin: "0 auto", width: "100%", padding: "2rem 1.8rem" }}>
+                <AuthRequired message={t("layout.authRequired")}>{null}</AuthRequired>
+            </div>
+        );
+    } else if (requestedOrgInvalid && requestedOrgId) {
+        content = (
+            <div
+                style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    minHeight: "60vh",
+                    padding: "20px",
+                }}
+            >
+                <div style={{ fontSize: "64px", color: "#f0a020", marginBottom: "24px", opacity: 0.9 }}>
+                    <FaLock />
+                </div>
+                <h1 style={{ fontSize: "28px", fontWeight: "bold", marginBottom: "12px", color: "var(--text-primary)" }}>
+                    {t("orgGate.invalidTitle")}
+                </h1>
+                <p
+                    style={{
+                        fontSize: "16px",
+                        color: "var(--text-secondary)",
+                        marginBottom: "32px",
+                        textAlign: "center",
+                        maxWidth: "480px",
+                        lineHeight: "1.6",
+                    }}
+                >
+                    {t("orgGate.invalidLine1")}
+                    <br />
+                    {t("orgGate.invalidLine2")}
+                </p>
+                <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", justifyContent: "center" }}>
+                    <button
+                        onClick={() => rawNavigate("/organizations/list")}
+                        style={{
+                            padding: "10px 24px",
+                            backgroundColor: "var(--primary)",
+                            color: "#fff",
+                            border: "none",
+                            borderRadius: "6px",
+                            cursor: "pointer",
+                            fontSize: "15px",
+                            fontWeight: "500",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                        }}
+                    >
+                        <FaBuilding /> {t("orgGate.backToOrgs")}
+                    </button>
+                    <button
+                        onClick={() => window.location.assign("/rd")}
+                        style={{
+                            padding: "10px 24px",
+                            backgroundColor: "transparent",
+                            color: "var(--text-primary)",
+                            border: "1px solid var(--border-primary)",
+                            borderRadius: "6px",
+                            cursor: "pointer",
+                            fontSize: "15px",
+                            fontWeight: "500",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                        }}
+                    >
+                        <FaHome /> {t("orgGate.backToRd")}
+                    </button>
+                </div>
+            </div>
+        );
+    } else if (!canAccess) {
+        content = (
+            <div
+                style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    minHeight: "60vh",
+                    backgroundColor: "transparent",
+                    color: "var(--text-primary)",
+                    padding: "20px",
+                }}
+            >
+                <div style={{ fontSize: "64px", color: "#f0a020", marginBottom: "24px", opacity: 0.9 }}>
+                    <FaLock />
+                </div>
+                <h1 style={{ fontSize: "28px", fontWeight: "bold", marginBottom: "12px", color: "var(--text-primary)" }}>
+                    {t("layout.needOrgTitle")}
+                </h1>
+                <p
+                    style={{
+                        fontSize: "16px",
+                        color: "var(--text-secondary)",
+                        marginBottom: "32px",
+                        textAlign: "center",
+                        maxWidth: "480px",
+                        lineHeight: "1.6",
+                    }}
+                >
+                    {t("layout.needOrgLine1")}
+                    <br />
+                    {t("layout.needOrgLine2")}
+                </p>
+                <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", justifyContent: "center" }}>
+                    <button
+                        onClick={() => navigate("/organizations/list")}
+                        style={{
+                            padding: "10px 24px",
+                            backgroundColor: "var(--primary)",
+                            color: "#fff",
+                            border: "none",
+                            borderRadius: "6px",
+                            cursor: "pointer",
+                            fontSize: "15px",
+                            fontWeight: "500",
+                            boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                        }}
+                    >
+                        <FaBuilding /> {t("layout.joinOrg")}
+                    </button>
+                    <button
+                        onClick={() => navigate("/")}
+                        style={{
+                            padding: "10px 24px",
+                            backgroundColor: "transparent",
+                            color: "var(--text-primary)",
+                            border: "1px solid var(--border-primary)",
+                            borderRadius: "6px",
+                            cursor: "pointer",
+                            fontSize: "15px",
+                            fontWeight: "500",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                        }}
+                    >
+                        <FaHome /> {t("layout.backHome")}
+                    </button>
+                    <button
+                        onClick={() => logout()}
+                        style={{
+                            padding: "10px 24px",
+                            backgroundColor: "transparent",
+                            color: "var(--text-primary)",
+                            border: "1px solid var(--border-primary)",
+                            borderRadius: "6px",
+                            cursor: "pointer",
+                            fontSize: "15px",
+                            fontWeight: "500",
+                        }}
+                    >
+                        {t("layout.switchAccount")}
+                    </button>
+                </div>
+            </div>
+        );
+    } else if (rdOrgs.length === 0) {
+        content = (
+            <div
+                style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    minHeight: "60vh",
+                    padding: "20px",
+                }}
+            >
+                <div style={{ fontSize: "64px", color: "#f0a020", marginBottom: "24px", opacity: 0.9 }}>
+                    <FaLock />
+                </div>
+                <h1 style={{ fontSize: "28px", fontWeight: "bold", marginBottom: "12px", color: "var(--text-primary)" }}>
+                    {t("orgGate.noOrgTitle")}
+                </h1>
+                <p
+                    style={{
+                        fontSize: "16px",
+                        color: "var(--text-secondary)",
+                        marginBottom: "32px",
+                        textAlign: "center",
+                        maxWidth: "480px",
+                        lineHeight: "1.6",
+                    }}
+                >
+                    {t("orgGate.noOrgLine1")}
+                    <br />
+                    {t("orgGate.noOrgLine2")}
+                </p>
+                <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", justifyContent: "center" }}>
+                    <button
+                        onClick={() => navigate("/organizations/list")}
+                        style={{
+                            padding: "10px 24px",
+                            backgroundColor: "var(--primary)",
+                            color: "#fff",
+                            border: "none",
+                            borderRadius: "6px",
+                            cursor: "pointer",
+                            fontSize: "15px",
+                            fontWeight: "500",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                        }}
+                    >
+                        <FaBuilding /> {t("orgGate.joinOrg")}
+                    </button>
+                    <button
+                        onClick={() => navigate("/")}
+                        style={{
+                            padding: "10px 24px",
+                            backgroundColor: "transparent",
+                            color: "var(--text-primary)",
+                            border: "1px solid var(--border-primary)",
+                            borderRadius: "6px",
+                            cursor: "pointer",
+                            fontSize: "15px",
+                            fontWeight: "500",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "8px",
+                        }}
+                    >
+                        <FaHome /> {t("orgGate.backHome")}
+                    </button>
+                    <button
+                        onClick={() => logout()}
+                        style={{
+                            padding: "10px 24px",
+                            backgroundColor: "transparent",
+                            color: "var(--text-primary)",
+                            border: "1px solid var(--border-primary)",
+                            borderRadius: "6px",
+                            cursor: "pointer",
+                            fontSize: "15px",
+                            fontWeight: "500",
+                        }}
+                    >
+                        {t("orgGate.switchAccount")}
+                    </button>
+                </div>
+            </div>
+        );
+    } else {
+        content = (
+            <Suspense
+                fallback={
+                    <MascotLoader
+                        variant="overlay"
+                        tone="org"
+                        title={t("entryLoader.title")}
+                        description={t("entryLoader.pageLoading")}
+                    />
+                }
+            >
+                <Outlet />
+            </Suspense>
+        );
+    }
+
     // 导航时自动保留 org 参数（由 useRdNavigate hook 处理）
 
     return (
         <div className={styles.rdLayout}>
             <div className={`${styles.mobileMenuOverlay} ${mobileMenuOpen ? styles.show : ""}`} onClick={closeMobileMenu} />
 
-            <RdOrgProvider initialOrgId={urlOrgId}>
-                <div className={styles.rdContainer}>
-                    {/* 侧边栏 */}
-                    <aside
-                        className={`${styles.rdSidebar} ${sidebarCollapsed ? styles.collapsed : ""} ${mobileMenuOpen ? styles.mobileOpen : ""}`}
-                    >
-                        <div className={styles.rdSidebarHeader}>
-                            <div onClick={() => navigate("/rd")} className={styles.rdLogo}>
-                                <span className={styles.rdLogoIcon}>⚙</span>
-                                <span className={styles.rdLogoText}>{t("layout.brand")}</span>
-                            </div>
-                            <button
-                                className={styles.toggleSidebarBtn}
-                                onClick={toggleSidebar}
-                                title={sidebarCollapsed ? t("layout.expandSidebar") : t("layout.collapseSidebar")}
-                            >
-                                {sidebarCollapsed ? <FaBars /> : <FaTimes />}
-                            </button>
+            <div className={styles.rdContainer}>
+                {/* 侧边栏 */}
+                <aside
+                    className={`${styles.rdSidebar} ${sidebarCollapsed ? styles.collapsed : ""} ${mobileMenuOpen ? styles.mobileOpen : ""}`}
+                >
+                    <div className={styles.rdSidebarHeader}>
+                        <div onClick={() => navigate("/rd")} className={styles.rdLogo}>
+                            <span className={styles.rdLogoIcon}>⚙</span>
+                            <span className={styles.rdLogoText}>{t("layout.brand")}</span>
                         </div>
+                        <button
+                            className={styles.toggleSidebarBtn}
+                            onClick={toggleSidebar}
+                            title={sidebarCollapsed ? t("layout.expandSidebar") : t("layout.collapseSidebar")}
+                        >
+                            {sidebarCollapsed ? <FaBars /> : <FaTimes />}
+                        </button>
+                    </div>
 
-                        <SidebarOrgSelector />
+                    <SidebarOrgSelector />
 
-                        <nav className={styles.rdNavMenu}>
-                            {navSections.map((section) => (
-                                <div key={section.title} className={styles.rdNavSection}>
-                                    <h3 className={styles.rdSectionTitle}>{section.title}</h3>
-                                    {section.items.map((item) => (
-                                        <div key={item.id} className={styles.rdNavItem}>
-                                            <div
-                                                onClick={() => {
-                                                    navigate(item.path);
-                                                    closeMobileMenu();
-                                                }}
-                                                className={`${styles.rdNavLink} ${location.pathname === item.path || (item.path !== "/rd" && location.pathname.startsWith(item.path)) ? styles.active : ""}`}
-                                                onMouseEnter={(e) => showTooltip(e, item.label)}
-                                                onMouseLeave={hideTooltip}
-                                            >
-                                                <span className={styles.rdNavIcon}>{item.icon}</span>
-                                                <span className={styles.rdNavText}>{item.label}</span>
-                                            </div>
+                    <nav className={styles.rdNavMenu}>
+                        {navSections.map((section) => (
+                            <div key={section.title} className={styles.rdNavSection}>
+                                <h3 className={styles.rdSectionTitle}>{section.title}</h3>
+                                {section.items.map((item) => (
+                                    <div key={item.id} className={styles.rdNavItem}>
+                                        <div
+                                            onClick={() => {
+                                                navigate(item.path);
+                                                closeMobileMenu();
+                                            }}
+                                            className={`${styles.rdNavLink} ${location.pathname === item.path || (item.path !== "/rd" && location.pathname.startsWith(item.path)) ? styles.active : ""}`}
+                                            onMouseEnter={(e) => showTooltip(e, item.label)}
+                                            onMouseLeave={hideTooltip}
+                                        >
+                                            <span className={styles.rdNavIcon}>{item.icon}</span>
+                                            <span className={styles.rdNavText}>{item.label}</span>
                                         </div>
-                                    ))}
-                                </div>
-                            ))}
-                        </nav>
-                    </aside>
-
-                    <main className={`${styles.rdMainContent} ${sidebarCollapsed ? styles.expanded : ""}`}>
-                        <header className={styles.rdTopBar}>
-                            <div className={styles.rdTopBarLeft}>
-                                <button className={styles.mobileMenuBtn} onClick={toggleMobileMenu} aria-label={t("layout.openMenu")}>
-                                    <FaBars />
-                                </button>
-
-                                <nav className={styles.rdBreadcrumb}>
-                                    {breadcrumbs.map((crumb, index) => (
-                                        <React.Fragment key={index}>
-                                            {index > 0 && <span className={styles.breadcrumbSeparator}>/</span>}
-                                            {index === breadcrumbs.length - 1 ? (
-                                                <span className={styles.breadcrumbActive}>{crumb.label}</span>
-                                            ) : (
-                                                <div onClick={() => navigate(crumb.path)} className={styles.breadcrumbLink}>
-                                                    {crumb.label}
-                                                </div>
-                                            )}
-                                        </React.Fragment>
-                                    ))}
-                                </nav>
+                                    </div>
+                                ))}
                             </div>
+                        ))}
+                    </nav>
+                </aside>
 
-                            <RdHeaderActions />
-                        </header>
+                <main className={`${styles.rdMainContent} ${sidebarCollapsed ? styles.expanded : ""}`}>
+                    <header className={styles.rdTopBar}>
+                        <div className={styles.rdTopBarLeft}>
+                            <button className={styles.mobileMenuBtn} onClick={toggleMobileMenu} aria-label={t("layout.openMenu")}>
+                                <FaBars />
+                            </button>
 
-                        <div className={styles.rdPageContent}>
-                            <Outlet />
+                            <nav className={styles.rdBreadcrumb}>
+                                {breadcrumbs.map((crumb, index) => (
+                                    <React.Fragment key={index}>
+                                        {index > 0 && <span className={styles.breadcrumbSeparator}>/</span>}
+                                        {index === breadcrumbs.length - 1 ? (
+                                            <span className={styles.breadcrumbActive}>{crumb.label}</span>
+                                        ) : (
+                                            <div onClick={() => navigate(crumb.path)} className={styles.breadcrumbLink}>
+                                                {crumb.label}
+                                            </div>
+                                        )}
+                                    </React.Fragment>
+                                ))}
+                            </nav>
                         </div>
 
-                        <Footer startYear={2025} />
-                    </main>
-                </div>
-            </RdOrgProvider>
+                        <RdHeaderActions />
+                    </header>
+
+                    <div className={styles.rdPageContent}>
+                        {content}
+                        {entryStage && <RdEntryLoader stage={entryStage} variant="overlay" />}
+                    </div>
+
+                    <Footer startYear={2025} />
+                </main>
+            </div>
         </div>
     );
 };

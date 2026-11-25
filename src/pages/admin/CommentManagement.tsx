@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import {
     FaFilter,
@@ -17,10 +17,13 @@ import {
     FaExclamationTriangle,
     FaStar,
     FaFlag,
+    FaComments,
+    FaCheckCircle,
 } from "react-icons/fa";
 import CustomSelect from "@/components/customSelect/CustomSelect";
 import Input from "@/components/input/Input";
 import Loading from "@/components/loading/Loading";
+import AdminListSkeleton from "@/components/adminListSkeleton/AdminListSkeleton";
 import Avatar from "@/components/avatar/Avatar";
 import { confirm } from "@/components/confirm/Confirm";
 import CommentService from "@/services/CommentService.ts";
@@ -29,6 +32,7 @@ import type { SelectOption } from "@/types";
 import type { CommentStatus } from "@/types/Enums.ts";
 import { useEnumLabels } from "@/i18n/UseEnumLabels";
 import { useInitialLoaded } from "@/hooks/UseInitialLoaded";
+import { useDebouncedValue } from "@/hooks/UseDebouncedValue";
 import styles from "./CommentManagement.module.css";
 
 interface FilterOptions {
@@ -46,6 +50,14 @@ const CommentManagement: React.FC = () => {
     const enums = useEnumLabels();
     const [comments, setComments] = useState<AdminComment[]>([]);
     const [total, setTotal] = useState(0);
+    const [stats, setStats] = useState({
+        total: 0,
+        pending: 0,
+        approved: 0,
+        spam: 0,
+        reported: 0,
+    });
+    const [statsLoading, setStatsLoading] = useState(true);
     const [filters, setFilters] = useState<FilterOptions>({
         search: "",
         status: "",
@@ -59,8 +71,22 @@ const CommentManagement: React.FC = () => {
     const [selectedComments, setSelectedComments] = useState<string[]>([]);
     const [showReplies, setShowReplies] = useState<string[]>([]);
 
+    // 搜索框防抖：避免每次键入都触发列表请求
+    const debouncedSearch = useDebouncedValue(filters.search, 300);
+    const queryFilters = useMemo(
+        () => ({
+            search: debouncedSearch,
+            status: filters.status,
+            articleId: filters.articleId,
+            isReported: filters.isReported,
+        }),
+        [debouncedSearch, filters.status, filters.articleId, filters.isReported],
+    );
+    const commentsRequestRef = useRef(0);
+
     // 加载数据
     const fetchComments = useCallback(async () => {
+        const requestId = ++commentsRequestRef.current;
         setLoading(true);
         try {
             const params: {
@@ -74,32 +100,60 @@ const CommentManagement: React.FC = () => {
                 page_num: currentPage,
                 page_size: PAGE_SIZE,
             };
-            if (filters.status) {
-                params.status = filters.status;
+            if (queryFilters.status) {
+                params.status = queryFilters.status;
             }
-            if (filters.search) {
-                params.keyword = filters.search;
+            if (queryFilters.search) {
+                params.keyword = queryFilters.search;
             }
-            if (filters.articleId) {
-                params.article_id = filters.articleId;
+            if (queryFilters.articleId) {
+                params.article_id = queryFilters.articleId;
             }
-            if (filters.isReported) {
-                params.is_reported = filters.isReported === "true" ? 1 : 0;
+            if (queryFilters.isReported) {
+                params.is_reported = queryFilters.isReported === "true" ? 1 : 0;
             }
 
             const data = await CommentService.getAdminList(params);
+            if (requestId !== commentsRequestRef.current) {
+                return;
+            }
             setComments(data.list);
             setTotal(data.total);
         } catch {
             // error handled by interceptor
         } finally {
-            setLoading(false);
+            if (requestId === commentsRequestRef.current) {
+                setLoading(false);
+            }
         }
-    }, [currentPage, filters]);
+    }, [currentPage, queryFilters]);
 
     useEffect(() => {
-        fetchComments();
+        void fetchComments();
     }, [fetchComments]);
+
+    // 加载评论统计
+    const fetchStats = useCallback(async () => {
+        setStatsLoading(true);
+        try {
+            const data = await CommentService.getAdminStats();
+            setStats({
+                total: data.total_comments ?? 0,
+                pending: data.pending_comments ?? 0,
+                approved: data.approved_comments ?? 0,
+                spam: data.spam_comments ?? 0,
+                reported: data.reported_comments ?? 0,
+            });
+        } catch {
+            // error handled by interceptor
+        } finally {
+            setStatsLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchStats();
+    }, [fetchStats]);
 
     // 筛选时重置页码
     const updateFilter = useCallback((field: keyof FilterOptions, value: string) => {
@@ -108,7 +162,7 @@ const CommentManagement: React.FC = () => {
     }, []);
 
     // 分页计算
-    const totalPages = Math.ceil(total / PAGE_SIZE);
+    const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
     const startIndex = total === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
     const endIndex = Math.min(currentPage * PAGE_SIZE, total);
 
@@ -158,6 +212,17 @@ const CommentManagement: React.FC = () => {
         }
     };
 
+    const allSelected = comments.length > 0 && comments.every((comment) => selectedComments.includes(comment.id));
+
+    const handleToggleSelectAll = () => {
+        if (allSelected) {
+            const currentIds = new Set(comments.map((comment) => comment.id));
+            setSelectedComments((prev) => prev.filter((id) => !currentIds.has(id)));
+            return;
+        }
+        setSelectedComments((prev) => Array.from(new Set([...prev, ...comments.map((comment) => comment.id)])));
+    };
+
     // 批准评论
     const approveComments = async (commentIds: string[]) => {
         await confirm({
@@ -169,6 +234,7 @@ const CommentManagement: React.FC = () => {
                 await CommentService.approve(commentIds);
                 setSelectedComments([]);
                 fetchComments();
+                fetchStats();
             },
         });
     };
@@ -184,6 +250,7 @@ const CommentManagement: React.FC = () => {
                 await CommentService.reject(commentIds);
                 setSelectedComments([]);
                 fetchComments();
+                fetchStats();
             },
         });
     };
@@ -199,6 +266,7 @@ const CommentManagement: React.FC = () => {
                 await CommentService.markSpam(commentIds);
                 setSelectedComments([]);
                 fetchComments();
+                fetchStats();
             },
         });
     };
@@ -214,6 +282,7 @@ const CommentManagement: React.FC = () => {
                 await CommentService.batchDelete(commentIds);
                 setSelectedComments([]);
                 fetchComments();
+                fetchStats();
             },
         });
     };
@@ -278,7 +347,7 @@ const CommentManagement: React.FC = () => {
     if (loading && !initialLoaded) {
         return (
             <div className={styles.commentManagement}>
-                <Loading text={t("comments.loading")} size="large" />
+                <AdminListSkeleton stats={5} columns={7} />
             </div>
         );
     }
@@ -291,16 +360,44 @@ const CommentManagement: React.FC = () => {
                     <h1 className={styles.pageTitle}>{t("comments.title")}</h1>
                     <p className={styles.pageDescription}>{t("comments.description")}</p>
                 </div>
-                <div className={styles.headerActions}>
-                    <span
-                        style={{
-                            fontSize: "14px",
-                            color: "var(--text-secondary)",
-                            marginRight: "12px",
-                        }}
-                    >
-                        {t("comments.totalComments", { total })}
-                    </span>
+            </div>
+
+            {/* 统计卡片 */}
+            <div className={styles.statsContainer}>
+                <div className={styles.statCard}>
+                    <div className={`${styles.statIcon} ${styles.primary}`}>
+                        <FaComments />
+                    </div>
+                    <div className={styles.statValue}>{statsLoading ? "..." : stats.total}</div>
+                    <div className={styles.statLabel}>{t("comments.stats.total")}</div>
+                </div>
+                <div className={styles.statCard}>
+                    <div className={`${styles.statIcon} ${styles.warning}`}>
+                        <FaClock />
+                    </div>
+                    <div className={styles.statValue}>{statsLoading ? "..." : stats.pending}</div>
+                    <div className={styles.statLabel}>{t("comments.stats.pending")}</div>
+                </div>
+                <div className={styles.statCard}>
+                    <div className={`${styles.statIcon} ${styles.success}`}>
+                        <FaCheckCircle />
+                    </div>
+                    <div className={styles.statValue}>{statsLoading ? "..." : stats.approved}</div>
+                    <div className={styles.statLabel}>{t("comments.stats.approved")}</div>
+                </div>
+                <div className={styles.statCard}>
+                    <div className={`${styles.statIcon} ${styles.error}`}>
+                        <FaExclamationTriangle />
+                    </div>
+                    <div className={styles.statValue}>{statsLoading ? "..." : stats.spam}</div>
+                    <div className={styles.statLabel}>{t("comments.stats.spam")}</div>
+                </div>
+                <div className={styles.statCard}>
+                    <div className={`${styles.statIcon} ${styles.reported}`}>
+                        <FaFlag />
+                    </div>
+                    <div className={styles.statValue}>{statsLoading ? "..." : stats.reported}</div>
+                    <div className={styles.statLabel}>{t("comments.stats.reported")}</div>
                 </div>
             </div>
 
@@ -393,159 +490,232 @@ const CommentManagement: React.FC = () => {
                 </div>
             )}
 
-            {/* 评论列表 */}
-            <div className={styles.commentsContainer}>
-                {loading ? (
-                    <div style={{ textAlign: "center", padding: "40px" }}>
-                        <Loading size="small" />
+            {/* 评论表格 */}
+            <div className={styles.tableContainer}>
+                <div className={styles.tableHeader}>
+                    <h3 className={styles.tableTitle}>{t("comments.table.title")}</h3>
+                    <div className={styles.tableActions}>
+                        <span style={{ fontSize: "14px", color: "var(--text-secondary)" }}>
+                            {t("comments.table.total", { total })}
+                        </span>
                     </div>
-                ) : comments.length > 0 ? (
-                    comments.map((comment) => {
-                        const replies = getReplies(comment.id);
-                        const hasReplies = replies.length > 0;
-                        const showReplyList = showReplies.includes(comment.id);
+                </div>
+                <table className={styles.commentsTable}>
+                    <thead>
+                        <tr>
+                            <th className={styles.selectColumn}>
+                                <input
+                                    type="checkbox"
+                                    className={styles.selectCheckbox}
+                                    checked={allSelected}
+                                    onChange={handleToggleSelectAll}
+                                    aria-label={t("comments.batch.selectAll")}
+                                />
+                            </th>
+                            <th>{t("comments.table.headers.author")}</th>
+                            <th>{t("comments.table.headers.content")}</th>
+                            <th>{t("comments.table.headers.status")}</th>
+                            <th>{t("comments.table.headers.engagement")}</th>
+                            <th>{t("comments.table.headers.time")}</th>
+                            <th>{t("comments.table.headers.actions")}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {loading ? (
+                            <tr>
+                                <td colSpan={7} style={{ textAlign: "center", padding: "40px" }}>
+                                    <Loading size="small" />
+                                </td>
+                            </tr>
+                        ) : comments.length > 0 ? (
+                            comments.map((comment) => {
+                                const replies = getReplies(comment.id);
+                                const hasReplies = replies.length > 0;
+                                const showReplyList = showReplies.includes(comment.id);
 
-                        return (
-                            <div key={comment.id} className={styles.commentCard}>
-                                <div className={styles.commentHeader}>
-                                    <div className={styles.commentMeta}>
-                                        <input
-                                            type="checkbox"
-                                            checked={selectedComments.includes(comment.id)}
-                                            onChange={(e) => handleSelectComment(comment.id, e.target.checked)}
-                                            className={styles.commentCheckbox}
-                                        />
-                                        <div className={styles.authorInfo}>
-                                            <Avatar src={comment.author.avatar} name={comment.author.name} size={40} />
-                                            <div className={styles.authorDetails}>
-                                                <div className={styles.authorName}>{comment.author.name}</div>
-                                                <div className={styles.authorEmail}>{comment.author.email}</div>
-                                            </div>
-                                        </div>
-                                        <div className={styles.commentInfo}>
-                                            <span className={`${styles.statusBadge} ${styles[comment.status]}`}>
-                                                {enums.commentStatus[comment.status as CommentStatus] || comment.status}
-                                            </span>
-                                            {comment.is_reported && (
-                                                <span className={styles.reportedBadge}>
-                                                    <FaFlag />
-                                                    {t("comments.card.report", { value: comment.report_count })}
-                                                </span>
-                                            )}
-                                            <span className={styles.commentTime}>
-                                                <FaClock />
-                                                {formatDate(comment.created_at)}
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <div className={styles.commentActions}>
-                                        {comment.status === "pending" && (
-                                            <>
-                                                <button
-                                                    className={`${styles.actionButton} ${styles.approve}`}
-                                                    title={t("comments.actions.approve")}
-                                                    onClick={() => approveComments([comment.id])}
-                                                >
-                                                    <FaCheck />
-                                                </button>
-                                                <button
-                                                    className={`${styles.actionButton} ${styles.reject}`}
-                                                    title={t("comments.actions.reject")}
-                                                    onClick={() => rejectComments([comment.id])}
-                                                >
-                                                    <FaBan />
-                                                </button>
-                                            </>
-                                        )}
-                                        <button
-                                            className={`${styles.actionButton} ${styles.spam}`}
-                                            title={t("comments.actions.markSpam")}
-                                            onClick={() => markAsSpam([comment.id])}
-                                        >
-                                            <FaExclamationTriangle />
-                                        </button>
-                                        <button
-                                            className={`${styles.actionButton} ${styles.delete}`}
-                                            title={t("comments.actions.delete")}
-                                            onClick={() => deleteComments([comment.id])}
-                                        >
-                                            <FaTrash />
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <div className={styles.commentContent}>
-                                    <div className={styles.articleLink}>
-                                        <FaFileAlt />
-                                        {t("comments.card.article", { value: comment.article.title })}
-                                    </div>
-                                    <div className={styles.contentText}>{comment.content}</div>
-                                    <div className={styles.commentStats}>
-                                        <span className={styles.statItem}>
-                                            <FaStar />
-                                            {t("comments.card.likes", { value: comment.likes })}
-                                        </span>
-                                        {hasReplies && (
-                                            <button className={styles.statItem} onClick={() => toggleReplies(comment.id)}>
-                                                <FaReply />
-                                                {t("comments.card.replies", { value: replies.length })}
-                                                {showReplyList ? <FaEyeSlash /> : <FaEye />}
-                                            </button>
-                                        )}
-                                    </div>
-                                </div>
-
-                                {/* 回复列表 */}
-                                {hasReplies && showReplyList && (
-                                    <div className={styles.repliesList}>
-                                        {replies.map((reply) => (
-                                            <div key={reply.id} className={styles.replyItem}>
-                                                <div className={styles.replyHeader}>
-                                                    <div className={styles.replyAuthor}>
-                                                        <Avatar src={reply.author.avatar} name={reply.author.name} size={32} />
-                                                        <div className={styles.replyInfo}>
-                                                            <span className={styles.replyName}>{reply.author.name}</span>
-                                                            <span className={styles.replyTime}>{formatDate(reply.created_at)}</span>
-                                                            <span
-                                                                className={`${styles.statusBadge} ${styles[reply.status]} ${styles.small}`}
-                                                            >
-                                                                {enums.commentStatus[reply.status as CommentStatus] || reply.status}
-                                                            </span>
-                                                        </div>
-                                                    </div>
-                                                    <div className={styles.replyActions}>
-                                                        <button
-                                                            className={`${styles.actionButton} ${styles.small}`}
-                                                            title={t("comments.actions.delete")}
-                                                            onClick={() => deleteComments([reply.id])}
-                                                        >
-                                                            <FaTrash />
-                                                        </button>
+                                return (
+                                    <React.Fragment key={comment.id}>
+                                        <tr className={comment.parent_id ? styles.replyRow : undefined}>
+                                            <td className={styles.selectColumn}>
+                                                <input
+                                                    type="checkbox"
+                                                    className={styles.selectCheckbox}
+                                                    checked={selectedComments.includes(comment.id)}
+                                                    onChange={(e) => handleSelectComment(comment.id, e.target.checked)}
+                                                    aria-label={t("comments.batch.selectRow")}
+                                                />
+                                            </td>
+                                            <td>
+                                                <div className={styles.authorInfo}>
+                                                    <Avatar src={comment.author.avatar} name={comment.author.name} size={40} />
+                                                    <div className={styles.authorDetails}>
+                                                        <div className={styles.authorName}>{comment.author.name}</div>
+                                                        <div className={styles.authorEmail}>{comment.author.email}</div>
                                                     </div>
                                                 </div>
-                                                <div className={styles.replyContent}>{reply.content}</div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        );
-                    })
-                ) : (
-                    <div
-                        style={{
-                            textAlign: "center",
-                            padding: "40px",
-                            color: "var(--text-secondary)",
-                        }}
-                    >
-                        {t("comments.empty")}
-                    </div>
-                )}
-            </div>
+                                            </td>
+                                            <td>
+                                                <div className={styles.contentCell}>
+                                                    <div className={styles.contentText}>{comment.content}</div>
+                                                    <div className={styles.articleLink}>
+                                                        <FaFileAlt />
+                                                        {t("comments.card.article", { value: comment.article.title })}
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div className={styles.badgeColumn}>
+                                                    <span className={`${styles.statusBadge} ${styles[comment.status]}`}>
+                                                        {enums.commentStatus[comment.status as CommentStatus] || comment.status}
+                                                    </span>
+                                                    {comment.is_reported && (
+                                                        <span className={styles.reportedBadge}>
+                                                            <FaFlag />
+                                                            {t("comments.card.report", { value: comment.report_count })}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <div className={styles.engagementCell}>
+                                                    <span className={styles.statItem}>
+                                                        <FaStar />
+                                                        {t("comments.card.likes", { value: comment.likes })}
+                                                    </span>
+                                                    {hasReplies ? (
+                                                        <button
+                                                            type="button"
+                                                            className={styles.statItem}
+                                                            onClick={() => toggleReplies(comment.id)}
+                                                            title={
+                                                                showReplyList
+                                                                    ? t("comments.table.collapseReplies")
+                                                                    : t("comments.table.expandReplies")
+                                                            }
+                                                        >
+                                                            <FaReply />
+                                                            {t("comments.card.replies", { value: replies.length })}
+                                                            {showReplyList ? <FaEyeSlash /> : <FaEye />}
+                                                        </button>
+                                                    ) : (
+                                                        <span className={styles.statItem}>
+                                                            <FaReply />
+                                                            {t("comments.card.replies", { value: comment.reply_count ?? 0 })}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span className={styles.commentTime}>
+                                                    <FaClock />
+                                                    {formatDate(comment.created_at)}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <div className={styles.actionButtons}>
+                                                    {comment.status === "pending" && (
+                                                        <>
+                                                            <button
+                                                                className={`${styles.actionButton} ${styles.approve}`}
+                                                                title={t("comments.actions.approve")}
+                                                                onClick={() => approveComments([comment.id])}
+                                                            >
+                                                                <FaCheck />
+                                                            </button>
+                                                            <button
+                                                                className={`${styles.actionButton} ${styles.reject}`}
+                                                                title={t("comments.actions.reject")}
+                                                                onClick={() => rejectComments([comment.id])}
+                                                            >
+                                                                <FaBan />
+                                                            </button>
+                                                        </>
+                                                    )}
+                                                    <button
+                                                        className={`${styles.actionButton} ${styles.spam}`}
+                                                        title={t("comments.actions.markSpam")}
+                                                        onClick={() => markAsSpam([comment.id])}
+                                                    >
+                                                        <FaExclamationTriangle />
+                                                    </button>
+                                                    <button
+                                                        className={`${styles.actionButton} ${styles.delete}`}
+                                                        title={t("comments.actions.delete")}
+                                                        onClick={() => deleteComments([comment.id])}
+                                                    >
+                                                        <FaTrash />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
 
-            {/* 分页 */}
-            {totalPages >= 1 && (
+                                        {/* 回复列表 */}
+                                        {hasReplies && showReplyList && (
+                                            <tr className={styles.repliesRow}>
+                                                <td colSpan={7}>
+                                                    <div className={styles.repliesList}>
+                                                        {replies.map((reply) => (
+                                                            <div key={reply.id} className={styles.replyItem}>
+                                                                <div className={styles.replyHeader}>
+                                                                    <div className={styles.replyAuthor}>
+                                                                        <Avatar
+                                                                            src={reply.author.avatar}
+                                                                            name={reply.author.name}
+                                                                            size={32}
+                                                                        />
+                                                                        <div className={styles.replyInfo}>
+                                                                            <span className={styles.replyName}>
+                                                                                {reply.author.name}
+                                                                            </span>
+                                                                            <span className={styles.replyTime}>
+                                                                                {formatDate(reply.created_at)}
+                                                                            </span>
+                                                                            <span
+                                                                                className={`${styles.statusBadge} ${styles[reply.status]} ${styles.small}`}
+                                                                            >
+                                                                                {enums.commentStatus[reply.status as CommentStatus] ||
+                                                                                    reply.status}
+                                                                            </span>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className={styles.replyActions}>
+                                                                        <button
+                                                                            className={`${styles.actionButton} ${styles.small}`}
+                                                                            title={t("comments.actions.delete")}
+                                                                            onClick={() => deleteComments([reply.id])}
+                                                                        >
+                                                                            <FaTrash />
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                                <div className={styles.replyContent}>{reply.content}</div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </React.Fragment>
+                                );
+                            })
+                        ) : (
+                            <tr>
+                                <td
+                                    colSpan={7}
+                                    style={{
+                                        textAlign: "center",
+                                        padding: "40px",
+                                        color: "var(--text-secondary)",
+                                    }}
+                                >
+                                    {t("comments.table.empty")}
+                                </td>
+                            </tr>
+                        )}
+                    </tbody>
+                </table>
+
+                {/* 分页 */}
                 <div className={styles.paginationContainer}>
                     <div className={styles.paginationInfo}>
                         {t("comments.pagination.info", { start: startIndex, end: endIndex, total })}
@@ -570,6 +740,7 @@ const CommentManagement: React.FC = () => {
                                     <button
                                         className={`${styles.paginationButton} ${currentPage === page ? styles.active : ""}`}
                                         onClick={() => setCurrentPage(page as number)}
+                                        disabled={total === 0}
                                     >
                                         {page}
                                     </button>
@@ -593,7 +764,7 @@ const CommentManagement: React.FC = () => {
                         </button>
                     </div>
                 </div>
-            )}
+            </div>
         </div>
     );
 };

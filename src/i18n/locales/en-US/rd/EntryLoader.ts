@@ -10,6 +10,7 @@ const section = {
         access: "Verifying your R&D Platform access…",
         org: "Loading organization and role information…",
     },
+    pageLoading: "Loading page…",
 } as const;
 
 export default section;

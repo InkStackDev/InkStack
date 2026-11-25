@@ -36,7 +36,7 @@ const TopBar: React.FC<TopBarProps> = ({ onMenuClick, tools }) => {
     const currentUser = user
         ? {
               name: user.name || user.account || tCommon("user.fallbackName"),
-              avatar: user.avatar || "https://picsum.photos/id/64/200",
+              avatar: user.avatar || "",
               role: user.role
                   ? enums.platformRole[user.role as PlatformRoleType] || tCommon("user.fallbackName")
                   : tCommon("user.fallbackName"),

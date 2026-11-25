@@ -78,6 +78,8 @@ const Avatar: React.FC<AvatarProps> = ({ src, name, size = 40, className, style 
                     src={src!}
                     alt={name}
                     className={styles.img}
+                    loading="lazy"
+                    decoding="async"
                     onError={() => setImgError(true)}
                     style={{ width: size, height: size }}
                 />

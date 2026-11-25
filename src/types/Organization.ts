@@ -38,6 +38,10 @@ export interface OrganizationDetail {
     user_in_org?: number;
     /** 当前用户在该组织的角色（原始枚举值，显示时用 useEnumLabels().orgRole 本地化） */
     user_role?: number;
+    /** 组织所有者用户 ID */
+    owner_id?: string;
+    /** 当前用户是否为组织所有者 */
+    is_owner?: boolean;
 }
 
 // 成员统计

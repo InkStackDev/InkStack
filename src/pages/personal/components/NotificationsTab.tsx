@@ -301,7 +301,7 @@ const NotificationsTab: React.FC = () => {
 
     const typeMeta = (type: string) => TYPE_ICON_MAP[type] || TYPE_ICON_MAP.system;
 
-    const totalPages = Math.ceil(total / PAGE_SIZE);
+    const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
     const startIndex = (currentPage - 1) * PAGE_SIZE;
     const endIndex = Math.min(startIndex + notifications.length, total);
     const unreadCount = notifications.filter((n: NotificationItem) => !n.is_read && !isRead(n.id)).length;
@@ -413,49 +413,47 @@ const NotificationsTab: React.FC = () => {
             </div>
 
             {/* Pagination */}
-            {totalPages >= 1 && (
-                <div className={styles.pagination}>
-                    <div className={styles.paginationInfo}>
-                        {t("notifications.pagination.info", { start: startIndex + 1, end: endIndex, total })}
-                    </div>
-                    <div className={styles.paginationControls}>
-                        <button className={styles.paginationButton} onClick={() => setCurrentPage(1)} disabled={currentPage === 1}>
-                            {t("notifications.pagination.first")}
-                        </button>
-                        <button
-                            className={styles.paginationButton}
-                            onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                            disabled={currentPage === 1}
-                        >
-                            {t("notifications.pagination.prev")}
-                        </button>
-                        {getPageNumbers(currentPage, totalPages).map((page, index) => (
-                            <button
-                                key={index}
-                                className={`${styles.paginationButton} ${currentPage === page ? styles.active : ""}`}
-                                onClick={() => page !== "..." && setCurrentPage(page as number)}
-                                disabled={page === "..."}
-                            >
-                                {page}
-                            </button>
-                        ))}
-                        <button
-                            className={styles.paginationButton}
-                            onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                            disabled={currentPage === totalPages}
-                        >
-                            {t("notifications.pagination.next")}
-                        </button>
-                        <button
-                            className={styles.paginationButton}
-                            onClick={() => setCurrentPage(totalPages)}
-                            disabled={currentPage === totalPages}
-                        >
-                            {t("notifications.pagination.last")}
-                        </button>
-                    </div>
+            <div className={styles.pagination}>
+                <div className={styles.paginationInfo}>
+                    {t("notifications.pagination.info", { start: total > 0 ? startIndex + 1 : 0, end: endIndex, total })}
                 </div>
-            )}
+                <div className={styles.paginationControls}>
+                    <button className={styles.paginationButton} onClick={() => setCurrentPage(1)} disabled={currentPage === 1}>
+                        {t("notifications.pagination.first")}
+                    </button>
+                    <button
+                        className={styles.paginationButton}
+                        onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                        disabled={currentPage === 1}
+                    >
+                        {t("notifications.pagination.prev")}
+                    </button>
+                    {getPageNumbers(currentPage, totalPages).map((page, index) => (
+                        <button
+                            key={index}
+                            className={`${styles.paginationButton} ${currentPage === page ? styles.active : ""}`}
+                            onClick={() => page !== "..." && setCurrentPage(page as number)}
+                            disabled={page === "..." || total === 0}
+                        >
+                            {page}
+                        </button>
+                    ))}
+                    <button
+                        className={styles.paginationButton}
+                        onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                        disabled={currentPage === totalPages}
+                    >
+                        {t("notifications.pagination.next")}
+                    </button>
+                    <button
+                        className={styles.paginationButton}
+                        onClick={() => setCurrentPage(totalPages)}
+                        disabled={currentPage === totalPages}
+                    >
+                        {t("notifications.pagination.last")}
+                    </button>
+                </div>
+            </div>
 
             {/* Settings Modal */}
             <Modal

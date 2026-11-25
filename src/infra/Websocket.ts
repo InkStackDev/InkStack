@@ -88,6 +88,11 @@ export class WebSocketClient {
         return this.hasOpened;
     }
 
+    /** 是否允许再次主动建连（`replaced` / 主动 disconnect 后为 false，避免重连循环） */
+    get canReconnect(): boolean {
+        return !this.intentionalClose;
+    }
+
     connect(uid?: string | number): boolean {
         if (uid !== undefined) {
             this.uid = uid;
@@ -113,7 +118,6 @@ export class WebSocketClient {
 
         const socket = new WebSocket(connectUrl);
         this.ws = socket;
-        let hasOpened = false;
 
         const isCurrentConnection = () => this.ws === socket && this.connectionGeneration === generation;
 
@@ -122,7 +126,6 @@ export class WebSocketClient {
                 return;
             }
             console.log("[WS] 连接已建立");
-            hasOpened = true;
             this.hasOpened = true;
             this.reconnectAttempts = 0;
             while (this.pendingSend.length > 0) {
@@ -191,7 +194,9 @@ export class WebSocketClient {
             this.stopHeartbeat();
             console.log("[WS] 连接关闭, code:", event.code, "reason:", event.reason || "(无)");
             this.dispatchHandlers(this.closeHandlers, event, "close");
-            if (hasOpened && !this.intentionalClose) {
+            // 已建立的连接断线要重连；首次握手失败也允许有限重试，
+            // 避免代理/实例重启窗口导致“页面打开后一直没有 WS”。
+            if (!this.intentionalClose) {
                 this.scheduleReconnect();
             }
         };
@@ -294,6 +299,7 @@ export class WebSocketClient {
 
     private scheduleReconnect() {
         if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+            console.warn("[WS] 自动重连次数已用尽，等待下一次触发");
             return;
         }
         const delay = Math.min(this.reconnectDelay * Math.pow(2, this.reconnectAttempts), this.maxReconnectDelay);

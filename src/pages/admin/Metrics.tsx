@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type FC, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-import * as echarts from "echarts";
+import type { ECharts, EChartsOption } from "@/utils/Echarts";
 import {
     FaChartLine,
     FaChevronLeft,
@@ -27,7 +27,7 @@ import Selector from "@/components/selector/Selector";
 import Switch from "@/components/switch/Switch";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useAsyncResource } from "@/hooks/UseAsyncResource";
-import MetricsService, { type MetricSample, type RouteMetricsRow } from "@/services/MetricsService.ts";
+import MetricsService, { type MetricsPayload, type RouteMetricsRow } from "@/services/MetricsService.ts";
 import { getThemeFontFamily } from "@/utils/ThemeFont";
 import styles from "./Metrics.module.css";
 
@@ -87,20 +87,40 @@ const Metrics: FC = () => {
     const [rawVisible, setRawVisible] = useState(false);
 
     const chartRef = useRef<HTMLDivElement>(null);
-    const chartInstance = useRef<echarts.ECharts | null>(null);
+    const chartInstance = useRef<ECharts | null>(null);
     const bucketChartRef = useRef<HTMLDivElement>(null);
-    const bucketChartInstance = useRef<echarts.ECharts | null>(null);
+    const bucketChartInstance = useRef<ECharts | null>(null);
+    const [echartsModule, setEchartsModule] = useState<typeof import("@/utils/Echarts") | null>(null);
+
+    // 图表库延迟加载：指标数据和表格先渲染，ECharts 后加载
+    useEffect(() => {
+        let cancelled = false;
+        void import("@/utils/Echarts").then((module) => {
+            if (!cancelled) {
+                setEchartsModule(module);
+            }
+        });
+        return () => {
+            cancelled = true;
+        };
+    }, []);
 
     const fetcher = useCallback((signal: AbortSignal) => MetricsService.getMetrics(signal), []);
-    const { data: samples, loading, error, reload } = useAsyncResource<MetricSample[]>(fetcher, [], { timeoutMs: 15000 });
+    const { data: payload, loading, error, reload } = useAsyncResource<MetricsPayload>(fetcher, [], { timeoutMs: 15000 });
 
-    const snapshot = useMemo(() => (samples ? MetricsService.buildSnapshot(samples) : null), [samples]);
+    const snapshot = useMemo(
+        () =>
+            payload
+                ? MetricsService.buildSnapshot(payload.metrics ?? [], payload.instanceCount ?? 1, payload.degraded ?? false)
+                : null,
+        [payload],
+    );
 
     useEffect(() => {
-        if (samples) {
+        if (payload) {
             setLastUpdated(new Date());
         }
-    }, [samples]);
+    }, [payload]);
 
     useEffect(() => {
         if (!autoRefresh) {
@@ -177,9 +197,10 @@ const Metrics: FC = () => {
             return;
         }
 
-        if (!chartRef.current) {
+        if (!echartsModule || !chartRef.current) {
             return;
         }
+        const echarts = echartsModule;
 
         if (!chartInstance.current) {
             chartInstance.current = echarts.init(chartRef.current, "light", { renderer: "canvas" });
@@ -300,7 +321,7 @@ const Metrics: FC = () => {
             ],
         };
 
-        chart.setOption(option as echarts.EChartsOption, true);
+        chart.setOption(option as EChartsOption, true);
 
         const handleResize = () => {
             chart.resize();
@@ -309,7 +330,7 @@ const Metrics: FC = () => {
         return () => {
             window.removeEventListener("resize", handleResize);
         };
-    }, [chartRoutes, preset, t]);
+    }, [echartsModule, chartRoutes, preset, t]);
 
     useEffect(() => {
         if (!selectedRoute || selectedRoute.buckets.length === 0) {
@@ -318,9 +339,10 @@ const Metrics: FC = () => {
             return;
         }
 
-        if (!bucketChartRef.current) {
+        if (!echartsModule || !bucketChartRef.current) {
             return;
         }
+        const echarts = echartsModule;
 
         if (!bucketChartInstance.current) {
             bucketChartInstance.current = echarts.init(bucketChartRef.current, "light", { renderer: "canvas" });
@@ -342,7 +364,7 @@ const Metrics: FC = () => {
             };
         });
 
-        const option: echarts.EChartsOption = {
+        const option: EChartsOption = {
             textStyle: {
                 fontFamily: themeFont,
             },
@@ -457,7 +479,7 @@ const Metrics: FC = () => {
         return () => {
             window.removeEventListener("resize", handleResize);
         };
-    }, [preset, selectedRoute, t]);
+    }, [echartsModule, preset, selectedRoute, t]);
 
     useEffect(() => {
         return () => {
@@ -545,6 +567,7 @@ const Metrics: FC = () => {
             hint: t("metrics.summary.connectionDetail", {
                 http: snapshot.connections.http,
                 ws: snapshot.connections.ws,
+                devices: snapshot.connections.wsDevices,
             }),
         },
         {
@@ -595,8 +618,14 @@ const Metrics: FC = () => {
                     <p className={styles.pageDescription}>{t("metrics.description")}</p>
                     <p className={styles.workerHint}>
                         <FaInfoCircle />
-                        <span>{t("metrics.workerHint")}</span>
+                        <span>{t("metrics.workerHint", { instances: snapshot.instanceCount })}</span>
                     </p>
+                    {snapshot.degraded ? (
+                        <p className={styles.workerHint}>
+                            <FaExclamationTriangle />
+                            <span>{t("metrics.degradedHint")}</span>
+                        </p>
+                    ) : null}
                 </div>
                 <div className={styles.headerActions}>
                     <span className={styles.lastUpdated}>
@@ -822,32 +851,28 @@ const Metrics: FC = () => {
                                 </tbody>
                             </table>
                         </div>
-
-                        {sortedRoutes.length > PAGE_SIZE ? (
-                            <div className={styles.pagination}>
-                                <Button
-                                    size="small"
-                                    variant="outline"
-                                    disabled={currentPage === 1}
-                                    onClick={() => setPage(Math.max(1, currentPage - 1))}
-                                >
-                                    <FaChevronLeft /> {t("metrics.table.prev")}
-                                </Button>
-                                <span className={styles.pageInfo}>
-                                    {t("metrics.table.pageInfo", { current: currentPage, total: totalPages })}
-                                </span>
-                                <Button
-                                    size="small"
-                                    variant="outline"
-                                    disabled={currentPage === totalPages}
-                                    onClick={() => setPage(Math.min(totalPages, currentPage + 1))}
-                                >
-                                    {t("metrics.table.next")} <FaChevronRight />
-                                </Button>
-                            </div>
-                        ) : null}
                     </>
                 )}
+
+                <div className={styles.pagination}>
+                    <Button
+                        size="small"
+                        variant="outline"
+                        disabled={currentPage === 1}
+                        onClick={() => setPage(Math.max(1, currentPage - 1))}
+                    >
+                        <FaChevronLeft /> {t("metrics.table.prev")}
+                    </Button>
+                    <span className={styles.pageInfo}>{t("metrics.table.pageInfo", { current: currentPage, total: totalPages })}</span>
+                    <Button
+                        size="small"
+                        variant="outline"
+                        disabled={currentPage === totalPages}
+                        onClick={() => setPage(Math.min(totalPages, currentPage + 1))}
+                    >
+                        {t("metrics.table.next")} <FaChevronRight />
+                    </Button>
+                </div>
             </div>
 
             {selectedRoute ? (
@@ -928,7 +953,7 @@ const Metrics: FC = () => {
                     </Button>
                 }
             >
-                <pre className={styles.rawJson}>{JSON.stringify(samples ?? [], null, 2)}</pre>
+                <pre className={styles.rawJson}>{JSON.stringify(payload ?? {}, null, 2)}</pre>
             </Modal>
         </div>
     );

@@ -20,6 +20,10 @@ export interface MetricSample {
 
 export interface MetricsPayload {
     metrics?: MetricSample[];
+    /** 参与聚合的存活实例数 */
+    instanceCount?: number;
+    /** Redis 聚合失败/不完整时为 true，此时只保证本实例数据 */
+    degraded?: boolean;
 }
 
 export interface RouteMetricsRow {
@@ -64,7 +68,10 @@ export interface ProcessMetrics {
 
 export interface ConnectionMetrics {
     http: number;
+    /** WSServer 的 TCP 活跃连接数（含尚未完成握手/鉴权的连接） */
     ws: number;
+    /** WSMgr 中已注册到设备表的 WebSocket 连接数 */
+    wsDevices: number;
     onlineUsers: number;
 }
 
@@ -82,6 +89,10 @@ export interface MetricsSnapshot {
     connections: ConnectionMetrics;
     totals: MetricsTotals;
     routes: RouteMetricsRow[];
+    /** 参与聚合的存活实例数（后端未返回时按 1 处理） */
+    instanceCount: number;
+    /** 后端聚合降级（Redis 不可用/部分快照缺失） */
+    degraded: boolean;
 }
 
 interface RouteAccumulator {
@@ -117,21 +128,69 @@ function estimatePercentileMs(buckets: Array<{ le: number; cumulative: number }>
     return null;
 }
 
+/**
+ * 合并多个实例的 histogram 样本：同 le 的桶累加，count/sum 相加。
+ */
+function mergeHistogram(current: MetricSample | null, sample: MetricSample): MetricSample {
+    if (!current) {
+        return sample;
+    }
+
+    const buckets = new Map<number, number>();
+    for (const bucket of current.buckets ?? []) {
+        buckets.set(bucket.le, bucket.cumulative);
+    }
+    for (const bucket of sample.buckets ?? []) {
+        buckets.set(bucket.le, (buckets.get(bucket.le) ?? 0) + bucket.cumulative);
+    }
+
+    return {
+        ...current,
+        buckets: Array.from(buckets.entries())
+            .sort(([left], [right]) => left - right)
+            .map(([le, cumulative]) => ({ le, cumulative })),
+        count: (current.count ?? 0) + (sample.count ?? 0),
+        sum: (current.sum ?? 0) + (sample.sum ?? 0),
+    };
+}
+
 export class MetricsService {
     /**
-     * 拉取当前 worker 进程的原始指标
+     * 拉取聚合后的指标数据（metrics + instanceCount/degraded）
      */
-    static async getMetrics(signal?: AbortSignal): Promise<MetricSample[]> {
+    static async getMetrics(signal?: AbortSignal): Promise<MetricsPayload> {
         const response = await http.get<MetricsPayload>("/admin/metrics", signal ? { signal } : undefined);
-        return response.data?.metrics ?? [];
+        return response.data ?? {};
     }
 
     /**
      * 将原始指标聚合成页面可直接消费的结构
+     * @param samples 原始指标
+     * @param instanceCount 参与聚合的实例数
+     * @param degraded 后端聚合是否降级
      */
-    static buildSnapshot(samples: MetricSample[]): MetricsSnapshot {
+    static buildSnapshot(samples: MetricSample[], instanceCount = 1, degraded = false): MetricsSnapshot {
         const routes = new Map<string, RouteAccumulator>();
-        const singleByName = new Map<string, MetricSample>();
+        const sumByName = new Map<string, number>();
+        const maxByName = new Map<string, number>();
+        const minByName = new Map<string, number>();
+        const firstByName = new Map<string, MetricSample>();
+
+        const addSum = (name: string, value?: number) => {
+            if (typeof value === "number") {
+                sumByName.set(name, (sumByName.get(name) ?? 0) + value);
+            }
+        };
+        const addMax = (name: string, value?: number) => {
+            if (typeof value === "number") {
+                maxByName.set(name, Math.max(maxByName.get(name) ?? value, value));
+            }
+        };
+        const addMin = (name: string, value?: number) => {
+            if (typeof value === "number") {
+                minByName.set(name, Math.min(minByName.get(name) ?? value, value));
+            }
+        };
 
         for (const sample of samples) {
             const route = sample.labels?.route;
@@ -150,19 +209,19 @@ export class MetricsService {
 
                 switch (sample.name) {
                     case ROUTE_REQUESTS:
-                        accumulator.requests = sample.value ?? 0;
+                        accumulator.requests += sample.value ?? 0;
                         break;
                     case ROUTE_ERRORS:
-                        accumulator.errors = sample.value ?? 0;
+                        accumulator.errors += sample.value ?? 0;
                         break;
                     case ROUTE_AVG_QPS:
-                        accumulator.avgQpsMilli = sample.value ?? 0;
+                        accumulator.avgQpsMilli += sample.value ?? 0;
                         break;
                     case ROUTE_RECENT_QPS:
-                        accumulator.recentQpsMilli = sample.value ?? 0;
+                        accumulator.recentQpsMilli += sample.value ?? 0;
                         break;
                     case ROUTE_DURATION:
-                        accumulator.histogram = sample;
+                        accumulator.histogram = mergeHistogram(accumulator.histogram, sample);
                         break;
                     default:
                         break;
@@ -170,8 +229,22 @@ export class MetricsService {
                 continue;
             }
 
-            if (!singleByName.has(sample.name)) {
-                singleByName.set(sample.name, sample);
+            if (!firstByName.has(sample.name)) {
+                firstByName.set(sample.name, sample);
+            }
+            if (sample.name === "blog_info") {
+                continue;
+            }
+            if (sample.name === "blog_process_uptime_seconds") {
+                addMin(sample.name, sample.value);
+            } else if (
+                sample.name === "blog_online_users" ||
+                sample.name === "blog_metrics_snapshot_age_seconds" ||
+                sample.name.startsWith("blog_system_memory_")
+            ) {
+                addMax(sample.name, sample.value);
+            } else {
+                addSum(sample.name, sample.value);
             }
         }
 
@@ -200,12 +273,11 @@ export class MetricsService {
 
         routeRows.sort((a, b) => b.requests - a.requests);
 
-        const numberValue = (name: string): number => {
-            const value = singleByName.get(name)?.value;
-            return typeof value === "number" ? value : 0;
-        };
+        const sumValue = (name: string): number => sumByName.get(name) ?? 0;
+        const maxValue = (name: string): number => maxByName.get(name) ?? 0;
+        const minValue = (name: string): number => minByName.get(name) ?? 0;
 
-        const info = singleByName.get("blog_info");
+        const info = firstByName.get("blog_info");
         const totalRequests = routeRows.reduce((total, row) => total + row.requests, 0);
         const totalErrors = routeRows.reduce((total, row) => total + row.errors, 0);
 
@@ -218,18 +290,19 @@ export class MetricsService {
                   }
                 : null,
             process: {
-                uptimeSeconds: numberValue("blog_process_uptime_seconds"),
-                rssKb: numberValue("blog_process_resident_memory_kb"),
-                vmKb: numberValue("blog_process_virtual_memory_kb"),
-                threads: numberValue("blog_process_threads"),
-                systemTotalKb: numberValue("blog_system_memory_total_kb"),
-                systemAvailableKb: numberValue("blog_system_memory_available_kb"),
-                fibers: numberValue("blog_fibers"),
+                uptimeSeconds: minValue("blog_process_uptime_seconds"),
+                rssKb: sumValue("blog_process_resident_memory_kb"),
+                vmKb: sumValue("blog_process_virtual_memory_kb"),
+                threads: sumValue("blog_process_threads"),
+                systemTotalKb: maxValue("blog_system_memory_total_kb"),
+                systemAvailableKb: maxValue("blog_system_memory_available_kb"),
+                fibers: sumValue("blog_fibers"),
             },
             connections: {
-                http: numberValue("blog_http_active_connections"),
-                ws: numberValue("blog_ws_active_connections"),
-                onlineUsers: numberValue("blog_online_users"),
+                http: sumValue("blog_http_active_connections"),
+                ws: sumValue("blog_ws_active_connections"),
+                wsDevices: sumValue("blog_ws_online_devices"),
+                onlineUsers: maxValue("blog_online_users"),
             },
             totals: {
                 requests: totalRequests,
@@ -239,6 +312,8 @@ export class MetricsService {
                 avgQps: routeRows.reduce((total, row) => total + row.avgQps, 0),
             },
             routes: routeRows,
+            instanceCount,
+            degraded,
         };
     }
 }

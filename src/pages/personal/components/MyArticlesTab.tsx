@@ -131,7 +131,7 @@ const MyArticlesTab: React.FC = () => {
     };
 
     // 分页计算
-    const totalPages = Math.ceil(totalArticles / itemsPerPage);
+    const totalPages = Math.max(1, Math.ceil(totalArticles / itemsPerPage));
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + articles.length;
     // 渲染时本地筛选
@@ -407,53 +407,51 @@ const MyArticlesTab: React.FC = () => {
             </div>
 
             {/* 分页 */}
-            {totalPages >= 1 && (
-                <div className={styles.pagination}>
-                    <div className={styles.paginationInfo}>
-                        {t("articles.pagination.info", {
-                            start: startIndex + 1,
-                            end: Math.min(endIndex, totalArticles),
-                            total: totalArticles,
-                        })}
-                    </div>
-                    <div className={styles.paginationControls}>
-                        <button className={styles.paginationButton} onClick={() => setCurrentPage(1)} disabled={currentPage === 1}>
-                            {t("articles.pagination.first")}
-                        </button>
-                        <button
-                            className={styles.paginationButton}
-                            onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                            disabled={currentPage === 1}
-                        >
-                            {t("articles.pagination.prev")}
-                        </button>
-                        {getPageNumbers().map((page, index) => (
-                            <button
-                                key={index}
-                                className={`${styles.paginationButton} ${currentPage === page ? styles.active : ""}`}
-                                onClick={() => page !== "..." && setCurrentPage(page as number)}
-                                disabled={page === "..."}
-                            >
-                                {page}
-                            </button>
-                        ))}
-                        <button
-                            className={styles.paginationButton}
-                            onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                            disabled={currentPage === totalPages}
-                        >
-                            {t("articles.pagination.next")}
-                        </button>
-                        <button
-                            className={styles.paginationButton}
-                            onClick={() => setCurrentPage(totalPages)}
-                            disabled={currentPage === totalPages}
-                        >
-                            {t("articles.pagination.last")}
-                        </button>
-                    </div>
+            <div className={styles.pagination}>
+                <div className={styles.paginationInfo}>
+                    {t("articles.pagination.info", {
+                        start: totalArticles > 0 ? startIndex + 1 : 0,
+                        end: Math.min(endIndex, totalArticles),
+                        total: totalArticles,
+                    })}
                 </div>
-            )}
+                <div className={styles.paginationControls}>
+                    <button className={styles.paginationButton} onClick={() => setCurrentPage(1)} disabled={currentPage === 1}>
+                        {t("articles.pagination.first")}
+                    </button>
+                    <button
+                        className={styles.paginationButton}
+                        onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                        disabled={currentPage === 1}
+                    >
+                        {t("articles.pagination.prev")}
+                    </button>
+                    {getPageNumbers().map((page, index) => (
+                        <button
+                            key={index}
+                            className={`${styles.paginationButton} ${currentPage === page ? styles.active : ""}`}
+                            onClick={() => page !== "..." && setCurrentPage(page as number)}
+                            disabled={page === "..." || totalArticles === 0}
+                        >
+                            {page}
+                        </button>
+                    ))}
+                    <button
+                        className={styles.paginationButton}
+                        onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                        disabled={currentPage === totalPages}
+                    >
+                        {t("articles.pagination.next")}
+                    </button>
+                    <button
+                        className={styles.paginationButton}
+                        onClick={() => setCurrentPage(totalPages)}
+                        disabled={currentPage === totalPages}
+                    >
+                        {t("articles.pagination.last")}
+                    </button>
+                </div>
+            </div>
         </div>
     );
 };

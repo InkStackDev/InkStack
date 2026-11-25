@@ -105,6 +105,8 @@ export interface GetOrganizationDetailResponse {
     description: string;
     user_in_org?: number;
     user_role?: number;
+    owner_id?: number | string;
+    is_owner?: boolean;
 }
 
 export interface JoinOrganizationParams {
@@ -118,6 +120,16 @@ export interface JoinOrganizationResponse {
     status: number | string;
     description: string;
     user_in_org: number;
+}
+
+export interface LeaveOrganizationResponse {
+    success: boolean;
+    org_id: number | string;
+}
+
+export interface SetOrganizationStatusResponse {
+    id: number | string;
+    status: number;
 }
 
 export interface organizationUserListsParams {
@@ -290,7 +302,7 @@ export class OrganizationService {
             url += `&status=${params.status}`;
         }
 
-        const response = await http.get<GetAdminOrganizationsResponse>(url);
+        const response = await http.get<GetAdminOrganizationsResponse>(url, { cacheTtl: 15_000 });
         return response.data;
     }
 
@@ -298,7 +310,7 @@ export class OrganizationService {
      * 获取管理端组织统计数据
      */
     static async getAdminOrganizationStats(): Promise<OrganizationStatsResponse> {
-        const response = await http.get<OrganizationStatsResponse>("/organization/admin/stats");
+        const response = await http.get<OrganizationStatsResponse>("/organization/admin/stats", { cacheTtl: 15_000 });
         return response.data;
     }
 
@@ -344,6 +356,32 @@ export class OrganizationService {
         formData.append("id", String(params.id));
 
         const response = await http.postForm<JoinOrganizationResponse>("/organization/join", formData);
+        return response.data;
+    }
+
+    /**
+     * 主动退出组织（组织所有者不能直接退出）
+     */
+    static async leaveOrganization(params: { id: number | string }): Promise<LeaveOrganizationResponse> {
+        const formData = new URLSearchParams();
+        formData.append("id", String(params.id));
+
+        const response = await http.postForm<LeaveOrganizationResponse>("/organization/leave", formData);
+        return response.data;
+    }
+
+    /**
+     * 组织所有者设置组织状态（0 停用 / 1 启用）
+     */
+    static async setOrganizationStatus(params: {
+        id: number | string;
+        status: 0 | 1;
+    }): Promise<SetOrganizationStatusResponse> {
+        const formData = new URLSearchParams();
+        formData.append("id", String(params.id));
+        formData.append("status", String(params.status));
+
+        const response = await http.postForm<SetOrganizationStatusResponse>("/organization/set_status", formData);
         return response.data;
     }
 
@@ -425,7 +463,7 @@ export class OrganizationService {
             url += `&status=${params.status}`;
         }
 
-        const response = await http.get<GetApplyListResponse>(url);
+        const response = await http.get<GetApplyListResponse>(url, { cacheTtl: 15_000 });
         return response.data;
     }
 

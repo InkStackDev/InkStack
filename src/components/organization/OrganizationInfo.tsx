@@ -1,7 +1,23 @@
-import React from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { FaBuilding, FaCheckCircle, FaLock, FaUserFriends, FaArrowLeft, FaPlus, FaUser, FaUserAlt, FaGithub } from "react-icons/fa";
+import {
+    FaBuilding,
+    FaCheckCircle,
+    FaLock,
+    FaUserFriends,
+    FaArrowLeft,
+    FaPlus,
+    FaUser,
+    FaUserAlt,
+    FaGithub,
+    FaCrown,
+    FaPowerOff,
+    FaTrash,
+    FaSignOutAlt,
+    FaChevronDown,
+} from "react-icons/fa";
+import Button from "@/components/button/Button";
 import type { OrganizationDetail, MemberStats } from "@/types/Organization.ts";
 import { OrgMembershipStatus } from "@/types/Enums.ts";
 import { useEnumLabels } from "@/i18n/UseEnumLabels";
@@ -12,12 +28,57 @@ interface OrganizationInfoProps {
     stats: MemberStats;
     repoCount: number;
     onJoin: () => void;
+    onLeave: () => Promise<void>;
+    onToggleStatus: () => Promise<void>;
+    onDelete: () => Promise<void>;
 }
 
-const OrganizationInfo: React.FC<OrganizationInfoProps> = ({ org, stats, repoCount, onJoin }) => {
+const OrganizationInfo: React.FC<OrganizationInfoProps> = ({
+    org,
+    stats,
+    repoCount,
+    onJoin,
+    onLeave,
+    onToggleStatus,
+    onDelete,
+}) => {
     const navigate = useNavigate();
     const enums = useEnumLabels();
     const { t } = useTranslation("organization");
+    const [busy, setBusy] = useState<"leave" | "status" | "delete" | null>(null);
+    const [moreOpen, setMoreOpen] = useState(false);
+    const moreRef = useRef<HTMLDivElement>(null);
+
+    const runAction = async (key: "leave" | "status" | "delete", action: () => Promise<void>) => {
+        setBusy(key);
+        try {
+            await action();
+        } finally {
+            setBusy(null);
+        }
+    };
+
+    useEffect(() => {
+        if (!moreOpen) {
+            return;
+        }
+        const handleClickOutside = (event: MouseEvent) => {
+            if (moreRef.current && !moreRef.current.contains(event.target as Node)) {
+                setMoreOpen(false);
+            }
+        };
+        const handleEscape = (event: KeyboardEvent) => {
+            if (event.key === "Escape") {
+                setMoreOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        document.addEventListener("keydown", handleEscape);
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+            document.removeEventListener("keydown", handleEscape);
+        };
+    }, [moreOpen]);
 
     if (!org) {
         return null;
@@ -41,8 +102,93 @@ const OrganizationInfo: React.FC<OrganizationInfoProps> = ({ org, stats, repoCou
                             {org.status === "active" ? <FaCheckCircle /> : <FaLock />}
                             {org.status === "active" ? t("info.status.active") : t("info.status.inactive")}
                         </span>
-                        {org.user_in_org === OrgMembershipStatus.JOINED || org.user_in_org === OrgMembershipStatus.PENDING ? (
-                            <span className={styles.joined}>{enums.orgMembershipStatus[org.user_in_org]}</span>
+                        {org.is_owner ? (
+                            <>
+                                <span className={styles.ownerBadge}>
+                                    <FaCrown /> {t("info.owner")}
+                                </span>
+                                <div className={styles.headerActions}>
+                                    <div className={styles.moreMenuWrapper} ref={moreRef}>
+                                        <Button
+                                            variant="light"
+                                            color="secondary"
+                                            size="small"
+                                            loading={busy === "status" || busy === "delete"}
+                                            onClick={() => setMoreOpen((open) => !open)}
+                                            aria-haspopup="menu"
+                                            aria-expanded={moreOpen}
+                                        >
+                                            {t("info.more")} <FaChevronDown />
+                                        </Button>
+                                        {moreOpen && (
+                                            <div className={styles.moreMenu} role="menu">
+                                                <button
+                                                    type="button"
+                                                    role="menuitem"
+                                                    className={
+                                                        org.status === "active"
+                                                            ? styles.moreMenuWarning
+                                                            : styles.moreMenuSuccess
+                                                    }
+                                                    disabled={busy !== null}
+                                                    onClick={() => {
+                                                        setMoreOpen(false);
+                                                        void runAction("status", onToggleStatus);
+                                                    }}
+                                                >
+                                                    {org.status === "active" ? <FaPowerOff /> : <FaCheckCircle />}
+                                                    {org.status === "active" ? t("info.disable") : t("info.enable")}
+                                                </button>
+                                                <div className={styles.moreMenuDivider} />
+                                                <button
+                                                    type="button"
+                                                    role="menuitem"
+                                                    className={styles.moreMenuDanger}
+                                                    disabled={busy !== null}
+                                                    onClick={() => {
+                                                        setMoreOpen(false);
+                                                        void runAction("delete", onDelete);
+                                                    }}
+                                                >
+                                                    <FaTrash /> {t("info.delete")}
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </>
+                        ) : org.user_in_org === OrgMembershipStatus.JOINED ? (
+                            <>
+                                <span className={styles.joined}>{enums.orgMembershipStatus[org.user_in_org]}</span>
+                                <div className={styles.headerActions}>
+                                    <Button
+                                        variant="light"
+                                        color="error"
+                                        size="small"
+                                        loading={busy === "leave"}
+                                        disabled={busy !== null && busy !== "leave"}
+                                        onClick={() => void runAction("leave", onLeave)}
+                                    >
+                                        <FaSignOutAlt /> {t("info.leave")}
+                                    </Button>
+                                </div>
+                            </>
+                        ) : org.user_in_org === OrgMembershipStatus.PENDING ? (
+                            <>
+                                <span className={styles.joined}>{enums.orgMembershipStatus[org.user_in_org]}</span>
+                                <div className={styles.headerActions}>
+                                    <Button
+                                        variant="light"
+                                        color="warning"
+                                        size="small"
+                                        loading={busy === "leave"}
+                                        disabled={busy !== null && busy !== "leave"}
+                                        onClick={() => void runAction("leave", onLeave)}
+                                    >
+                                        <FaSignOutAlt /> {t("info.cancelApply")}
+                                    </Button>
+                                </div>
+                            </>
                         ) : (
                             <button
                                 className={styles.joinBtn}

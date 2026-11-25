@@ -4,6 +4,7 @@ import { AuthService } from "../services/AuthService.ts";
 import { PasskeyService } from "../services/PasskeyService.ts";
 import { sessionEvents } from "../auth/SessionEvents.ts";
 import { sessionWS } from "../services/WsInstances.ts";
+import { resetOnlineCount } from "../services/PresenceService.ts";
 import { setFaviconBadge } from "../utils/Favicon.ts";
 import { resetNotificationState } from "../utils/NotificationState.ts";
 import i18n from "../i18n";
@@ -79,6 +80,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const clearAuthRuntimeState = useCallback(() => {
         disconnectWebSockets();
+        resetOnlineCount(); // WS 是登录态专属的，退出后不要残留上一位用户的在线人数
         setUser(null);
         resetNotificationState();
         setFaviconBadge(0);
@@ -174,6 +176,30 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     }, [isAuthenticated, user]);
 
+    // 网络恢复 / 页面重新可见时补一次连接，避免首次握手失败或后台挂起后一直没有 WS。
+    // canReconnect 会在 replaced / 主动 disconnect 后为 false，防止多标签页互相顶号时重连循环。
+    useEffect(() => {
+        if (!isAuthenticated || !user) {
+            return;
+        }
+        const ensureConnected = () => {
+            if (!sessionWS.isConnected && sessionWS.canReconnect) {
+                sessionWS.connect(user.id);
+            }
+        };
+        const handleVisibility = () => {
+            if (document.visibilityState === "visible") {
+                ensureConnected();
+            }
+        };
+        window.addEventListener("online", ensureConnected);
+        document.addEventListener("visibilitychange", handleVisibility);
+        return () => {
+            window.removeEventListener("online", ensureConnected);
+            document.removeEventListener("visibilitychange", handleVisibility);
+        };
+    }, [isAuthenticated, user]);
+
     // 统一会话系统帧：顶号 / 会话失效 / 设备被踢
     useEffect(() => {
         // 同一设备的新连接顶掉当前连接：主动断开且不再重连，避免多标签页互相顶号形成重连循环。
@@ -229,10 +255,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         try {
             setLoginError(null);
             setLoading(true);
-            disconnectWebSockets();
-            setUser(null);
-            resetNotificationState();
-            setFaviconBadge(0);
+            clearAuthRuntimeState();
 
             const response = await AuthService.login(authId, password);
             if (generation !== authGenerationRef.current) {
@@ -315,10 +338,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         try {
             setLoginError(null);
             setLoading(true);
-            disconnectWebSockets();
-            setUser(null);
-            resetNotificationState();
-            setFaviconBadge(0);
+            clearAuthRuntimeState();
             await PasskeyService.login(authId);
             await completeLogin(generation);
         } catch (error: any) {
@@ -339,10 +359,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         try {
             setLoginError(null);
             setLoading(true);
-            disconnectWebSockets();
-            setUser(null);
-            resetNotificationState();
-            setFaviconBadge(0);
+            clearAuthRuntimeState();
             await AuthService.recoverWithEmail(email, authCode);
             await completeLogin(generation);
         } catch (error: any) {

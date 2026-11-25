@@ -1,12 +1,8 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, type ReactNode } from "react";
-import { useTranslation } from "react-i18next";
 import { useAuth } from "./AuthContext";
-import { useNavigate } from "react-router-dom";
 import { RdPlatformService } from "../services/RdPlatformService.ts";
 import type { RdOrgInfo } from "../types/RdPlatform.ts";
 import { isAdmin as checkIsAdmin } from "../types/Roles.ts";
-import { FaBuilding, FaHome, FaLock } from "react-icons/fa";
-import RdEntryLoader from "@/components/rdEntryLoader";
 
 interface RdOrgContextType {
     orgs: RdOrgInfo[];
@@ -22,6 +18,8 @@ interface RdOrgContextType {
     /** 当前选中的组织 ID */
     selectedOrgId: string;
     setSelectedOrgId: (orgId: string) => void;
+    /** URL 指定的组织不存在、已停用或用户无权访问 */
+    requestedOrgInvalid: boolean;
 }
 
 const RdOrgContext = createContext<RdOrgContextType>({
@@ -34,6 +32,7 @@ const RdOrgContext = createContext<RdOrgContextType>({
     currentOrgRole: 1,
     selectedOrgId: "",
     setSelectedOrgId: () => {},
+    requestedOrgInvalid: false,
 });
 
 export const useRdOrg = (): RdOrgContextType => {
@@ -42,19 +41,24 @@ export const useRdOrg = (): RdOrgContextType => {
 };
 
 export const RdOrgProvider: React.FC<{ children: ReactNode; initialOrgId?: string }> = ({ children, initialOrgId = "" }) => {
-    const { user, logout } = useAuth();
-    const navigate = useNavigate();
-    const { t } = useTranslation("rd");
+    const { user } = useAuth();
     const [orgs, setOrgs] = useState<RdOrgInfo[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedOrgId, setSelectedOrgId] = useState(initialOrgId);
+    const [requestedOrgInvalid, setRequestedOrgInvalid] = useState(false);
 
     const isAdmin = checkIsAdmin(user?.role);
+
+    const selectOrg = (orgId: string) => {
+        setSelectedOrgId(orgId);
+        setRequestedOrgInvalid(false);
+    };
 
     useEffect(() => {
         if (!user) {
             setOrgs([]);
             setSelectedOrgId("");
+            setRequestedOrgInvalid(false);
             setLoading(false);
             return;
         }
@@ -64,13 +68,18 @@ export const RdOrgProvider: React.FC<{ children: ReactNode; initialOrgId?: strin
                 const list = await RdPlatformService.getMyOrganizations();
                 const mapped = list.map((item) => ({ orgId: item.orgId, orgName: item.orgName, role: item.role }));
                 setOrgs(mapped);
-                if (mapped.length > 0) {
-                    // URL 传入的 orgId 有效则使用，否则默认选中第一个
-                    if (initialOrgId && mapped.some((o) => o.orgId === initialOrgId)) {
+                if (initialOrgId) {
+                    // URL 指定的组织必须仍在用户可访问的组织列表中；否则明确拦截，
+                    // 不能静默 fallback 到第一个组织，否则看起来像“停用后还能进去”。
+                    if (mapped.some((o) => o.orgId === initialOrgId)) {
                         setSelectedOrgId(initialOrgId);
-                    } else if (!selectedOrgId) {
-                        setSelectedOrgId(mapped[0].orgId);
+                        setRequestedOrgInvalid(false);
+                    } else {
+                        setSelectedOrgId("");
+                        setRequestedOrgInvalid(true);
                     }
+                } else if (mapped.length > 0 && !selectedOrgId) {
+                    setSelectedOrgId(mapped[0].orgId);
                 }
             } catch {
                 setOrgs([]);
@@ -114,119 +123,20 @@ export const RdOrgProvider: React.FC<{ children: ReactNode; initialOrgId?: strin
         return map;
     }, [orgs]);
 
-    if (loading) {
-        return <RdEntryLoader stage="org" />;
-    }
-
-    if (orgs.length === 0) {
-        return (
-            <div
-                style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    justifyContent: "center",
-                    alignItems: "center",
-                    height: "100vh",
-                    backgroundColor: "transparent",
-                    color: "var(--text-primary)",
-                    padding: "20px",
-                }}
-            >
-                <div
-                    style={{
-                        fontSize: "64px",
-                        color: "#f0a020",
-                        marginBottom: "24px",
-                        opacity: 0.9,
-                    }}
-                >
-                    <FaLock />
-                </div>
-                <h1
-                    style={{
-                        fontSize: "28px",
-                        fontWeight: "bold",
-                        marginBottom: "12px",
-                        color: "var(--text-primary)",
-                    }}
-                >
-                    {t("orgGate.noOrgTitle")}
-                </h1>
-                <p
-                    style={{
-                        fontSize: "16px",
-                        color: "var(--text-secondary)",
-                        marginBottom: "32px",
-                        textAlign: "center",
-                        maxWidth: "480px",
-                        lineHeight: "1.6",
-                    }}
-                >
-                    {t("orgGate.noOrgLine1")}
-                    <br />
-                    {t("orgGate.noOrgLine2")}
-                </p>
-                <div style={{ display: "flex", gap: "16px", flexWrap: "wrap", justifyContent: "center" }}>
-                    <button
-                        onClick={() => navigate("/organizations/list")}
-                        style={{
-                            padding: "10px 24px",
-                            backgroundColor: "var(--primary)",
-                            color: "#fff",
-                            border: "none",
-                            borderRadius: "6px",
-                            cursor: "pointer",
-                            fontSize: "15px",
-                            fontWeight: "500",
-                            boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "8px",
-                        }}
-                    >
-                        <FaBuilding /> {t("orgGate.joinOrg")}
-                    </button>
-                    <button
-                        onClick={() => navigate("/")}
-                        style={{
-                            padding: "10px 24px",
-                            backgroundColor: "transparent",
-                            color: "var(--text-primary)",
-                            border: "1px solid var(--border-primary)",
-                            borderRadius: "6px",
-                            cursor: "pointer",
-                            fontSize: "15px",
-                            fontWeight: "500",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "8px",
-                        }}
-                    >
-                        <FaHome /> {t("orgGate.backHome")}
-                    </button>
-                    <button
-                        onClick={() => logout()}
-                        style={{
-                            padding: "10px 24px",
-                            backgroundColor: "transparent",
-                            color: "var(--text-primary)",
-                            border: "1px solid var(--border-primary)",
-                            borderRadius: "6px",
-                            cursor: "pointer",
-                            fontSize: "15px",
-                            fontWeight: "500",
-                        }}
-                    >
-                        {t("orgGate.switchAccount")}
-                    </button>
-                </div>
-            </div>
-        );
-    }
-
     return (
         <RdOrgContext.Provider
-            value={{ orgs, userOrgIds, isAdmin, loading, orgNameMap, maxOrgRole, currentOrgRole, selectedOrgId, setSelectedOrgId }}
+            value={{
+                orgs,
+                userOrgIds,
+                isAdmin,
+                loading,
+                orgNameMap,
+                maxOrgRole,
+                currentOrgRole,
+                selectedOrgId,
+                setSelectedOrgId: selectOrg,
+                requestedOrgInvalid,
+            }}
         >
             {children}
         </RdOrgContext.Provider>

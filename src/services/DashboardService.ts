@@ -42,13 +42,14 @@ export interface DashboardRecentUser {
 
 export class DashboardService {
     static async getStats(): Promise<DashboardStats> {
-        const response = await http.get<DashboardStats>("/admin/dashboard/stats");
+        const response = await http.get<DashboardStats>("/admin/dashboard/stats", { cacheTtl: 15_000 });
         return response.data;
     }
 
     static async getTrend(period: number = 7): Promise<DashboardTrend> {
         const response = await http.get<DashboardTrend>("/admin/dashboard/trend", {
             params: { period },
+            cacheTtl: 15_000,
         });
         return response.data;
     }
@@ -56,6 +57,7 @@ export class DashboardService {
     static async getActivities(limit: number = 5): Promise<{ list: DashboardActivity[] }> {
         const response = await http.get<{ list: DashboardActivity[] }>("/admin/dashboard/activities", {
             params: { limit },
+            cacheTtl: 15_000,
         });
         return response.data;
     }
@@ -63,6 +65,7 @@ export class DashboardService {
     static async getRecentUsers(limit: number = 5): Promise<{ list: DashboardRecentUser[] }> {
         const response = await http.get<{ list: DashboardRecentUser[] }>("/admin/dashboard/recent-users", {
             params: { limit },
+            cacheTtl: 15_000,
         });
         return response.data;
     }

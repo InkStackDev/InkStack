@@ -150,7 +150,7 @@ function toDataStats(r: DataStatsResponse): DataStats {
 export class DataService {
     /** 数据概览统计 */
     static async getStats(): Promise<DataStats> {
-        const res = await http.get<DataStatsResponse>("/admin/database/stats");
+        const res = await http.get<DataStatsResponse>("/admin/database/stats", { cacheTtl: 15_000 });
         return toDataStats(res.data);
     }
 
@@ -162,7 +162,7 @@ export class DataService {
         page?: number;
         pageSize?: number;
     }): Promise<{ list: BackupRecord[]; total: number }> {
-        const res = await http.get<PaginatedResponse<BackupRecordResponse>>("/admin/database/backups", { params });
+        const res = await http.get<PaginatedResponse<BackupRecordResponse>>("/admin/database/backups", { params, cacheTtl: 15_000 });
         console.log("getBackups response:", res); // Debug log
         return {
             list: res.data.list.map(toBackupRecord),
@@ -189,7 +189,7 @@ export class DataService {
         page?: number;
         pageSize?: number;
     }): Promise<{ list: ExportRecord[]; total: number }> {
-        const res = await http.get<PaginatedResponse<ExportRecordResponse>>("/admin/database/exports", { params });
+        const res = await http.get<PaginatedResponse<ExportRecordResponse>>("/admin/database/exports", { params, cacheTtl: 15_000 });
         return {
             list: res.data.list.map(toExportRecord),
             total: res.data.total,

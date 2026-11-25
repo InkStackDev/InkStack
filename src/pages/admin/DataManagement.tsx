@@ -30,6 +30,7 @@ import {
 import CustomSelect from "@/components/customSelect/CustomSelect";
 import Input from "@/components/input/Input";
 import Loading from "@/components/loading/Loading";
+import AdminListSkeleton from "@/components/adminListSkeleton/AdminListSkeleton";
 import { confirm } from "@/components/confirm/Confirm";
 import { message } from "@/components/message/Message";
 import { formatToChinaTime } from "@/utils/Utils.ts";
@@ -82,21 +83,6 @@ const DataManagement: React.FC = () => {
 
     const itemsPerPage = 15;
 
-    // 加载数据概览
-    useEffect(() => {
-        const fetchStats = async () => {
-            try {
-                const data = await DataService.getStats();
-                setStats(data);
-            } catch (err) {
-                console.error("加载数据概览失败:", err);
-            } finally {
-                setInitialLoading(false);
-            }
-        };
-        fetchStats();
-    }, []);
-
     // 切换 tab 时懒加载
     useEffect(() => {
         if (activeTab === "overview") {
@@ -106,6 +92,8 @@ const DataManagement: React.FC = () => {
                     setStats(data);
                 } catch (err) {
                     console.error("加载数据概览失败:", err);
+                } finally {
+                    setInitialLoading(false);
                 }
             };
             fetchStats();
@@ -180,7 +168,7 @@ const DataManagement: React.FC = () => {
 
     // 分页计算
     const currentData = activeTab === "backups" ? filteredBackups : filteredExports;
-    const totalPages = Math.ceil(currentData.length / itemsPerPage);
+    const totalPages = Math.max(1, Math.ceil(currentData.length / itemsPerPage));
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
     const currentItems = currentData.slice(startIndex, endIndex);
@@ -421,7 +409,7 @@ const DataManagement: React.FC = () => {
     if (initialLoading) {
         return (
             <div className={styles.dataManagement}>
-                <Loading text={t("data.loading")} size="large" />
+                <AdminListSkeleton stats={6} columns={6} />
             </div>
         );
     }
@@ -911,63 +899,62 @@ const DataManagement: React.FC = () => {
                         )}
 
                         {/* 分页 */}
-                        {totalPages >= 1 && (
-                            <div className={styles.paginationContainer}>
-                                <div className={styles.paginationInfo}>
-                                    {t("data.pagination.info", {
-                                        start: startIndex + 1,
-                                        end: Math.min(endIndex, currentData.length),
-                                        total: currentData.length,
-                                    })}
-                                </div>
-                                <div className={styles.paginationControls}>
-                                    <button
-                                        className={styles.paginationButton}
-                                        onClick={() => setCurrentPage(1)}
-                                        disabled={currentPage === 1}
-                                    >
-                                        <FaAngleDoubleLeft />
-                                    </button>
-                                    <button
-                                        className={styles.paginationButton}
-                                        onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                                        disabled={currentPage === 1}
-                                    >
-                                        <FaChevronLeft />
-                                    </button>
-
-                                    {getPageNumbers().map((page, index) => (
-                                        <React.Fragment key={index}>
-                                            {page === "..." ? (
-                                                <span className={styles.paginationEllipsis}>...</span>
-                                            ) : (
-                                                <button
-                                                    className={`${styles.paginationButton} ${currentPage === page ? styles.active : ""}`}
-                                                    onClick={() => setCurrentPage(page as number)}
-                                                >
-                                                    {page}
-                                                </button>
-                                            )}
-                                        </React.Fragment>
-                                    ))}
-
-                                    <button
-                                        className={styles.paginationButton}
-                                        onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                                        disabled={currentPage === totalPages}
-                                    >
-                                        <FaChevronRight />
-                                    </button>
-                                    <button
-                                        className={styles.paginationButton}
-                                        onClick={() => setCurrentPage(totalPages)}
-                                        disabled={currentPage === totalPages}
-                                    >
-                                        <FaAngleDoubleRight />
-                                    </button>
-                                </div>
+                        <div className={styles.paginationContainer}>
+                            <div className={styles.paginationInfo}>
+                                {t("data.pagination.info", {
+                                    start: currentData.length > 0 ? startIndex + 1 : 0,
+                                    end: Math.min(endIndex, currentData.length),
+                                    total: currentData.length,
+                                })}
                             </div>
-                        )}
+                            <div className={styles.paginationControls}>
+                                <button
+                                    className={styles.paginationButton}
+                                    onClick={() => setCurrentPage(1)}
+                                    disabled={currentPage === 1}
+                                >
+                                    <FaAngleDoubleLeft />
+                                </button>
+                                <button
+                                    className={styles.paginationButton}
+                                    onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                                    disabled={currentPage === 1}
+                                >
+                                    <FaChevronLeft />
+                                </button>
+
+                                {getPageNumbers().map((page, index) => (
+                                    <React.Fragment key={index}>
+                                        {page === "..." ? (
+                                            <span className={styles.paginationEllipsis}>...</span>
+                                        ) : (
+                                            <button
+                                                className={`${styles.paginationButton} ${currentPage === page ? styles.active : ""}`}
+                                                onClick={() => setCurrentPage(page as number)}
+                                                disabled={currentData.length === 0}
+                                            >
+                                                {page}
+                                            </button>
+                                        )}
+                                    </React.Fragment>
+                                ))}
+
+                                <button
+                                    className={styles.paginationButton}
+                                    onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                                    disabled={currentPage === totalPages}
+                                >
+                                    <FaChevronRight />
+                                </button>
+                                <button
+                                    className={styles.paginationButton}
+                                    onClick={() => setCurrentPage(totalPages)}
+                                    disabled={currentPage === totalPages}
+                                >
+                                    <FaAngleDoubleRight />
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </>
             )}

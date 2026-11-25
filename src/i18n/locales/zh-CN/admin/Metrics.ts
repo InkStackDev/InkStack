@@ -1,7 +1,8 @@
 const section = {
     title: "运行指标",
     description: "实时查看服务请求量、错误率、接口延迟与进程资源占用。",
-    workerHint: "多 worker 部署时各 worker 指标独立统计，本页仅展示当前处理请求的 worker。",
+    workerHint: "指标已按实例聚合，当前参与聚合的实例数：{{instances}}。若少于实际部署数，说明部分实例快照缺失。",
+    degradedHint: "指标聚合不完整（Redis 不可用或部分实例快照缺失），当前可能只展示部分实例数据。",
     loading: "加载运行指标...",
     errorTitle: "指标加载失败",
     errorRetry: "重新加载",
@@ -24,7 +25,7 @@ const section = {
         activeConnections: "活跃连接",
         onlineUsers: "在线用户",
         uptime: "运行时长",
-        connectionDetail: "HTTP {{http}} · WS {{ws}}",
+        connectionDetail: "HTTP {{http}} · WS {{ws}} · 设备 {{devices}}",
     },
     service: {
         title: "服务信息",

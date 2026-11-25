@@ -183,7 +183,13 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
                                         onClick={() => selectOption(option)}
                                     >
                                         {option.avatar ? (
-                                            <img className={styles.avatar} src={option.avatar} alt="" />
+                                            <img
+                                                className={styles.avatar}
+                                                src={option.avatar}
+                                                alt=""
+                                                loading="lazy"
+                                                decoding="async"
+                                            />
                                         ) : (
                                             option.color && (
                                                 <div className={styles.tagColor} style={{ backgroundColor: option.color }} />

@@ -4,7 +4,7 @@ import { FaTags, FaPlus, FaEdit, FaTrash, FaFilter, FaEye, FaChartBar, FaCheckCi
 import CustomSelect from "@/components/customSelect/CustomSelect";
 import Input from "@/components/input/Input";
 import Button from "@/components/button/Button";
-import Loading from "@/components/loading/Loading";
+import AdminListSkeleton from "@/components/adminListSkeleton/AdminListSkeleton";
 import Modal from "@/components/modal/Modal";
 import { confirm } from "@/components/confirm/Confirm";
 import message from "@/components/message/Message";
@@ -421,7 +421,7 @@ const CategoryManagement: React.FC = () => {
     if (loading) {
         return (
             <div className={styles.categoryManagement}>
-                <Loading text={t("categories.loading")} size="large" />
+                <AdminListSkeleton stats={4} columns={6} />
             </div>
         );
     }

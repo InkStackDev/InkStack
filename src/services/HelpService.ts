@@ -31,7 +31,7 @@ export interface FeedbackListResponse {
 export class HelpService {
     static async getFaqs(keyword?: string) {
         const params = keyword ? `?keyword=${encodeURIComponent(keyword)}` : "";
-        return http.get<HelpFaq[]>(`/help/faqs${params}`);
+        return http.get<HelpFaq[]>(`/help/faqs${params}`, { cacheTtl: 30_000 });
     }
 
     static async submitFeedback(payload: { type: FeedbackType; content: string; contact?: string }) {
@@ -41,7 +41,7 @@ export class HelpService {
     // ----- 管理员接口 -----
 
     static async getFeedbacks(params?: FeedbackListParams) {
-        return http.get<FeedbackListResponse>("/admin/feedback/list", { params });
+        return http.get<FeedbackListResponse>("/admin/feedback/list", { params, cacheTtl: 15_000 });
     }
 
     static async deleteFeedback(id: string) {

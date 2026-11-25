@@ -5,6 +5,8 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="preload" href="/fonts/SourceSerif4.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/PlayfairDisplay.woff2" as="font" type="font/woff2" crossorigin />
     <title>InkStack</title>
     <script>
         (function () {
@@ -50,14 +52,167 @@
                 document.documentElement.classList.remove('dark');
             }
             const savedPreset = localStorage.getItem('theme-preset');
-            const validPresets = ['default', 'time', 'monochrome', 'mint', 'ocean', 'sakura', 'cyberpunk', 'gold', 'lavender'];
-            document.documentElement.setAttribute('data-skin', validPresets.includes(savedPreset) ? savedPreset : 'default');
+            const validPresets = ['time', 'monochrome', 'mint', 'ocean', 'sakura', 'cyberpunk', 'gold', 'lavender', 'pi'];
+            document.documentElement.setAttribute('data-skin', validPresets.includes(savedPreset) ? savedPreset : 'time');
         })();
     </script>
+    <style>
+        #boot-splash {
+            position: fixed;
+            inset: 0;
+            z-index: 99999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 14px;
+            background: #f6f1e7;
+            color: #57606a;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        }
+        [data-theme="dark"] #boot-splash {
+            background: #0d1117;
+            color: #8b949e;
+        }
+        #boot-splash .boot-logo {
+            font-size: 20px;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+        }
+        /* 机器人吉祥物：与 src/components/robotMascot 的 SVG 保持一致 */
+        #boot-splash .boot-mascot {
+            position: relative;
+            display: grid;
+            place-items: center;
+            width: 150px;
+            height: 150px;
+            animation: bootFloat 2.8s ease-in-out infinite;
+        }
+        #boot-splash .boot-mascot::before {
+            content: "";
+            position: absolute;
+            inset: -28px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(79, 142, 247, 0.18), transparent 68%);
+            animation: bootGlow 4s ease-in-out infinite;
+        }
+        #boot-splash .boot-orbit {
+            position: absolute;
+            width: 132px;
+            height: 132px;
+            border: 1px dashed #4f8ef7;
+            border-radius: 50%;
+            opacity: 0.3;
+            animation: bootSpin 16s linear infinite;
+        }
+        #boot-splash .boot-mascot svg {
+            position: relative;
+            z-index: 1;
+            filter: drop-shadow(0 10px 20px rgba(79, 142, 247, 0.18));
+        }
+        #boot-splash .boot-eyes {
+            transform-box: fill-box;
+            transform-origin: center;
+            animation: bootBlink 4.5s infinite;
+        }
+        #boot-splash .boot-bar {
+            width: 120px;
+            height: 3px;
+            overflow: hidden;
+            border-radius: 2px;
+            background: rgba(128, 128, 128, 0.25);
+        }
+        #boot-splash .boot-bar::after {
+            content: "";
+            display: block;
+            width: 40%;
+            height: 100%;
+            border-radius: 2px;
+            background: #4361ee;
+            animation: bootProgress 900ms ease-in-out infinite;
+        }
+        @keyframes bootProgress {
+            0% {
+                transform: translateX(-110%);
+            }
+            100% {
+                transform: translateX(360%);
+            }
+        }
+        @keyframes bootFloat {
+            0%,
+            100% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-10px);
+            }
+        }
+        @keyframes bootSpin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+        @keyframes bootGlow {
+            0%,
+            100% {
+                opacity: 0.7;
+                transform: scale(1);
+            }
+            50% {
+                opacity: 1;
+                transform: scale(1.05);
+            }
+        }
+        @keyframes bootBlink {
+            0%,
+            92%,
+            100% {
+                transform: scaleY(1);
+            }
+            94%,
+            96% {
+                transform: scaleY(0.12);
+            }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            #boot-splash .boot-bar::after {
+                animation: none;
+                width: 100%;
+            }
+            #boot-splash .boot-mascot,
+            #boot-splash .boot-mascot::before,
+            #boot-splash .boot-orbit,
+            #boot-splash .boot-eyes {
+                animation: none;
+            }
+        }
+    </style>
 </head>
 
 <body>
-    <div id="root"></div>
+    <div id="root">
+        <div id="boot-splash" role="status" aria-label="Loading">
+            <div class="boot-mascot" aria-hidden="true">
+                <span class="boot-orbit"></span>
+                <svg width="120" height="120" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <ellipse cx="60" cy="70" rx="38" ry="32" fill="#4f8ef7" opacity="0.12" />
+                    <rect x="32" y="38" width="56" height="44" rx="16" fill="#fff" stroke="#4f8ef7" stroke-width="3" />
+                    <rect x="44" y="52" width="32" height="16" rx="8" fill="#e0e7ef" />
+                    <g class="boot-eyes">
+                        <circle cx="48" cy="60" r="4" fill="#4f8ef7" />
+                        <circle cx="72" cy="60" r="4" fill="#4f8ef7" />
+                    </g>
+                    <rect x="56" y="68" width="8" height="4" rx="2" fill="#4f8ef7" />
+                    <rect x="58" y="32" width="4" height="10" rx="2" fill="#4f8ef7" />
+                    <rect x="32" y="80" width="8" height="12" rx="4" fill="#4f8ef7" />
+                    <rect x="80" y="80" width="8" height="12" rx="4" fill="#4f8ef7" />
+                </svg>
+            </div>
+            <div class="boot-logo">InkStack</div>
+            <div class="boot-bar"></div>
+        </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
 </body>
 

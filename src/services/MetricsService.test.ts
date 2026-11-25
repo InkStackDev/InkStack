@@ -106,4 +106,23 @@ describe("MetricsService.buildSnapshot", () => {
         expect(snapshot.connections.http).toBe(3);
         expect(snapshot.connections.onlineUsers).toBe(7);
     });
+
+    it("sums per-instance connection gauges instead of taking the first sample", () => {
+        const multi: MetricSample[] = [
+            { name: "blog_ws_active_connections", help: "", type: "gauge", labels: {}, value: 0 },
+            { name: "blog_ws_active_connections", help: "", type: "gauge", labels: {}, value: 1 },
+            { name: "blog_ws_online_devices", help: "", type: "gauge", labels: {}, value: 0 },
+            { name: "blog_ws_online_devices", help: "", type: "gauge", labels: {}, value: 1 },
+            { name: "blog_online_users", help: "", type: "gauge", labels: {}, value: 0 },
+            { name: "blog_online_users", help: "", type: "gauge", labels: {}, value: 2 },
+        ];
+
+        const snapshot = MetricsService.buildSnapshot(multi, 2, false);
+
+        expect(snapshot.connections.ws).toBe(1);
+        expect(snapshot.connections.wsDevices).toBe(1);
+        expect(snapshot.connections.onlineUsers).toBe(2);
+        expect(snapshot.instanceCount).toBe(2);
+        expect(snapshot.degraded).toBe(false);
+    });
 });

@@ -1,8 +1,10 @@
-import React from "react";
+import React, { Suspense } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import AppShell from "./AppShell";
 import ClassicLayout from "./ClassicLayout";
 import HomeQuickTools from "../homeQuickTools/HomeQuickTools";
+import Loading from "../loading/Loading";
+import PageSkeleton from "../pageSkeleton/PageSkeleton";
 import { useLayoutMode } from "@/contexts/LayoutModeContext";
 
 /**
@@ -22,17 +24,29 @@ const FrontLayout: React.FC = () => {
     const isProduct = location.pathname.startsWith("/products");
     const fit = isHome || isHelp || isEditor || isOrg || isProfile || isAssignment || isMessages || isProduct;
 
+    const outlet = (
+        <Suspense
+            fallback={
+                isHome ? (
+                    <PageSkeleton />
+                ) : (
+                    <div style={{ display: "flex", justifyContent: "center", padding: "80px 20px" }}>
+                        <Loading size="large" />
+                    </div>
+                )
+            }
+        >
+            <Outlet />
+        </Suspense>
+    );
+
     if (mode === "classic") {
-        return (
-            <ClassicLayout>
-                <Outlet />
-            </ClassicLayout>
-        );
+        return <ClassicLayout>{outlet}</ClassicLayout>;
     }
 
     return (
         <AppShell fit={fit} topBarTools={<HomeQuickTools />}>
-            <Outlet />
+            {outlet}
         </AppShell>
     );
 };

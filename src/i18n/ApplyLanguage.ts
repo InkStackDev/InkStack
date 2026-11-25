@@ -5,8 +5,10 @@
 import i18n from "./index";
 import { refreshErrorCodes } from "@/utils/ErrorCodes.ts";
 import type { SupportedLanguage } from "./Constants";
+import { ensureLanguageResources } from "./ResourcesLoader";
 
 export async function applyLanguage(language: SupportedLanguage): Promise<void> {
+    await ensureLanguageResources(language);
     if (i18n.language !== language) {
         await i18n.changeLanguage(language);
     }

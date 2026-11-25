@@ -466,13 +466,10 @@ const MediaManagement: React.FC = () => {
         [t],
     );
 
-    // 加载数据
+    // 加载数据（当前为本地 mock 数据，无需模拟网络延迟）
     useEffect(() => {
-        setLoading(true);
-        setTimeout(() => {
-            setMediaFiles(mockMediaFiles);
-            setLoading(false);
-        }, 800);
+        setMediaFiles(mockMediaFiles);
+        setLoading(false);
     }, [mockMediaFiles]);
 
     // 筛选数据
@@ -506,7 +503,7 @@ const MediaManagement: React.FC = () => {
     }, [mediaFiles, filters]);
 
     // 分页计算
-    const totalPages = Math.ceil(filteredFiles.length / itemsPerPage);
+    const totalPages = Math.max(1, Math.ceil(filteredFiles.length / itemsPerPage));
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
     const currentItems = filteredFiles.slice(startIndex, endIndex);
@@ -875,7 +872,7 @@ const MediaManagement: React.FC = () => {
                                     </div>
                                     <div className={styles.filePreview}>
                                         {file.type === "image" && file.thumbnailUrl ? (
-                                            <img src={file.thumbnailUrl} alt={file.alt || file.name} />
+                                            <img src={file.thumbnailUrl} alt={file.alt || file.name} loading="lazy" decoding="async" />
                                         ) : (
                                             <div className={styles.fileIcon}>{getFileIcon(file.type, file.mimeType)}</div>
                                         )}
@@ -1036,59 +1033,58 @@ const MediaManagement: React.FC = () => {
                 )}
 
                 {/* 分页 */}
-                {totalPages >= 1 && (
-                    <div className={styles.paginationContainer}>
-                        <div className={styles.paginationInfo}>
-                            {t("media.pagination.info", {
-                                start: startIndex + 1,
-                                end: Math.min(endIndex, filteredFiles.length),
-                                total: filteredFiles.length,
-                            })}
-                        </div>
-                        <div className={styles.paginationControls}>
-                            <button className={styles.paginationButton} onClick={() => setCurrentPage(1)} disabled={currentPage === 1}>
-                                <FaAngleDoubleLeft />
-                            </button>
-                            <button
-                                className={styles.paginationButton}
-                                onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                                disabled={currentPage === 1}
-                            >
-                                <FaChevronLeft />
-                            </button>
-
-                            {getPageNumbers().map((page, index) => (
-                                <React.Fragment key={index}>
-                                    {page === "..." ? (
-                                        <span className={styles.paginationEllipsis}>...</span>
-                                    ) : (
-                                        <button
-                                            className={`${styles.paginationButton} ${currentPage === page ? styles.active : ""}`}
-                                            onClick={() => setCurrentPage(page as number)}
-                                        >
-                                            {page}
-                                        </button>
-                                    )}
-                                </React.Fragment>
-                            ))}
-
-                            <button
-                                className={styles.paginationButton}
-                                onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                                disabled={currentPage === totalPages}
-                            >
-                                <FaChevronRight />
-                            </button>
-                            <button
-                                className={styles.paginationButton}
-                                onClick={() => setCurrentPage(totalPages)}
-                                disabled={currentPage === totalPages}
-                            >
-                                <FaAngleDoubleRight />
-                            </button>
-                        </div>
+                <div className={styles.paginationContainer}>
+                    <div className={styles.paginationInfo}>
+                        {t("media.pagination.info", {
+                            start: filteredFiles.length > 0 ? startIndex + 1 : 0,
+                            end: Math.min(endIndex, filteredFiles.length),
+                            total: filteredFiles.length,
+                        })}
                     </div>
-                )}
+                    <div className={styles.paginationControls}>
+                        <button className={styles.paginationButton} onClick={() => setCurrentPage(1)} disabled={currentPage === 1}>
+                            <FaAngleDoubleLeft />
+                        </button>
+                        <button
+                            className={styles.paginationButton}
+                            onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                            disabled={currentPage === 1}
+                        >
+                            <FaChevronLeft />
+                        </button>
+
+                        {getPageNumbers().map((page, index) => (
+                            <React.Fragment key={index}>
+                                {page === "..." ? (
+                                    <span className={styles.paginationEllipsis}>...</span>
+                                ) : (
+                                    <button
+                                        className={`${styles.paginationButton} ${currentPage === page ? styles.active : ""}`}
+                                        onClick={() => setCurrentPage(page as number)}
+                                        disabled={filteredFiles.length === 0}
+                                    >
+                                        {page}
+                                    </button>
+                                )}
+                            </React.Fragment>
+                        ))}
+
+                        <button
+                            className={styles.paginationButton}
+                            onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                            disabled={currentPage === totalPages}
+                        >
+                            <FaChevronRight />
+                        </button>
+                        <button
+                            className={styles.paginationButton}
+                            onClick={() => setCurrentPage(totalPages)}
+                            disabled={currentPage === totalPages}
+                        >
+                            <FaAngleDoubleRight />
+                        </button>
+                    </div>
+                </div>
             </div>
 
             {/* 预览模态框 */}

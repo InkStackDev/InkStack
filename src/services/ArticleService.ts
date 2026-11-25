@@ -324,7 +324,7 @@ export class ArticleService {
             url += `&keyword=${encodeURIComponent(params.keyword)}`;
         }
 
-        const response = await http.get<ListAdminArticlesResponse>(url);
+        const response = await http.get<ListAdminArticlesResponse>(url, { cacheTtl: 15_000 });
         return response.data;
     }
 
@@ -480,7 +480,7 @@ export class ArticleService {
             url += `?${queryParts.join("&")}`;
         }
 
-        const response = await http.get<ArticleStatsResponse>(url);
+        const response = await http.get<ArticleStatsResponse>(url, { cacheTtl: 15_000 });
         return response.data;
     }
 }

@@ -1,6 +1,7 @@
 /**
  * i18n 资源汇总（以 zh-CN 为 source of truth）
  *
+ * en-US 资源单独放在 ResourcesEn.ts，按需动态加载，避免首屏同时打包两种语言。
  * 新增模块时：在 locales/<lang>/ 下补同名命名空间文件，并在此登记。
  */
 
@@ -24,26 +25,6 @@ import blogZh from "./locales/zh-CN/Blog";
 import servicesZh from "./locales/zh-CN/Services";
 import sampleZh from "./locales/zh-CN/Sample";
 
-import commonEn from "./locales/en-US/Common";
-import navEn from "./locales/en-US/Nav";
-import authEn from "./locales/en-US/Auth";
-import errorEn from "./locales/en-US/Error";
-import articleEn from "./locales/en-US/Article";
-import adminEn from "./locales/en-US/Admin";
-import personalEn from "./locales/en-US/Personal";
-import rdEn from "./locales/en-US/Rd";
-import calendarEn from "./locales/en-US/Calendar";
-import enumsEn from "./locales/en-US/Enums";
-import organizationEn from "./locales/en-US/Organization";
-import assignmentEn from "./locales/en-US/Assignment";
-import userEn from "./locales/en-US/User";
-import profileEn from "./locales/en-US/Profile";
-import componentsEn from "./locales/en-US/Components";
-import homeEn from "./locales/en-US/Home";
-import blogEn from "./locales/en-US/Blog";
-import servicesEn from "./locales/en-US/Services";
-import sampleEn from "./locales/en-US/Sample";
-
 export const resources = {
     "zh-CN": {
         common: commonZh,
@@ -66,27 +47,11 @@ export const resources = {
         services: servicesZh,
         sample: sampleZh,
     },
-    "en-US": {
-        common: commonEn,
-        nav: navEn,
-        auth: authEn,
-        error: errorEn,
-        article: articleEn,
-        admin: adminEn,
-        personal: personalEn,
-        rd: rdEn,
-        calendar: calendarEn,
-        enums: enumsEn,
-        organization: organizationEn,
-        assignment: assignmentEn,
-        user: userEn,
-        profile: profileEn,
-        components: componentsEn,
-        home: homeEn,
-        blog: blogEn,
-        services: servicesEn,
-        sample: sampleEn,
-    },
 } as const;
+
+export async function loadEnResources() {
+    const module = await import("./ResourcesEn");
+    return module.enResources;
+}
 
 export default resources;

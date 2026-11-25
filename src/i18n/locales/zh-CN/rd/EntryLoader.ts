@@ -10,6 +10,7 @@ const section = {
         access: "正在校验研发平台访问权限…",
         org: "正在加载组织与角色信息…",
     },
+    pageLoading: "正在加载页面…",
 } as const;
 
 export default section;

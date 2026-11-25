@@ -2,7 +2,8 @@ const section = {
     title: "Runtime Metrics",
     description: "Monitor request volume, error rate, endpoint latency, and process resource usage in real time.",
     workerHint:
-        "With multiple workers, each worker keeps its own metrics. This page only shows the worker handling the current request.",
+        "Metrics are aggregated across instances. Instances included: {{instances}}. If this is lower than your deployment, some snapshots are missing.",
+    degradedHint: "Metrics aggregation is incomplete (Redis unavailable or some instance snapshots are missing). The values may cover only part of the cluster.",
     loading: "Loading runtime metrics...",
     errorTitle: "Failed to load metrics",
     errorRetry: "Reload",
@@ -25,7 +26,7 @@ const section = {
         activeConnections: "Active Connections",
         onlineUsers: "Online Users",
         uptime: "Uptime",
-        connectionDetail: "HTTP {{http}} · WS {{ws}}",
+        connectionDetail: "HTTP {{http}} · WS {{ws}} · Devices {{devices}}",
     },
     service: {
         title: "Service Info",

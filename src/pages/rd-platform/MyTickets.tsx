@@ -596,7 +596,12 @@ const MyTickets: React.FC = () => {
                             ...
                         </span>
                     ) : (
-                        <button key={pg} className={page === pg ? styles.activePage : ""} onClick={() => setPage(pg as number)}>
+                        <button
+                            key={pg}
+                            className={page === pg ? styles.activePage : ""}
+                            onClick={() => setPage(pg as number)}
+                            disabled={total === 0}
+                        >
                             {pg}
                         </button>
                     ),

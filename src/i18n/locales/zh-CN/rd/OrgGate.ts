@@ -6,6 +6,11 @@ const section = {
     joinOrg: "加入组织",
     backHome: "返回首页",
     switchAccount: "切换账号",
+    invalidTitle: "无法访问该组织",
+    invalidLine1: "该组织可能已停用、已删除，或您已不再是其成员。",
+    invalidLine2: "请返回研发平台或组织列表，选择其他有权限的组织。",
+    backToOrgs: "返回组织列表",
+    backToRd: "返回研发平台",
 } as const;
 
 export default section;

@@ -4,6 +4,28 @@ const section = {
     description: "Manage user comments, moderate content, and handle reports",
     totalComments: "{{total}} comments in total",
     empty: "No data",
+    stats: {
+        total: "Total Comments",
+        pending: "Pending",
+        approved: "Approved",
+        spam: "Spam",
+        reported: "Reported",
+    },
+    table: {
+        title: "Comment List",
+        total: "{{total}} comments in total",
+        headers: {
+            author: "Commenter",
+            content: "Content",
+            status: "Status",
+            engagement: "Engagement",
+            time: "Time",
+            actions: "Actions",
+        },
+        expandReplies: "Expand replies",
+        collapseReplies: "Collapse replies",
+        empty: "No data",
+    },
     filter: {
         title: "Filters",
         clear: "Clear Filters",
@@ -28,6 +50,8 @@ const section = {
     },
     batch: {
         selected: "{{total}} comments selected",
+        selectAll: "Select all on this page",
+        selectRow: "Select this comment",
         approve: "Approve",
         reject: "Reject",
         markSpam: "Mark as Spam",

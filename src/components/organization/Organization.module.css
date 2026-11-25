@@ -158,6 +158,10 @@
         width: 100%;
         justify-content: flex-start;
     }
+
+    .headerActions {
+        width: 100%;
+    }
 }
 
 .orgType {
@@ -596,6 +600,85 @@
     transform: translateY(0);
 }
 
+.headerActions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.moreMenuWrapper {
+    position: relative;
+    display: inline-flex;
+}
+
+.moreMenu {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    min-width: 160px;
+    padding: 6px;
+    background: var(--card-bg);
+    border: 1px solid var(--border-primary);
+    border-radius: 8px;
+    box-shadow: var(--shadow-lg, 0 8px 24px rgba(0, 0, 0, 0.12));
+    z-index: 50;
+}
+
+.moreMenuWarning,
+.moreMenuSuccess,
+.moreMenuDanger {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    text-align: left;
+}
+
+.moreMenuWarning {
+    color: var(--warning);
+}
+
+.moreMenuWarning:hover:not(:disabled) {
+    background: var(--warning-bg-hover, rgba(234, 179, 8, 0.08));
+}
+
+.moreMenuSuccess {
+    color: var(--success);
+}
+
+.moreMenuSuccess:hover:not(:disabled) {
+    background: var(--success-bg-hover, rgba(34, 197, 94, 0.08));
+}
+
+.moreMenuDanger {
+    color: var(--error);
+}
+
+.moreMenuDanger:hover:not(:disabled) {
+    background: var(--error-bg-hover, rgba(239, 68, 68, 0.08));
+}
+
+.moreMenuWarning:disabled,
+.moreMenuSuccess:disabled,
+.moreMenuDanger:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.moreMenuDivider {
+    height: 1px;
+    margin: 4px 6px;
+    background: var(--border-light);
+}
+
 .joined {
     color: var(--success);
     font-weight: 600;
@@ -614,6 +697,20 @@
     content: "✓";
     font-size: 1rem;
     font-weight: 600;
+}
+
+.ownerBadge {
+    color: var(--warning);
+    font-weight: 600;
+    font-size: 1rem;
+    background: rgba(234, 179, 8, 0.1);
+    padding: 8px 12px;
+    border-radius: 5px;
+    letter-spacing: 0.02em;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border: 1px solid rgba(234, 179, 8, 0.3);
 }
 
 /* Tab切换按钮 */

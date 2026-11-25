@@ -6,7 +6,8 @@ import { Link, useParams, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { encodeId, decodeId } from "@/utils/HashId.ts";
 import ReactMarkdown from "react-markdown";
-import { articleMarkdownComponents, articleMarkdownPlugins } from "@/components/articleView/Markdown";
+import { articleMarkdownComponents } from "@/components/articleView/Markdown";
+import { articleMarkdownPlugins } from "@/components/articleView/MathMarkdownPlugins";
 import type { ArticleCreateProps, ArticleFormData, SelectOption, Tag } from "@/types";
 import { FaEdit, FaEye, FaFileImport, FaInfoCircle, FaLock } from "react-icons/fa";
 import styles from "./ArticleCreate.module.css";
@@ -123,38 +124,57 @@ const ArticleCreate: React.FC<ArticleCreateProps> = ({ onSaveDraft, onPublish, i
         }
     }, [formData, selectedTags, id]);
 
-    // 页面加载时获取分类和标签列表（async/await风格）
+    // 页面加载时并发获取分类、标签和文章详情
     useEffect(() => {
         const fetchData = async () => {
-            if (user?.id) {
-                setLoading(true);
+            if (!user?.id) {
+                return;
+            }
+            setLoading(true);
+            try {
+                const articlePromise = id
+                    ? (async () => {
+                          try {
+                              // 尝试获取文章详情，先假设是原创(1)
+                              return await ArticleService.getArticleDetails({ id, type: 1 });
+                          } catch {
+                              // 如果失败，尝试转载(2)
+                              return await ArticleService.getArticleDetails({ id, type: 2 });
+                          }
+                      })()
+                    : Promise.resolve(null);
+
+                const [categoryResult, tagResult, articleResult] = await Promise.allSettled([
+                    // 获取当前用户的分类，保证每项都有 color 字段
+                    CategoryService.queryMyCategory(),
+                    // 获取所有标签，使用当前用户id
+                    LabelService.queryLabel({ user_id: user.id }),
+                    articlePromise,
+                ]);
+
                 let formattedCategories: SelectOption[] = [];
                 let formattedTags: Tag[] = [];
 
-                try {
-                    // 获取当前用户的分类，保证每项都有 color 字段
-                    const categoryData = await CategoryService.queryMyCategory();
-                    formattedCategories = categoryData.list.map((cat) => ({
+                if (categoryResult.status === "fulfilled") {
+                    formattedCategories = (categoryResult.value.list || []).map((cat) => ({
                         id: cat.id,
                         name: cat.name,
                         color: cat.color || "#3B82F6",
                     }));
                     setCategories(formattedCategories);
-                } catch (err) {
-                    console.error("获取分类失败:", err);
+                } else {
+                    console.error("获取分类失败:", categoryResult.reason);
                 }
 
-                try {
-                    // 获取所有标签，使用当前用户id
-                    const tagData = await LabelService.queryLabel({ user_id: user.id });
-                    formattedTags = tagData.map((tag) => ({
+                if (tagResult.status === "fulfilled") {
+                    formattedTags = tagResult.value.map((tag) => ({
                         id: tag.id,
                         name: tag.name,
                         color: tag.color || "#61dafb",
                     }));
                     setTags(formattedTags);
-                } catch (err) {
-                    console.error("获取标签失败:", err);
+                } else {
+                    console.error("获取标签失败:", tagResult.reason);
                 }
 
                 // 创建模式下，从 sessionStorage 恢复上次选择的分类/标签（匹配最新列表）
@@ -183,61 +203,52 @@ const ArticleCreate: React.FC<ArticleCreateProps> = ({ onSaveDraft, onPublish, i
                     }
                 }
 
-                // 如果是编辑模式，获取文章详情
+                // 编辑模式下填充文章详情
                 if (id) {
-                    try {
-                        let article;
-                        try {
-                            // 尝试获取文章详情，先假设是原创(1)
-                            article = await ArticleService.getArticleDetails({ id, type: 1 });
-                        } catch (err) {
-                            // 如果失败，尝试转载(2)
-                            article = await ArticleService.getArticleDetails({ id, type: 2 });
-                        }
-
-                        if (article) {
-                            // 检查权限
-                            if (String(article.user_id) !== String(user.id)) {
-                                setPermissionDenied(true);
-                                setLoading(false);
-                                return;
-                            }
-
-                            // 填充表单
-                            setFormData((prev) => ({
-                                ...prev,
-                                title: article.title,
-                                content: article.content,
-                                articleType: article.type === 1 ? "original" : "repost",
-                                category: formattedCategories.find((c) => c.id == article.categorys?.[0]?.id) || null,
-                                tags: [],
-                            }));
-
-                            // 填充标签
-                            if (article.labels && article.labels.length > 0) {
-                                const articleTags = formattedTags.filter((t) => article.labels?.some((l) => l.id === t.id));
-                                setSelectedTags(articleTags);
-                                setFormData((prev) => ({ ...prev, tags: articleTags }));
-                            }
-
-                            // 填充分类
-                            if (article.categorys && article.categorys.length > 0) {
-                                const cat = formattedCategories.find((c) => c.id == article.categorys![0]?.id);
-                                if (cat) {
-                                    setFormData((prev) => ({ ...prev, category: cat }));
-                                }
-                            }
-                        }
-                    } catch (err) {
-                        console.error("获取文章详情失败:", err);
+                    if (articleResult.status === "rejected") {
+                        console.error("获取文章详情失败:", articleResult.reason);
                         message.error(t("create.fetchFailed"));
+                    } else if (articleResult.value) {
+                        const article = articleResult.value;
+
+                        // 检查权限
+                        if (String(article.user_id) !== String(user.id)) {
+                            setPermissionDenied(true);
+                            return;
+                        }
+
+                        // 填充表单
+                        setFormData((prev) => ({
+                            ...prev,
+                            title: article.title,
+                            content: article.content,
+                            articleType: article.type === 1 ? "original" : "repost",
+                            category: formattedCategories.find((c) => c.id == article.categorys?.[0]?.id) || null,
+                            tags: [],
+                        }));
+
+                        // 填充标签
+                        if (article.labels && article.labels.length > 0) {
+                            const articleTags = formattedTags.filter((t) => article.labels?.some((l) => l.id === t.id));
+                            setSelectedTags(articleTags);
+                            setFormData((prev) => ({ ...prev, tags: articleTags }));
+                        }
+
+                        // 填充分类
+                        if (article.categorys && article.categorys.length > 0) {
+                            const cat = formattedCategories.find((c) => c.id == article.categorys![0]?.id);
+                            if (cat) {
+                                setFormData((prev) => ({ ...prev, category: cat }));
+                            }
+                        }
                     }
                 }
+            } finally {
                 setLoading(false);
                 initialLoadDone.current = true;
             }
         };
-        fetchData();
+        void fetchData();
     }, [user, id]);
 
     const fileInputRef = useRef<HTMLInputElement>(null);

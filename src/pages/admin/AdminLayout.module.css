@@ -544,6 +544,7 @@
 
 /* 页面内容区域 */
 .adminPageContent {
+    position: relative;
     padding: 24px;
     background-color: transparent;
     flex: 1;
