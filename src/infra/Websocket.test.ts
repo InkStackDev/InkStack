@@ -224,10 +224,10 @@ describe("WebSocket Cookie 建连", () => {
         socket.onopen?.();
 
         vi.advanceTimersByTime(4999);
-        expect(socket.sent).not.toContainEqual('{"type":"ping"}');
+        expect(socket.sent).not.toContainEqual("ping");
 
         vi.advanceTimersByTime(1);
-        expect(socket.sent).toContainEqual('{"type":"ping"}');
+        expect(socket.sent).toContainEqual("ping");
 
         vi.useRealTimers();
     });
@@ -241,10 +241,13 @@ describe("WebSocket Cookie 建连", () => {
         socket.onopen?.();
 
         vi.advanceTimersByTime(30000);
-        expect(socket.sent).toContainEqual('{"type":"ping"}');
+        expect(socket.sent).toContainEqual("ping");
+
+        // 回应 pong，避免 10 秒 pong 超时提前关闭连接
+        socket.onmessage?.({ data: "pong" } as MessageEvent);
 
         vi.advanceTimersByTime(30000);
-        expect(socket.sent.filter((s) => s === '{"type":"ping"}')).toHaveLength(2);
+        expect(socket.sent.filter((s) => s === "ping")).toHaveLength(2);
 
         vi.useRealTimers();
     });
@@ -258,14 +261,14 @@ describe("WebSocket Cookie 建连", () => {
         socket.onopen?.();
 
         vi.advanceTimersByTime(30000);
-        expect(socket.sent).toContainEqual('{"type":"ping"}');
+        expect(socket.sent).toContainEqual("ping");
 
         socket.readyState = MockWebSocket.CLOSED;
         socket.onclose?.({ code: 1000, reason: "", wasClean: true } as CloseEvent);
 
         socket.sent = [];
         vi.advanceTimersByTime(60000);
-        expect(socket.sent).not.toContainEqual('{"type":"ping"}');
+        expect(socket.sent).not.toContainEqual("ping");
 
         vi.useRealTimers();
     });
@@ -279,27 +282,55 @@ describe("WebSocket Cookie 建连", () => {
         socket.onopen?.();
 
         vi.advanceTimersByTime(30000);
-        expect(socket.sent).toContainEqual('{"type":"ping"}');
+        expect(socket.sent).toContainEqual("ping");
 
         client.disconnect();
 
         socket.sent = [];
         vi.advanceTimersByTime(60000);
-        expect(socket.sent).not.toContainEqual('{"type":"ping"}');
+        expect(socket.sent).not.toContainEqual("ping");
 
         vi.useRealTimers();
     });
 
-    it("pong 消息不触发用户注册的 handler", () => {
-        const client = new WebSocketClient("/ws/v1/session");
+    it("纯文本 pong 不触发 handler，并清除 pong 超时", () => {
+        vi.useFakeTimers();
+        const client = new WebSocketClient("/ws/v1/session", { heartbeatInterval: 1000, pongTimeout: 500 });
         captureConsole(client, 1);
         const socket = MockWebSocket.instances[0];
         const handler = vi.fn();
         client.onMessage("*", handler);
+        socket.readyState = MockWebSocket.OPEN;
+        socket.onopen?.();
+        const closeSpy = vi.spyOn(socket, "close");
 
-        socket.onmessage?.({ data: JSON.stringify({ type: "pong" }) } as MessageEvent);
+        vi.advanceTimersByTime(1000);
+        expect(socket.sent).toContainEqual("ping");
+
+        socket.onmessage?.({ data: "pong" } as MessageEvent);
+        vi.advanceTimersByTime(500);
 
         expect(handler).not.toHaveBeenCalled();
+        expect(closeSpy).not.toHaveBeenCalled();
+        vi.useRealTimers();
+    });
+
+    it("pong 超时后主动关闭连接", () => {
+        vi.useFakeTimers();
+        const client = new WebSocketClient("/ws/v1/session", { heartbeatInterval: 1000, pongTimeout: 500 });
+        captureConsole(client, 1);
+        const socket = MockWebSocket.instances[0];
+        socket.readyState = MockWebSocket.OPEN;
+        socket.onopen?.();
+        const closeSpy = vi.spyOn(socket, "close");
+
+        vi.advanceTimersByTime(1000);
+        expect(socket.sent).toContainEqual("ping");
+        expect(closeSpy).not.toHaveBeenCalled();
+
+        vi.advanceTimersByTime(500);
+        expect(closeSpy).toHaveBeenCalled();
+        vi.useRealTimers();
     });
 
     it("heartbeatInterval 设为 0 时禁用心跳", () => {
@@ -311,7 +342,7 @@ describe("WebSocket Cookie 建连", () => {
         socket.onopen?.();
 
         vi.advanceTimersByTime(60000);
-        expect(socket.sent).not.toContainEqual('{"type":"ping"}');
+        expect(socket.sent).not.toContainEqual("ping");
 
         vi.useRealTimers();
     });
