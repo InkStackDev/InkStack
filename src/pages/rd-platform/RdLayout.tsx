@@ -25,6 +25,7 @@ import UserDropdown from "@/components/userDropdown/UserDropdown";
 import Footer from "@/components/footer/Footer";
 import AuthRequired from "@/components/auth/AuthRequired";
 import OrgSelector from "@/components/orgSelector/OrgSelector";
+import RdEntryLoader, { type RdEntryStage } from "@/components/rdEntryLoader";
 import Loading from "@/components/loading/Loading";
 import { useAuth } from "@/contexts/AuthContext";
 import { RdOrgProvider, useRdOrg } from "@/contexts/RdOrgContext";
@@ -249,17 +250,27 @@ const RdLayoutShell: React.FC = () => {
     const breadcrumbs = getBreadcrumbs();
 
     // 界面刷新时保持研发平台外壳常驻，仅在内容区切换状态（对齐 GitHub/Turbo 的局部刷新体验）
+    // 同一实例贯穿 auth → access → org 三个阶段，颜色随阶段平滑切换，避免反复闪烁
+    const entryStage: RdEntryStage | null = loading
+        ? "auth"
+        : !isAuthenticated || !user
+          ? null
+          : !accessChecked
+            ? "access"
+            : orgLoading
+              ? "org"
+              : null;
+
     let content: React.ReactNode;
-    if (loading) {
-        content = <Loading size="large" />;
+    if (entryStage) {
+        // 加载态由内容区上方的 RdEntryLoader 覆盖展示
+        content = null;
     } else if (!isAuthenticated || !user) {
         content = (
             <div style={{ maxWidth: "var(--page-max-width)", margin: "0 auto", width: "100%", padding: "2rem 1.8rem" }}>
                 <AuthRequired message={t("layout.authRequired")}>{null}</AuthRequired>
             </div>
         );
-    } else if (!accessChecked) {
-        content = <Loading size="large" />;
     } else if (!canAccess) {
         content = (
             <div
@@ -350,8 +361,6 @@ const RdLayoutShell: React.FC = () => {
                 </div>
             </div>
         );
-    } else if (orgLoading) {
-        content = <Loading size="large" />;
     } else if (rdOrgs.length === 0) {
         content = (
             <div
@@ -525,7 +534,10 @@ const RdLayoutShell: React.FC = () => {
                         <RdHeaderActions />
                     </header>
 
-                    <div className={styles.rdPageContent}>{content}</div>
+                    <div className={styles.rdPageContent}>
+                        {content}
+                        {entryStage && <RdEntryLoader stage={entryStage} variant="overlay" />}
+                    </div>
 
                     <Footer startYear={2025} />
                 </main>

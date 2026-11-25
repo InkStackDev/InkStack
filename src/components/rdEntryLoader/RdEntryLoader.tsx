@@ -9,6 +9,10 @@ export type RdEntryStage = "auth" | "access" | "org";
 
 interface RdEntryLoaderProps {
     stage: RdEntryStage;
+    /** fullscreen：整页加载；overlay：覆盖在内容区之上，保持研发平台外壳常驻 */
+    variant?: "fullscreen" | "overlay";
+    /** 快速加载时不闪加载态，超过该毫秒数才展示 */
+    delayMs?: number;
 }
 
 const STAGES: RdEntryStage[] = ["auth", "access", "org"];
@@ -19,24 +23,32 @@ const STAGE_ICONS: Record<RdEntryStage, IconType> = {
     org: FaBuilding,
 };
 
-const RdEntryLoader: React.FC<RdEntryLoaderProps> = ({ stage }) => {
+const RdEntryLoader: React.FC<RdEntryLoaderProps> = ({ stage, variant = "fullscreen", delayMs }) => {
     const { t } = useTranslation("rd");
     const Icon = STAGE_ICONS[stage];
     const currentIndex = STAGES.indexOf(stage);
     const [visible, setVisible] = useState(false);
+    const delay = delayMs ?? (variant === "overlay" ? 120 : 220);
 
-    // 快速加载时不闪骨架屏；超过 220ms 才展示
+    // 快速加载时不闪加载态；超过 delay 才展示
     useEffect(() => {
-        const timer = setTimeout(() => setVisible(true), 220);
+        const timer = setTimeout(() => setVisible(true), delay);
         return () => clearTimeout(timer);
-    }, []);
+    }, [delay]);
 
     if (!visible) {
-        return <div style={{ minHeight: "100vh" }} />;
+        return variant === "fullscreen" ? <div style={{ minHeight: "100vh" }} /> : null;
     }
 
     return (
-        <div className={styles.container} data-stage={stage} role="status" aria-live="polite" aria-busy="true">
+        <div
+            className={`${styles.container} ${variant === "overlay" ? styles.overlay : ""}`}
+            data-stage={stage}
+            data-variant={variant}
+            role="status"
+            aria-live="polite"
+            aria-busy="true"
+        >
             <div className={styles.ambient} aria-hidden="true" />
 
             <div className={styles.mascotWrap} data-stage={stage}>

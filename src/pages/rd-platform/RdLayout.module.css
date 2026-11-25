@@ -384,6 +384,7 @@
 
 /* Page content */
 .rdPageContent {
+    position: relative;
     padding: 24px;
     background-color: transparent;
     flex: 1;
