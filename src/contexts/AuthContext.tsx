@@ -4,6 +4,7 @@ import { AuthService } from "../services/AuthService.ts";
 import { PasskeyService } from "../services/PasskeyService.ts";
 import { sessionEvents } from "../auth/SessionEvents.ts";
 import { sessionWS } from "../services/WsInstances.ts";
+import { resetOnlineCount } from "../services/PresenceService.ts";
 import { setFaviconBadge } from "../utils/Favicon.ts";
 import { resetNotificationState } from "../utils/NotificationState.ts";
 import i18n from "../i18n";
@@ -79,6 +80,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     const clearAuthRuntimeState = useCallback(() => {
         disconnectWebSockets();
+        resetOnlineCount(); // WS 是登录态专属的，退出后不要残留上一位用户的在线人数
         setUser(null);
         resetNotificationState();
         setFaviconBadge(0);
@@ -253,10 +255,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         try {
             setLoginError(null);
             setLoading(true);
-            disconnectWebSockets();
-            setUser(null);
-            resetNotificationState();
-            setFaviconBadge(0);
+            clearAuthRuntimeState();
 
             const response = await AuthService.login(authId, password);
             if (generation !== authGenerationRef.current) {
@@ -339,10 +338,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         try {
             setLoginError(null);
             setLoading(true);
-            disconnectWebSockets();
-            setUser(null);
-            resetNotificationState();
-            setFaviconBadge(0);
+            clearAuthRuntimeState();
             await PasskeyService.login(authId);
             await completeLogin(generation);
         } catch (error: any) {
@@ -363,10 +359,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         try {
             setLoginError(null);
             setLoading(true);
-            disconnectWebSockets();
-            setUser(null);
-            resetNotificationState();
-            setFaviconBadge(0);
+            clearAuthRuntimeState();
             await AuthService.recoverWithEmail(email, authCode);
             await completeLogin(generation);
         } catch (error: any) {

@@ -15,8 +15,11 @@ const StatsPanel: React.FC = () => {
     const { isAuthenticated, loading: authLoading } = useAuth();
     const [httpStats, setHttpStats] = useState<StatsData | null>(null);
     const [loading, setLoading] = useState(true);
-    const onlineUsers = useOnlineCount(); // 实时 WebSocket 推送
-    const onlineLoading = authLoading || (isAuthenticated ? onlineUsers === null : loading);
+    const onlineUsers = useOnlineCount(); // 实时 WebSocket 推送（仅登录后存在连接）
+    // WS 只在登录后建立，且初始人数帧只发一次；未收到时回退到 HTTP 统计，避免永久骨架屏
+    const fallbackOnlineUsers = httpStats?.onlineUsers ?? null;
+    const resolvedOnlineUsers = isAuthenticated ? (onlineUsers ?? fallbackOnlineUsers) : fallbackOnlineUsers;
+    const onlineLoading = authLoading || (resolvedOnlineUsers === null && loading);
 
     useEffect(() => {
         let cancelled = false;
@@ -54,7 +57,7 @@ const StatsPanel: React.FC = () => {
     const statsItems = [
         {
             title: t("statsPanel.onlineUsers"),
-            value: isAuthenticated ? onlineUsers : (httpStats?.onlineUsers ?? "-"),
+            value: resolvedOnlineUsers ?? "-",
             loading: onlineLoading,
             icon: <FaUsers className={styles.statIcon} />,
             color: styles.online,

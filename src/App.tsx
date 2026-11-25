@@ -21,6 +21,7 @@ import { finishNavigation, installNavigationTracking } from "./components/routeP
 import SessionNotifier from "./components/auth/SessionNotifier";
 import { initErrorCodes } from "./utils/ErrorCodes.ts";
 import "./utils/ErrorHandlers.ts"; // 注册业务 errno 处理器（1101 等）
+import "./services/PresenceService.ts"; // 启动即注册在线人数监听：WS 仅登录后建立，监听必须早于握手
 
 function NavigationWatcher() {
     const location = useLocation();
