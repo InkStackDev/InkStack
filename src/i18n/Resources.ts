@@ -46,6 +46,7 @@ export const resources = {
         blog: blogZh,
         services: servicesZh,
         sample: sampleZh,
+        backend: {},
     },
 } as const;
 

@@ -21,7 +21,7 @@ export interface MetricSample {
 export interface MetricsPayload {
     metrics?: MetricSample[];
     /** 参与聚合的存活实例数 */
-    instanceCount?: number;
+    instance_count?: number;
     /** Redis 聚合失败/不完整时为 true，此时只保证本实例数据 */
     degraded?: boolean;
 }

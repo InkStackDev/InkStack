@@ -45,6 +45,7 @@ import Modal from "../modal/Modal";
 import Switch from "../switch/Switch";
 import { setFaviconBadge } from "@/utils/Favicon.ts";
 import { encodeId } from "@/utils/HashId.ts";
+import { resolveBackendMessage } from "@/utils/AppConfig.ts";
 import type { Notification as NotificationItem } from "@/types/Notification.ts";
 
 const TYPE_ICON_MAP: Record<string, { icon: React.ReactNode; className: string }> = {
@@ -176,6 +177,9 @@ const Notification: React.FC = () => {
                 type: data.notification_type ?? data.type ?? "system",
                 title: data.title ?? "",
                 content: data.content ?? data.body ?? "",
+                title_id: data.title_id,
+                content_id: data.content_id,
+                params: data.params,
                 is_read: data.is_read ?? false,
                 create_time: data.create_time ?? Math.floor(Date.now() / 1000),
                 link: data.link,
@@ -211,7 +215,7 @@ const Notification: React.FC = () => {
                 return;
             }
             // 只要携带了通知相关字段就视为通知
-            if (data?.notification_id || data?.title || data?.content) {
+            if (data?.notification_id || data?.title || data?.content || data?.title_id || data?.content_id) {
                 handleNotification(data);
             }
         });
@@ -453,8 +457,12 @@ const Notification: React.FC = () => {
                                         >
                                             <div className={`${styles.itemIcon} ${meta.className}`}>{meta.icon}</div>
                                             <div className={styles.itemBody}>
-                                                <div className={styles.itemTitle}>{item.title}</div>
-                                                <div className={styles.itemContent}>{item.content}</div>
+                                                <div className={styles.itemTitle}>
+                                                    {resolveBackendMessage(item.title_id, item.params, item.title)}
+                                                </div>
+                                                <div className={styles.itemContent}>
+                                                    {resolveBackendMessage(item.content_id, item.params, item.content)}
+                                                </div>
                                                 <div className={styles.itemTime}>{formatTime(t, item.create_time)}</div>
                                             </div>
                                             {!item.is_read && <span className={styles.unreadDot} />}

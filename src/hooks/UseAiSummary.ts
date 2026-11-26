@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import i18n from "@/i18n";
+import { resolveBackendMessage } from "@/utils/AppConfig.ts";
 
 /**
  * 时间戳工具函数，格式: [HH:MM:SS.mmm]
@@ -223,10 +224,12 @@ function useAiSummary(articleId?: string | number) {
                             // type: "chunk"  → 追加 content 到 UI
                             // type: "done"   → 标记完成，不追加到 UI
                             if (parsed.type === "start") {
-                                console.log(`${ts()} [AI-SSE] │    🟢 start 事件: ${parsed.message || ""}`);
+                                const message = resolveBackendMessage(parsed.message_id, undefined, parsed.message);
+                                console.log(`${ts()} [AI-SSE] │    🟢 start 事件: ${message || ""}`);
                                 // start 事件不追加文本
                             } else if (parsed.type === "done") {
-                                console.log(`${ts()} [AI-SSE] │    🏁 done 事件: ${parsed.message || ""}`);
+                                const message = resolveBackendMessage(parsed.message_id, undefined, parsed.message);
+                                console.log(`${ts()} [AI-SSE] │    🏁 done 事件: ${message || ""}`);
                                 // done 事件不追加文本，流自然结束
                             } else if (parsed.type === "chunk" || parsed.content !== undefined) {
                                 const chunkText = parsed.content ?? "";
@@ -237,8 +240,9 @@ function useAiSummary(articleId?: string | number) {
                                 setText((prev) => prev + parsed.text);
                                 eventCount++;
                                 console.log(`${ts()} [AI-SSE] │    ➕ text: "${String(parsed.text).substring(0, 80)}"`);
-                            } else if (parsed.message !== undefined) {
-                                console.log(`${ts()} [AI-SSE] │    💬 message: ${parsed.message}`);
+                            } else if (parsed.message !== undefined || parsed.message_id !== undefined) {
+                                const message = resolveBackendMessage(parsed.message_id, undefined, parsed.message);
+                                console.log(`${ts()} [AI-SSE] │    💬 message: ${message}`);
                             } else if (typeof parsed === "object" && Object.keys(parsed).length > 0) {
                                 const fallback = JSON.stringify(parsed);
                                 setText((prev) => prev + fallback);

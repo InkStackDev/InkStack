@@ -162,7 +162,11 @@ export class DataService {
         page?: number;
         pageSize?: number;
     }): Promise<{ list: BackupRecord[]; total: number }> {
-        const res = await http.get<PaginatedResponse<BackupRecordResponse>>("/admin/database/backups", { params, cacheTtl: 15_000 });
+        const { pageSize, ...rest } = params || {};
+        const res = await http.get<PaginatedResponse<BackupRecordResponse>>("/admin/database/backups", {
+            params: { ...rest, page_size: pageSize },
+            cacheTtl: 15_000,
+        });
         console.log("getBackups response:", res); // Debug log
         return {
             list: res.data.list.map(toBackupRecord),
@@ -189,7 +193,11 @@ export class DataService {
         page?: number;
         pageSize?: number;
     }): Promise<{ list: ExportRecord[]; total: number }> {
-        const res = await http.get<PaginatedResponse<ExportRecordResponse>>("/admin/database/exports", { params, cacheTtl: 15_000 });
+        const { pageSize, ...rest } = params || {};
+        const res = await http.get<PaginatedResponse<ExportRecordResponse>>("/admin/database/exports", {
+            params: { ...rest, page_size: pageSize },
+            cacheTtl: 15_000,
+        });
         return {
             list: res.data.list.map(toExportRecord),
             total: res.data.total,

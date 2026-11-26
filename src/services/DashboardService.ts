@@ -15,6 +15,10 @@ export interface DashboardStats {
 
 export interface TrendItem {
     label: string;
+    label_id?: string;
+    label_params?: Record<string, unknown>;
+    weekday?: number;
+    week_index?: number;
     date: string;
     visits: number;
 }
@@ -29,7 +33,11 @@ export interface DashboardTrend {
 export interface DashboardActivity {
     type: "user_register" | "article_publish" | "comment_create" | "system_backup" | "profile_update";
     title: string;
+    title_id?: string;
+    params?: Record<string, unknown>;
     time: string;
+    time_id?: string;
+    time_params?: Record<string, unknown>;
     timestamp: number;
 }
 

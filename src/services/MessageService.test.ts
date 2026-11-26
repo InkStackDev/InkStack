@@ -41,7 +41,7 @@ describe("MessageService", () => {
     });
 
     it("sends URL-encoded message text", async () => {
-        const message = { id: 1, fromMe: true, text: "你好 & hello", create_time: 1 };
+        const message = { id: 1, from_me: true, text: "你好 & hello", create_time: 1 };
         httpMock.postForm.mockResolvedValue({ data: message });
 
         await expect(MessageService.send(9, message.text)).resolves.toBe(message);

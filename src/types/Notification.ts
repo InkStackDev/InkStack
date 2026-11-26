@@ -2,6 +2,9 @@ export interface Notification {
     id: number | string;
     title: string;
     content: string;
+    title_id?: string;
+    content_id?: string;
+    params?: Record<string, unknown>;
     type:
         | "system"
         | "comment"

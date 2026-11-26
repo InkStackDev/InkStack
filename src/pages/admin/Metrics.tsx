@@ -111,7 +111,7 @@ const Metrics: FC = () => {
     const snapshot = useMemo(
         () =>
             payload
-                ? MetricsService.buildSnapshot(payload.metrics ?? [], payload.instanceCount ?? 1, payload.degraded ?? false)
+                ? MetricsService.buildSnapshot(payload.metrics ?? [], payload.instance_count ?? 1, payload.degraded ?? false)
                 : null,
         [payload],
     );

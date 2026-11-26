@@ -446,11 +446,11 @@ export class ArticleService {
      * 站点日历 - 获取指定月份有文章的日期列表
      */
     static async getCalendarDays(year: number, month: number): Promise<number[]> {
-        const response = await http.get<{ year: number; month: number; articleDays: number[] }>(
+        const response = await http.get<{ year: number; month: number; article_days: number[] }>(
             `/article/calendar?year=${year}&month=${month}`,
         );
         console.log("Calendar response:", response);
-        return response.data.articleDays ?? [];
+        return response.data.article_days ?? [];
     }
 
     /**

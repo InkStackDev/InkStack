@@ -1,4 +1,4 @@
-import { getErrorMsg } from "../utils/ErrorCodes.ts";
+import { getErrorMsg } from "../utils/AppConfig.ts";
 
 type MessageHandler = (data: unknown) => void;
 type EventHandler = (event?: Event) => void;

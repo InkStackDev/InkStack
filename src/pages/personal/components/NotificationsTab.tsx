@@ -39,6 +39,7 @@ import Switch from "@/components/switch/Switch";
 import type { SelectOption } from "@/types";
 import { encodeId } from "@/utils/HashId.ts";
 import type { Notification as NotificationItem } from "@/types/Notification.ts";
+import { resolveBackendMessage } from "@/utils/AppConfig.ts";
 import styles from "../PersonalCenter.module.css";
 
 const TYPE_ICON_MAP: Record<string, { icon: React.ReactNode; className: string }> = {
@@ -400,10 +401,12 @@ const NotificationsTab: React.FC = () => {
                                 <div className={`${styles.notifItemIcon} ${meta.className}`}>{meta.icon}</div>
                                 <div className={styles.notifItemBody}>
                                     <div className={styles.notifItemTitle}>
-                                        {item.title}
+                                        {resolveBackendMessage(item.title_id, item.params, item.title)}
                                         {!item.is_read && <span className={styles.notifItemDot} />}
                                     </div>
-                                    <div className={styles.notifItemContent}>{item.content}</div>
+                                    <div className={styles.notifItemContent}>
+                                        {resolveBackendMessage(item.content_id, item.params, item.content)}
+                                    </div>
                                     <div className={styles.notifItemTime}>{formatTime(t, item.create_time)}</div>
                                 </div>
                             </div>

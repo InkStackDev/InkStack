@@ -449,7 +449,7 @@ export class FileService {
         // 使用POST请求下载文件，Content-Type为application/x-www-form-urlencoded
         const params = new URLSearchParams();
         params.append("url", url);
-        params.append("fileName", fileName);
+        params.append("file_name", fileName);
         const res = await fetch("/file/download", {
             method: "POST",
             headers: {

@@ -6,7 +6,7 @@ export interface ChatMsg {
     /** 消息 ID */
     id: number | string;
     /** 是否为当前用户发送 */
-    fromMe: boolean;
+    from_me: boolean;
     /** 消息内容 */
     text: string;
     /** 消息时间（Unix 秒） */
