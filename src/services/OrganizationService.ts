@@ -288,11 +288,9 @@ export class OrganizationService {
         }
 
         if (organizationId) {
-            const response = await http.put<CreateOrganizationResponse>(
-                `/organizations/${organizationId}`,
-                formData.toString(),
-                { headers: { "Content-Type": "application/x-www-form-urlencoded" } },
-            );
+            const response = await http.put<CreateOrganizationResponse>(`/organizations/${organizationId}`, formData.toString(), {
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            });
             return response.data;
         }
         const response = await http.postForm<CreateOrganizationResponse>("/organizations", formData);
@@ -324,9 +322,7 @@ export class OrganizationService {
      * 删除组织 (Admin)
      */
     static async deleteOrganizations(params: DeleteOrganizationParams): Promise<DeleteOrganizationResponse> {
-        const response = await http.delete<DeleteOrganizationResponse>(
-            `/organizations?ids=${encodeURIComponent(params.ids)}`,
-        );
+        const response = await http.delete<DeleteOrganizationResponse>(`/organizations?ids=${encodeURIComponent(params.ids)}`);
         return response.data;
     }
 
@@ -372,10 +368,7 @@ export class OrganizationService {
     /**
      * 组织所有者设置组织状态（0 停用 / 1 启用）
      */
-    static async setOrganizationStatus(params: {
-        id: number | string;
-        status: 0 | 1;
-    }): Promise<SetOrganizationStatusResponse> {
+    static async setOrganizationStatus(params: { id: number | string; status: 0 | 1 }): Promise<SetOrganizationStatusResponse> {
         const formData = new URLSearchParams();
         formData.append("status", String(params.status));
 
@@ -393,16 +386,13 @@ export class OrganizationService {
     }
 
     static async organizationJoinCheck(params: organizationJoinCheckParams): Promise<organizationJoinCheckResponse> {
-        const response = await http.get<organizationJoinCheckResponse>(
-            `/organizations/${params.org_id}/membership-checks`,
-            {
-                params: {
-                    user_id: params.user_id,
-                    state: params.state,
-                    ...(params.role !== undefined ? { role: params.role } : {}),
-                },
+        const response = await http.get<organizationJoinCheckResponse>(`/organizations/${params.org_id}/membership-checks`, {
+            params: {
+                user_id: params.user_id,
+                state: params.state,
+                ...(params.role !== undefined ? { role: params.role } : {}),
             },
-        );
+        });
         return response.data;
     }
 
@@ -477,11 +467,9 @@ export class OrganizationService {
             formData.append("reason", params.reason);
         }
 
-        const response = await http.patch<ReviewApplyResponse>(
-            `/organizations/applications/${params.apply_id}`,
-            formData.toString(),
-            { headers: { "Content-Type": "application/x-www-form-urlencoded" } },
-        );
+        const response = await http.patch<ReviewApplyResponse>(`/organizations/applications/${params.apply_id}`, formData.toString(), {
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        });
         return response.data;
     }
 
@@ -543,39 +531,18 @@ export class OrganizationService {
             formData.append("token", params.token);
         }
 
-        const response = await http.postForm<{ id: number | string }>(
-            `/organizations/${params.org_id}/repositories`,
-            formData,
-        );
+        const response = await http.postForm<{ id: number | string }>(`/organizations/${params.org_id}/repositories`, formData);
         return response.data;
     }
 
     /**
      * 编辑仓库
      */
-    static async updateRepo(params: {
-        id: string;
-        name?: string;
-        description?: string;
-        url?: string;
-        language?: string;
-        sort_order?: number;
-    }): Promise<void> {
+    static async updateRepo(params: { id: string; url: string; token?: string }): Promise<void> {
         const formData = new URLSearchParams();
-        if (params.name !== undefined) {
-            formData.append("name", params.name);
-        }
-        if (params.description !== undefined) {
-            formData.append("description", params.description);
-        }
-        if (params.url !== undefined) {
-            formData.append("url", params.url);
-        }
-        if (params.language !== undefined) {
-            formData.append("language", params.language);
-        }
-        if (params.sort_order !== undefined) {
-            formData.append("sort_order", String(params.sort_order));
+        formData.append("url", params.url);
+        if (params.token !== undefined && params.token !== "") {
+            formData.append("token", params.token);
         }
 
         await http.put(`/repositories/${params.id}`, formData.toString(), {
@@ -609,21 +576,6 @@ export class OrganizationService {
     }> {
         const response = await http.get<any>(`/organizations/${orgId}/stats`);
         return response.data;
-    }
-
-    // ---------------------------------------------------------------------------
-    // 仓库 Token
-    // ---------------------------------------------------------------------------
-
-    /**
-     * 为单个仓库保存/更新 GitHub Token
-     */
-    static async saveRepoToken(params: { repo_id: string; token: string }): Promise<void> {
-        const formData = new URLSearchParams();
-        formData.append("token", params.token);
-        await http.put(`/repositories/${params.repo_id}/token`, formData.toString(), {
-            headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        });
     }
 
     /**
