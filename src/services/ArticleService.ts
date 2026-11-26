@@ -19,6 +19,7 @@ export interface ListArticlesResponse {
         id: string | number;
         title: string;
         author: string;
+        author_avatar?: string;
         summary: string;
         state: number;
         type: number;
@@ -51,6 +52,7 @@ export interface ListAdminArticlesResponse {
         id: string | number;
         title: string;
         author: string;
+        author_avatar?: string;
         email: string;
         state: number;
         summary: string;

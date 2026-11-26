@@ -24,6 +24,7 @@ export interface ArticleListItem {
     id: string | number;
     title: string;
     author: string;
+    author_avatar?: string;
     summary: string;
     state: string;
     type: string;

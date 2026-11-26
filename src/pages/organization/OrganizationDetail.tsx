@@ -175,6 +175,8 @@ const OrganizationDetail: React.FC = () => {
                     user_in_org: typeof res.user_in_org !== "undefined" && res.user_in_org >= 0 ? res.user_in_org : undefined,
                     user_role: typeof res.user_role !== "undefined" && res.user_role > 0 ? res.user_role : undefined,
                     owner_id: typeof res.owner_id !== "undefined" ? String(res.owner_id) : undefined,
+                    owner_name: res.owner_name,
+                    owner_avatar: res.owner_avatar,
                     is_owner: Boolean(res.is_owner),
                 };
                 setOrg(orgDetail);

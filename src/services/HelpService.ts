@@ -14,6 +14,9 @@ export interface FeedbackItem {
     type: FeedbackType;
     content: string;
     contact?: string;
+    user_id?: string | number;
+    user_name?: string;
+    user_avatar?: string;
     created_at: number;
 }
 

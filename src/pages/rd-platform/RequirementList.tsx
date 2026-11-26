@@ -363,7 +363,9 @@ const RequirementList: React.FC = () => {
                                         <AssigneeDisplay name={r.assignee} avatar={r.assigneeAvatar} />
                                     </td>
                                     <td data-label={t("requirements.table.iteration")}>{r.iteration || "-"}</td>
-                                    <td data-label={t("requirements.table.creator")}>{r.creator}</td>
+                                    <td data-label={t("requirements.table.creator")}>
+                                        <AssigneeDisplay name={r.creator} avatar={r.creatorAvatar} />
+                                    </td>
                                     <td data-label={t("requirements.table.createdAt")}>{formatDateTime(r.createdAt)}</td>
                                     <td data-label={t("requirements.table.actions")}>
                                         <div className={styles.actionButtons}>
@@ -491,7 +493,10 @@ const RequirementList: React.FC = () => {
                                 t("requirements.modal.detail.assignee"),
                                 <AssigneeDisplay name={selectedReq.assignee} avatar={selectedReq.assigneeAvatar} />,
                             )}
-                            {renderField(t("requirements.modal.detail.creator"), selectedReq.creator)}
+                            {renderField(
+                                t("requirements.modal.detail.creator"),
+                                <AssigneeDisplay name={selectedReq.creator} avatar={selectedReq.creatorAvatar} />,
+                            )}
                             {renderField(
                                 t("requirements.modal.detail.organization"),
                                 orgNameMap[selectedReq.organizationId] || selectedReq.organizationId,

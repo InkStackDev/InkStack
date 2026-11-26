@@ -20,6 +20,8 @@ export interface Conversation {
     peer_id: number | string;
     /** 对端用户昵称 */
     name: string;
+    /** 对端用户头像 */
+    avatar?: string;
     /** 对端是否在线 */
     online: boolean;
     /** 最近消息时间（Unix 秒） */

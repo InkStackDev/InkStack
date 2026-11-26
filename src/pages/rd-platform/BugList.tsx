@@ -404,7 +404,9 @@ const BugList: React.FC = () => {
                                         <AssigneeDisplay name={b.assignee} avatar={b.assigneeAvatar} />
                                     </td>
                                     <td data-label={t("bugs.table.module")}>{b.module || "-"}</td>
-                                    <td data-label={t("bugs.table.creator")}>{b.creator}</td>
+                                    <td data-label={t("bugs.table.creator")}>
+                                        <AssigneeDisplay name={b.creator} avatar={b.creatorAvatar} />
+                                    </td>
                                     <td data-label={t("bugs.table.createdAt")}>{formatDateTime(b.createdAt)}</td>
                                     <td data-label={t("bugs.table.actions")}>
                                         <div className={styles.actionButtons}>
@@ -534,7 +536,10 @@ const BugList: React.FC = () => {
                                 t("bugs.modal.detail.assignee"),
                                 <AssigneeDisplay name={selectedBug.assignee} avatar={selectedBug.assigneeAvatar} />,
                             )}
-                            {renderField(t("bugs.modal.detail.creator"), selectedBug.creator)}
+                            {renderField(
+                                t("bugs.modal.detail.creator"),
+                                <AssigneeDisplay name={selectedBug.creator} avatar={selectedBug.creatorAvatar} />,
+                            )}
                             {renderField(
                                 t("bugs.modal.detail.organization"),
                                 orgNameMap[selectedBug.organizationId] || selectedBug.organizationId,

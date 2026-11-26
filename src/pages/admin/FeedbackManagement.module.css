@@ -231,6 +231,13 @@
     font-size: 13px;
 }
 
+.userCell {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+}
+
 .timeCell {
     font-size: 13px;
     color: var(--text-secondary);

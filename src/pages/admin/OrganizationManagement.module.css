@@ -516,6 +516,12 @@
     gap: 12px;
 }
 
+.applyUserCell {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
 .userAvatar {
     width: 40px;
     height: 40px;

@@ -14,10 +14,34 @@ export interface CategoryItem {
     status: number;
     user_id?: string | number;
     author?: string;
+    author_avatar?: string;
     article_count: number;
     view_count: number;
     create_time: number;
     update_time: number;
+}
+
+/**
+ * 管理端分类统计
+ */
+export interface CategoryStats {
+    total_categories: number;
+    active_categories: number;
+    total_articles: number;
+    total_views: number;
+}
+
+/**
+ * 管理端分类查询参数（传 page_num/page_size 时后端分页返回）
+ */
+export interface QueryCategoryParams {
+    page_num?: number;
+    page_size?: number;
+    user_id?: string | number;
+    status?: number;
+    keyword?: string;
+    sort_by?: "name" | "created_at" | "article_count" | "views";
+    sort_order?: "asc" | "desc";
 }
 
 /**
@@ -29,6 +53,7 @@ export interface CategoryInfo {
     color: string;
     total: number;
     list: CategoryItem[];
+    stats?: CategoryStats;
 }
 
 /**
@@ -101,10 +126,17 @@ export class CategoryService {
     }
 
     /**
-     * 查询分类详情（管理端，默认返回全部用户分类）
+     * 查询分类详情（管理端）
+     * 不传 page_num/page_size 时返回全部，供下拉选项等场景使用。
      */
-    static async queryCategory(config?: HttpRequestConfig): Promise<CategoryInfo> {
-        const response = await http.get<CategoryInfo>("/admin/categories", { cacheTtl: 15_000, ...config });
+    static async queryCategory(params?: QueryCategoryParams, config?: HttpRequestConfig): Promise<CategoryInfo> {
+        const response = await http.get<CategoryInfo>("/admin/categories", {
+            ...config,
+            params: {
+                ...(config?.params ?? {}),
+                ...(params ?? {}),
+            },
+        });
         return response.data;
     }
 

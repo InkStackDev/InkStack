@@ -1,6 +1,21 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { FaTags, FaPlus, FaEdit, FaTrash, FaFilter, FaEye, FaChartBar, FaCheckCircle, FaTimes, FaLayerGroup } from "react-icons/fa";
+import {
+    FaTags,
+    FaPlus,
+    FaEdit,
+    FaTrash,
+    FaFilter,
+    FaEye,
+    FaChartBar,
+    FaCheckCircle,
+    FaTimes,
+    FaLayerGroup,
+    FaAngleDoubleLeft,
+    FaAngleDoubleRight,
+    FaChevronLeft,
+    FaChevronRight,
+} from "react-icons/fa";
 import CustomSelect from "@/components/customSelect/CustomSelect";
 import Input from "@/components/input/Input";
 import Button from "@/components/button/Button";
@@ -14,6 +29,9 @@ import CategoryService from "@/services/CategoryService.ts";
 import AuthService from "@/services/AuthService.ts";
 import { useAuth } from "@/contexts/AuthContext";
 import { formatDateTime } from "@/utils/Utils.ts";
+import Avatar from "@/components/avatar/Avatar";
+import { useDebouncedValue } from "@/hooks/UseDebouncedValue";
+import { useInitialLoaded } from "@/hooks/UseInitialLoaded";
 
 interface Category {
     id: string | number;
@@ -25,6 +43,7 @@ interface Category {
     parentId?: string | number;
     userId: string | number;
     author?: string;
+    authorAvatar?: string;
     articleCount: number;
     views: number;
     createdAt: string;
@@ -60,6 +79,33 @@ interface FilterOptions {
     sortOrder: "asc" | "desc";
 }
 
+const SORT_BY_MAP: Record<FilterOptions["sortBy"], "name" | "created_at" | "article_count" | "views"> = {
+    name: "name",
+    articleCount: "article_count",
+    views: "views",
+    createdAt: "created_at",
+};
+
+const mapCategoryItem = (item: any): Category => ({
+    id: item.id,
+    name: item.name,
+    slug: item.url,
+    description: item.description || "",
+    color: item.color,
+    icon: item.icon,
+    parentId: item.parent_id,
+    userId: item.user_id ?? "",
+    author: item.author || "",
+    authorAvatar: item.author_avatar || "",
+    articleCount: item.article_count || 0,
+    views: item.view_count || 0,
+    createdAt: item.create_time ? formatDateTime(item.create_time) : "-",
+    updatedAt: item.update_time ? formatDateTime(item.update_time) : "-",
+    status: item.status === 1 ? "active" : "inactive",
+    level: item.parent_id ? 1 : 0,
+    children: [],
+});
+
 const CategoryManagement: React.FC = () => {
     const { t } = useTranslation("admin");
     const { user } = useAuth();
@@ -77,8 +123,18 @@ const CategoryManagement: React.FC = () => {
         "📷": t("categories.icons.photography"),
     };
     const [categories, setCategories] = useState<Category[]>([]);
+    const [allCategories, setAllCategories] = useState<Category[]>([]);
     const [userOptions, setUserOptions] = useState<SelectOption[]>([]);
     const [loading, setLoading] = useState(true);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [total, setTotal] = useState(0);
+    const [stats, setStats] = useState<CategoryStats>({
+        totalCategories: 0,
+        activeCategories: 0,
+        totalArticles: 0,
+        totalViews: 0,
+    });
+    const pageSize = 10;
     const [filters, setFilters] = useState<FilterOptions>({
         search: "",
         userId: "",
@@ -86,6 +142,8 @@ const CategoryManagement: React.FC = () => {
         sortBy: "name",
         sortOrder: "asc",
     });
+    const debouncedSearch = useDebouncedValue(filters.search, 300);
+    const initialLoaded = useInitialLoaded(loading);
     const [showModal, setShowModal] = useState(false);
     const [editingCategory, setEditingCategory] = useState<Category | null>(null);
     const [formData, setFormData] = useState<CategoryFormData>({
@@ -122,7 +180,7 @@ const CategoryManagement: React.FC = () => {
     const getParentCategoryOptions = (): SelectOption[] => {
         const options: SelectOption[] = [{ id: "", name: t("categories.parent.none"), color: "#6c757d" }];
         const ownerId = formData.ownerId || String(user?.id || "");
-        const activeCategories = categories.filter(
+        const activeCategories = allCategories.filter(
             (cat) =>
                 cat.level === 0 &&
                 cat.status === "active" &&
@@ -138,10 +196,6 @@ const CategoryManagement: React.FC = () => {
         );
         return options;
     };
-
-    useEffect(() => {
-        loadCategories();
-    }, []);
 
     useEffect(() => {
         const fetchUsers = async () => {
@@ -160,38 +214,47 @@ const CategoryManagement: React.FC = () => {
         fetchUsers();
     }, []);
 
-    const loadCategories = async () => {
+    const loadCategories = useCallback(async () => {
         setLoading(true);
         try {
-            const response = await CategoryService.queryCategory();
-            const categoryList = response.list || [];
+            const response = await CategoryService.queryCategory({
+                page_num: currentPage,
+                page_size: pageSize,
+                user_id: filters.userId || undefined,
+                status: filters.status === "" ? -1 : filters.status === "active" ? 1 : 0,
+                keyword: debouncedSearch || undefined,
+                sort_by: SORT_BY_MAP[filters.sortBy],
+                sort_order: filters.sortOrder,
+            });
 
-            const mappedCategories: Category[] = categoryList.map((item: any) => ({
-                id: item.id,
-                name: item.name,
-                slug: item.url,
-                description: item.description || "",
-                color: item.color,
-                icon: item.icon,
-                parentId: item.parent_id,
-                userId: item.user_id ?? "",
-                author: item.author || "",
-                articleCount: item.article_count || 0,
-                views: item.view_count || 0,
-                createdAt: item.create_time ? formatDateTime(item.create_time) : "-",
-                updatedAt: item.update_time ? formatDateTime(item.update_time) : "-",
-                status: item.status === 1 ? "active" : "inactive",
-                level: item.parent_id ? 1 : 0,
-                children: [],
-            }));
-
-            setCategories(mappedCategories);
+            setCategories((response.list || []).map(mapCategoryItem));
+            setTotal(response.total ?? 0);
+            const responseStats = response.stats;
+            setStats({
+                totalCategories: responseStats?.total_categories ?? response.total ?? 0,
+                activeCategories: responseStats?.active_categories ?? 0,
+                totalArticles: responseStats?.total_articles ?? 0,
+                totalViews: responseStats?.total_views ?? 0,
+            });
         } catch (error) {
             console.error("加载分类失败:", error);
         } finally {
             setLoading(false);
         }
-    };
+    }, [currentPage, pageSize, filters.userId, filters.status, filters.sortBy, filters.sortOrder, debouncedSearch]);
+
+    const fetchAllCategories = useCallback(async () => {
+        try {
+            const response = await CategoryService.queryCategory();
+            setAllCategories((response.list || []).map(mapCategoryItem));
+        } catch (error) {
+            console.error("加载分类选项失败:", error);
+        }
+    }, []);
+
+    useEffect(() => {
+        loadCategories();
+    }, [loadCategories]);
 
     const generateSlug = (name: string) => {
         return name
@@ -203,19 +266,23 @@ const CategoryManagement: React.FC = () => {
 
     const handleFilterChange = (field: keyof FilterOptions, value: string) => {
         setFilters((prev) => ({ ...prev, [field]: value }));
+        setCurrentPage(1);
     };
 
     const handleSelectChange = (field: keyof FilterOptions) => {
         return (selectedOption: SelectOption | null) => {
             setFilters((prev) => ({ ...prev, [field]: selectedOption?.id || "" }));
+            setCurrentPage(1);
         };
     };
 
     const clearFilters = () => {
         setFilters({ search: "", userId: "", status: "", sortBy: "name", sortOrder: "asc" });
+        setCurrentPage(1);
     };
 
     const openModal = (category?: Category) => {
+        void fetchAllCategories();
         if (category) {
             setEditingCategory(category);
             setFormData({
@@ -262,8 +329,7 @@ const CategoryManagement: React.FC = () => {
         setSubmitting(true);
         try {
             const ownerId = formData.ownerId || String(user?.id || "");
-            const ownerName = userOptions.find((option) => option.id === ownerId)?.name || "";
-            const response = await CategoryService.createCategory({
+            await CategoryService.createCategory({
                 id: editingCategory ? editingCategory.id : undefined,
                 user_id: ownerId || undefined,
                 name: formData.name,
@@ -275,48 +341,10 @@ const CategoryManagement: React.FC = () => {
                 status: formData.status === "active" ? 1 : 0,
             });
 
-            if (editingCategory) {
-                setCategories((prev) =>
-                    prev.map((cat) =>
-                        cat.id === editingCategory.id
-                            ? {
-                                  ...cat,
-                                  name: response.name,
-                                  slug: formData.slug || formData.name,
-                                  description: formData.description,
-                                  color: response.color,
-                                  icon: formData.icon || "📁",
-                                  parentId: response.parent_id,
-                                  status: formData.status,
-                                  updatedAt: formatDateTime(new Date()),
-                              }
-                            : cat,
-                    ),
-                );
-                message.success(t("categories.request.updated"));
-            } else {
-                const newCategory: Category = {
-                    id: response.id,
-                    name: response.name,
-                    slug: formData.slug || formData.name,
-                    description: formData.description,
-                    color: response.color,
-                    icon: formData.icon || "📁",
-                    parentId: response.parent_id,
-                    userId: ownerId,
-                    author: ownerName,
-                    articleCount: 0,
-                    views: 0,
-                    createdAt: formatDateTime(new Date()),
-                    updatedAt: formatDateTime(new Date()),
-                    status: formData.status,
-                    level: formData.parentId ? 1 : 0,
-                };
-                setCategories((prev) => [...prev, newCategory]);
-                message.success(t("categories.request.created"));
-            }
-
+            message.success(editingCategory ? t("categories.request.updated") : t("categories.request.created"));
             closeModal();
+            await loadCategories();
+            void fetchAllCategories();
         } catch (error) {
             message.error(t("categories.request.saveFailed"));
         } finally {
@@ -346,8 +374,9 @@ const CategoryManagement: React.FC = () => {
 
         try {
             await CategoryService.deleteCategory({ ids: String(category.id), user_id: category.userId });
-            await loadCategories();
             message.success(t("categories.request.deleted"));
+            await loadCategories();
+            void fetchAllCategories();
         } catch (error) {
             message.error(t("categories.request.deleteFailed"));
         }
@@ -367,49 +396,12 @@ const CategoryManagement: React.FC = () => {
                 parent_id: category.parentId || "",
                 status: newStatus === "active" ? 1 : 0,
             });
-            setCategories((prev) =>
-                prev.map((cat) =>
-                    cat.id === category.id ? { ...cat, status: newStatus, updatedAt: formatDateTime(new Date()) } : cat,
-                ),
-            );
+            await loadCategories();
+            void fetchAllCategories();
         } catch (error) {
             message.error(t("categories.request.toggleFailed"));
         }
     };
-
-    const stats: CategoryStats = {
-        totalCategories: categories.length,
-        activeCategories: categories.filter((cat) => cat.status === "active").length,
-        totalArticles: categories.reduce((sum, cat) => sum + cat.articleCount, 0),
-        totalViews: categories.reduce((sum, cat) => sum + cat.views, 0),
-    };
-
-    const filteredCategories = categories
-        .filter((cat) => {
-            if (filters.userId && String(cat.userId) !== filters.userId) {
-                return false;
-            }
-            if (
-                filters.search &&
-                !cat.name.toLowerCase().includes(filters.search.toLowerCase()) &&
-                !cat.description.toLowerCase().includes(filters.search.toLowerCase())
-            ) {
-                return false;
-            }
-            if (filters.status && cat.status !== filters.status) {
-                return false;
-            }
-            return true;
-        })
-        .sort((a, b) => {
-            let comparison = 0;
-            if (filters.sortBy === "name") {
-                comparison = a.name.localeCompare(b.name);
-            } else {
-                comparison = (a[filters.sortBy] || 0) > (b[filters.sortBy] || 0) ? 1 : -1;
-            }
-            return filters.sortOrder === "asc" ? comparison : -comparison;
-        });
 
     const formatDate = (dateString: string) => {
         if (!dateString) {
@@ -418,7 +410,43 @@ const CategoryManagement: React.FC = () => {
         return formatDateTime(dateString);
     };
 
-    if (loading) {
+    const getOwnerName = (category: Category) =>
+        category.author || userOptions.find((option) => option.id === String(category.userId))?.name || category.userId || "-";
+
+    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+    const pageStart = total > 0 ? (currentPage - 1) * pageSize + 1 : 0;
+    const pageEnd = Math.min(currentPage * pageSize, total);
+
+    const getPageNumbers = () => {
+        const pages: (number | string)[] = [];
+        const maxVisiblePages = 5;
+        if (totalPages <= maxVisiblePages) {
+            for (let i = 1; i <= totalPages; i++) {
+                pages.push(i);
+            }
+        } else {
+            const start = Math.max(1, currentPage - 2);
+            const end = Math.min(totalPages, start + maxVisiblePages - 1);
+            if (start > 1) {
+                pages.push(1);
+                if (start > 2) {
+                    pages.push("...");
+                }
+            }
+            for (let i = start; i <= end; i++) {
+                pages.push(i);
+            }
+            if (end < totalPages) {
+                if (end < totalPages - 1) {
+                    pages.push("...");
+                }
+                pages.push(totalPages);
+            }
+        }
+        return pages;
+    };
+
+    if (!initialLoaded) {
         return (
             <div className={styles.categoryManagement}>
                 <AdminListSkeleton stats={4} columns={6} />
@@ -539,7 +567,10 @@ const CategoryManagement: React.FC = () => {
                         <label className={styles.filterLabel}>{t("categories.filter.orderLabel")}</label>
                         <button
                             className={`${styles.btn} ${styles.btnOutline}`}
-                            onClick={() => setFilters((prev) => ({ ...prev, sortOrder: prev.sortOrder === "asc" ? "desc" : "asc" }))}
+                            onClick={() => {
+                                setFilters((prev) => ({ ...prev, sortOrder: prev.sortOrder === "asc" ? "desc" : "asc" }));
+                                setCurrentPage(1);
+                            }}
                             style={{ minHeight: "46px", height: "50px", justifyContent: "center" }}
                         >
                             {filters.sortOrder === "asc" ? t("categories.filter.ascending") : t("categories.filter.descending")}
@@ -554,7 +585,7 @@ const CategoryManagement: React.FC = () => {
                     <h3 className={styles.tableTitle}>{t("categories.table.title")}</h3>
                     <div className={styles.tableActions}>
                         <span style={{ fontSize: "14px", color: "var(--text-secondary)" }}>
-                            {t("categories.table.total", { total: filteredCategories.length })}
+                            {t("categories.table.total", { total })}
                         </span>
                     </div>
                 </div>
@@ -571,8 +602,8 @@ const CategoryManagement: React.FC = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        {filteredCategories.length > 0 ? (
-                            filteredCategories.map((category) => (
+                        {categories.length > 0 ? (
+                            categories.map((category) => (
                                 <tr key={category.id}>
                                     <td>
                                         <div className={styles.categoryInfo}>
@@ -589,15 +620,17 @@ const CategoryManagement: React.FC = () => {
                                         </div>
                                     </td>
                                     <td>
-                                        {category.author ||
-                                            userOptions.find((option) => option.id === String(category.userId))?.name ||
-                                            category.userId ||
-                                            "-"}
+                                        <span className={styles.ownerCell}>
+                                            <Avatar src={category.authorAvatar} name={String(getOwnerName(category))} size={24} />
+                                            <span>{getOwnerName(category)}</span>
+                                        </span>
                                     </td>
                                     <td>
                                         {category.parentId ? (
                                             <span className={styles.parentBadge}>
-                                                {categories.find((c) => c.id === category.parentId)?.name || "-"}
+                                                {allCategories.find((c) => c.id === category.parentId)?.name ||
+                                                    categories.find((c) => c.id === category.parentId)?.name ||
+                                                    "-"}
                                             </span>
                                         ) : (
                                             <span style={{ color: "var(--text-tertiary)", fontSize: "13px" }}>
@@ -674,6 +707,54 @@ const CategoryManagement: React.FC = () => {
                         )}
                     </tbody>
                 </table>
+                <div className={styles.pagination}>
+                    <span className={styles.pageInfo}>
+                        {t("categories.pagination.info", { start: pageStart, end: pageEnd, total })}
+                    </span>
+                    <div className={styles.pageButtons}>
+                        <button className={styles.pageBtn} disabled={currentPage === 1} onClick={() => setCurrentPage(1)}>
+                            <FaAngleDoubleLeft />
+                        </button>
+                        <button
+                            className={styles.pageBtn}
+                            disabled={currentPage === 1}
+                            onClick={() => setCurrentPage((prev) => prev - 1)}
+                        >
+                            <FaChevronLeft />
+                        </button>
+
+                        {getPageNumbers().map((page, index) => (
+                            <React.Fragment key={index}>
+                                {page === "..." ? (
+                                    <span className={styles.paginationEllipsis}>...</span>
+                                ) : (
+                                    <button
+                                        className={`${styles.pageBtn} ${currentPage === page ? styles.active : ""}`}
+                                        onClick={() => setCurrentPage(page as number)}
+                                        disabled={total === 0}
+                                    >
+                                        {page}
+                                    </button>
+                                )}
+                            </React.Fragment>
+                        ))}
+
+                        <button
+                            className={styles.pageBtn}
+                            disabled={currentPage === totalPages}
+                            onClick={() => setCurrentPage((prev) => prev + 1)}
+                        >
+                            <FaChevronRight />
+                        </button>
+                        <button
+                            className={styles.pageBtn}
+                            disabled={currentPage === totalPages}
+                            onClick={() => setCurrentPage(totalPages)}
+                        >
+                            <FaAngleDoubleRight />
+                        </button>
+                    </div>
+                </div>
             </div>
 
             {/* 新增/编辑模态框 */}

@@ -597,7 +597,10 @@ const TicketDetail: React.FC = () => {
                                 t("ticketDetail.meta.assignee"),
                                 <AssigneeDisplay name={item.assignee} avatar={(item as any).assigneeAvatar} />,
                             )}
-                            {metaField(t("ticketDetail.meta.creator"), (item as any).creator)}
+                            {metaField(
+                                t("ticketDetail.meta.creator"),
+                                <AssigneeDisplay name={item.creator} avatar={(item as any).creatorAvatar} />,
+                            )}
                             {metaField(
                                 t("ticketDetail.meta.organization"),
                                 orgNameMap[(item as any).organizationId] || (item as any).organizationId,

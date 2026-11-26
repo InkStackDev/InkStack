@@ -390,7 +390,7 @@ const Messages: React.FC = () => {
                                         onClick={() => selectConv(String(c.id))}
                                     >
                                         <div className={msgStyles.convAvatar}>
-                                            <Avatar name={c.name} size={44} />
+                                            <Avatar src={c.avatar} name={c.name} size={44} />
                                             {c.online && <FaCircle className={msgStyles.onlineDot} />}
                                         </div>
                                         <div className={msgStyles.convInfo}>
@@ -430,7 +430,7 @@ const Messages: React.FC = () => {
                                     <button className={msgStyles.backBtn} onClick={() => setMobileChatOpen(false)}>
                                         <FaArrowLeft />
                                     </button>
-                                    <Avatar name={active.name} size={36} />
+                                    <Avatar src={active.avatar} name={active.name} size={36} />
                                     <div>
                                         <div className={msgStyles.chatName}>{active.name}</div>
                                         <div className={msgStyles.chatStatus}>
@@ -445,7 +445,7 @@ const Messages: React.FC = () => {
                                     ) : (
                                         messages.map((m) => (
                                             <div key={m.id} className={`${msgStyles.msgRow} ${m.from_me ? msgStyles.msgMine : ""}`}>
-                                                {!m.from_me && <Avatar name={active.name} size={32} />}
+                                                {!m.from_me && <Avatar src={active.avatar} name={active.name} size={32} />}
                                                 <div className={msgStyles.bubbleWrap}>
                                                     <div className={`${msgStyles.bubble} ${m.from_me ? msgStyles.bubbleMine : ""}`}>
                                                         {m.text}

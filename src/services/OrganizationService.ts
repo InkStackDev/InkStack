@@ -37,7 +37,8 @@ export interface GetAdminOrganizationsResponse {
         type: string;
         status: number | string;
         description: string;
-        create_time: number;
+        created_at?: number;
+        create_time?: number;
         count: number;
     }>;
 }
@@ -84,6 +85,7 @@ export interface GetOrganizationListsResponse {
         status: number | string;
         description: string;
         count: number;
+        created_at?: number;
     }>;
 }
 
@@ -106,6 +108,8 @@ export interface GetOrganizationDetailResponse {
     user_in_org?: number;
     user_role?: number;
     owner_id?: number | string;
+    owner_name?: string;
+    owner_avatar?: string;
     is_owner?: boolean;
 }
 
@@ -223,6 +227,7 @@ export interface ApplyItem {
     id: string;
     user_id: string;
     user_name: string;
+    user_avatar?: string;
     org_name: string;
     org_type: string;
     org_description: string;

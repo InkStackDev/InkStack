@@ -40,6 +40,9 @@ export interface Notification {
         | "assignment_deleted";
     is_read: boolean;
     create_time: number;
+    sender_id?: number | string;
+    sender_name?: string;
+    sender_avatar?: string;
     link?: string;
     article_id?: number | string;
     comment_id?: number | string;

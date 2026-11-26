@@ -50,6 +50,7 @@ function mapRequirement(raw: any): Requirement {
         priority: raw.priority || "medium",
         status: raw.status || "new",
         creator: raw.creator || "",
+        creatorAvatar: raw.creator_avatar || "",
         assignee: raw.assignee || "",
         assigneeAvatar: raw.assignee_avatar || "",
         organizationId: String(raw.org_id ?? ""),
@@ -71,6 +72,7 @@ function mapBug(raw: any): Bug {
         priority: raw.priority || "high",
         status: raw.status || "new",
         creator: raw.creator || "",
+        creatorAvatar: raw.creator_avatar || "",
         assignee: raw.assignee || "",
         assigneeAvatar: raw.assignee_avatar || "",
         organizationId: String(raw.org_id ?? ""),
@@ -94,6 +96,7 @@ function mapTask(raw: any): Task {
         assignee: raw.assignee || "",
         assigneeAvatar: raw.assignee_avatar || "",
         creator: raw.creator || "",
+        creatorAvatar: raw.creator_avatar || "",
         organizationId: String(raw.org_id ?? ""),
         requirementId: String(raw.requirement_id ?? ""),
         deadline: raw.deadline

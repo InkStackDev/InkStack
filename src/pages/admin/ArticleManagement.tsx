@@ -21,7 +21,6 @@ import {
     FaStar,
     FaFlag,
     FaTags,
-    FaUser,
     FaCalendar,
     FaClock,
     FaHeart,
@@ -43,6 +42,7 @@ import ArticleService, { type ListAdminArticlesResponse, type ArticleStatsRespon
 import { CategoryService } from "@/services/CategoryService.ts";
 import { formatToChinaTime } from "@/utils/Utils.ts";
 import message from "@/components/message/Message";
+import Avatar from "@/components/avatar/Avatar";
 
 // 文章接口定义
 interface Article {
@@ -51,6 +51,7 @@ interface Article {
     slug: string;
     summary: string;
     author: string;
+    authorAvatar?: string;
     authorEmail: string;
     authorRole: string;
     category: string;
@@ -247,6 +248,7 @@ const ArticleManagement: React.FC = () => {
                         slug: "asdasdsad", // 占位符，API未提供
                         summary: (article.summary || "").substring(0, 45) + "...",
                         author: article.author,
+                        authorAvatar: article.author_avatar,
                         authorEmail: article.email,
                         authorRole: enums.platformRole[article.author_role as PlatformRole] || t("articles.common.user"), // 使用API提供的author_role字段
                         category: t("articles.common.defaultCategory"), // 占位符，API未提供
@@ -822,7 +824,8 @@ const ArticleManagement: React.FC = () => {
                                     <td>
                                         <div className={styles.authorInfo}>
                                             <div className={styles.authorName}>
-                                                <FaUser /> {article.author}
+                                                <Avatar src={article.authorAvatar} name={article.author} size={20} />
+                                                <span>{article.author}</span>
                                                 <span className={styles.authorRole}>({article.authorRole})</span>
                                             </div>
                                             <div className={styles.authorEmail}>{article.authorEmail}</div>

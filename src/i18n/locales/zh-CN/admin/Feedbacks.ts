@@ -27,6 +27,7 @@ const section = {
         empty: "暂无反馈",
         columns: {
             content: "反馈内容",
+            user: "提交用户",
             contact: "联系方式",
             time: "时间",
             actions: "操作",

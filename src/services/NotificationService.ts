@@ -89,8 +89,28 @@ export class NotificationService {
     /**
      * 获取广播跑马灯列表
      */
-    static async getBroadcasts(): Promise<{ id: number; title: string; content: string; level: string }[]> {
-        const response = await http.get<{ list: { id: number; title: string; content: string; level: string }[] }>("/broadcasts");
+    static async getBroadcasts(): Promise<
+        {
+            id: number;
+            title: string;
+            content: string;
+            level: string;
+            sender_id?: number;
+            sender_name?: string;
+            sender_avatar?: string;
+        }[]
+    > {
+        const response = await http.get<{
+            list: {
+                id: number;
+                title: string;
+                content: string;
+                level: string;
+                sender_id?: number;
+                sender_name?: string;
+                sender_avatar?: string;
+            }[];
+        }>("/broadcasts");
         return response.data?.list ?? [];
     }
 

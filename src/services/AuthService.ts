@@ -470,9 +470,11 @@ export class AuthService {
      * @param userIds 用户ID列表
      * @returns 用户信息列表
      */
-    static async queryUsersBatch(userIds: Array<number | string>): Promise<Array<{ id: number | string; name: string }>> {
+    static async queryUsersBatch(
+        userIds: Array<number | string>,
+    ): Promise<Array<{ id: number | string; name: string; avatar?: string }>> {
         const idsStr = userIds.join(",");
-        const response = await http.get<Array<{ id: number | string; name: string }>>(`/users?user_ids=${idsStr}`);
+        const response = await http.get<Array<{ id: number | string; name: string; avatar?: string }>>(`/users?user_ids=${idsStr}`);
         return response.data;
     }
 
