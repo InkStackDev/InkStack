@@ -8,7 +8,10 @@ export interface WebSocketClientOptions {
     reconnectDelay?: number;
     maxReconnectDelay?: number;
     maxPendingMessages?: number;
+    /** 应用层心跳间隔（毫秒），客户端发送纯文本 "ping"；默认 5 秒 */
     heartbeatInterval?: number;
+    /** 发出 ping 后等待 pong 的超时（毫秒），默认 3 秒 */
+    pongTimeout?: number;
 }
 
 /** WebSocket 服务端错误帧（与 HTTP API 同构的 errno / errstr 格式） */
@@ -47,7 +50,9 @@ export class WebSocketClient {
     private connectionGeneration = 0;
     private hasOpened = false;
     private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
+    private pongTimer: ReturnType<typeof setTimeout> | null = null;
     private readonly heartbeatInterval: number;
+    private readonly pongTimeout: number;
 
     /**
      * @param path WebSocket 路径，如 "/notification"
@@ -66,6 +71,7 @@ export class WebSocketClient {
         this.maxReconnectDelay = Math.max(this.reconnectDelay, options.maxReconnectDelay ?? 30000);
         this.maxPendingMessages = Math.max(0, options.maxPendingMessages ?? 100);
         this.heartbeatInterval = Math.max(0, options.heartbeatInterval ?? 5000);
+        this.pongTimeout = Math.max(0, options.pongTimeout ?? 3000);
 
         window.addEventListener(
             "beforeunload",
@@ -146,16 +152,15 @@ export class WebSocketClient {
             if (!isCurrentConnection()) {
                 return;
             }
+            if (event.data === "pong") {
+                this.clearPongTimer();
+                return;
+            }
             let data: unknown;
             try {
                 data = JSON.parse(event.data);
             } catch {
                 this.dispatchMessage("*", event.data);
-                return;
-            }
-
-            // 心跳响应，静默处理
-            if (this.isMessageRecord(data) && data.type === "pong") {
                 return;
             }
 
@@ -327,13 +332,43 @@ export class WebSocketClient {
             return;
         }
         this.heartbeatTimer = setInterval(() => {
-            if (this.ws?.readyState === WebSocket.OPEN) {
-                this.ws.send(JSON.stringify({ type: "ping" }));
+            const socket = this.ws;
+            if (!socket || socket.readyState !== WebSocket.OPEN) {
+                return;
             }
+            try {
+                socket.send("ping");
+            } catch (error) {
+                console.error("[WS] 心跳发送失败:", error);
+                return;
+            }
+            this.startPongTimeout(socket);
         }, this.heartbeatInterval);
     }
 
+    private startPongTimeout(socket: WebSocket): void {
+        this.clearPongTimer();
+        if (this.pongTimeout <= 0) {
+            return;
+        }
+        this.pongTimer = setTimeout(() => {
+            if (this.ws !== socket || this.intentionalClose) {
+                return;
+            }
+            console.warn("[WS] pong 超时，主动关闭并重连");
+            socket.close();
+        }, this.pongTimeout);
+    }
+
+    private clearPongTimer(): void {
+        if (this.pongTimer) {
+            clearTimeout(this.pongTimer);
+            this.pongTimer = null;
+        }
+    }
+
     private stopHeartbeat(): void {
+        this.clearPongTimer();
         if (this.heartbeatTimer) {
             clearInterval(this.heartbeatTimer);
             this.heartbeatTimer = null;
