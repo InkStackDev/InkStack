@@ -446,16 +446,11 @@ export class FileService {
     static async downloadFile(url: string, fileName: string) {
         console.log("FileService.downloadFile called with url:", url, "fileName:", fileName);
 
-        // 使用POST请求下载文件，Content-Type为application/x-www-form-urlencoded
         const params = new URLSearchParams();
         params.append("url", url);
         params.append("file_name", fileName);
-        const res = await fetch("/file/download", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/x-www-form-urlencoded",
-            },
-            body: params.toString(),
+        const res = await fetch(`/api/v1/files/content?${params.toString()}`, {
+            method: "GET",
             credentials: "include",
         });
 

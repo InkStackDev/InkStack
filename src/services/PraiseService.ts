@@ -6,7 +6,7 @@ export class PraiseService {
      * 点赞/取消点赞（toggle）
      */
     static async toggle(articleId: number | string): Promise<PraiseToggleResponse> {
-        const response = await http.postForm<PraiseToggleResponse>("/article/praise", { article_id: articleId });
+        const response = await http.postForm<PraiseToggleResponse>(`/articles/${articleId}/praises`, {});
         return response.data;
     }
 
@@ -14,9 +14,7 @@ export class PraiseService {
      * 是否已点赞
      */
     static async isPraising(articleId: number | string): Promise<boolean> {
-        const response = await http.get<{ is_praising: boolean }>("/article/is_praising", {
-            params: { article_id: articleId },
-        });
+        const response = await http.get<{ is_praising: boolean }>(`/articles/${articleId}/praises/me`);
         return response.data.is_praising;
     }
 
@@ -30,7 +28,12 @@ export class PraiseService {
         offset?: number;
         size?: number;
     }): Promise<PraiseListResponse> {
-        const response = await http.get<PraiseListResponse>("/article/praise/list", { params });
+        const url = params?.article_id
+            ? `/articles/${params.article_id}/praises`
+            : params?.user_id
+              ? `/users/${params.user_id}/praises`
+              : "/users/me/praises";
+        const response = await http.get<PraiseListResponse>(url, { params });
         return response.data;
     }
 }

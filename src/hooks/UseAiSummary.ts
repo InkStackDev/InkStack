@@ -13,7 +13,7 @@ const ts = () => {
 /**
  * AI 总结 Hook（SSE 流式版）
  *
- * POST /api/v1/article/ai-summary，后端使用 DoRequestStreaming + SSEServlet
+ * GET /api/v1/articles/:id/ai-summary，后端使用 DoRequestStreaming + SSEServlet
  * 流式返回 AI 生成的总结文本。前端通过 fetch + ReadableStream 逐块读取，
  * 按 SSE 协议解析后实时推送到 UI。
  */
@@ -52,15 +52,12 @@ function useAiSummary(articleId?: string | number) {
         const useProxy = import.meta.env.VITE_USE_PROXY === "true";
 
         // SSE stream via Vite proxy in dev (no CORS), direct via nginx in prod.
-        // A dedicated proxy rule in vite.config.ts handles /api/v1/article/ai-summary
+        // A dedicated proxy rule in vite.config.ts handles /api/v1/articles/:id/ai-summary
         // to avoid any buffering of chunked transfer-encoding.
-        const url = useProxy ? "/api/v1/article/ai-summary" : `${import.meta.env.VITE_API_BASE_URL as string}/article/ai-summary`;
-
-        const formData = new URLSearchParams();
-        formData.append("article_id", String(articleId));
+        const path = `/articles/${articleId}/ai-summary`;
+        const url = useProxy ? `/api/v1${path}` : `${import.meta.env.VITE_API_BASE_URL as string}${path}`;
 
         const headers: Record<string, string> = {
-            "Content-Type": "application/x-www-form-urlencoded",
             Accept: "text/event-stream",
         };
 
@@ -86,9 +83,8 @@ function useAiSummary(articleId?: string | number) {
         const startTs = Date.now();
 
         fetch(url, {
-            method: "POST",
+            method: "GET",
             headers,
-            body: formData.toString(),
             credentials: "include",
             signal: controller.signal,
         })

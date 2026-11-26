@@ -6,7 +6,7 @@ export class NotificationService {
      * 获取通知列表
      */
     static async getNotifications(params?: { offset?: number; size?: number; type?: string }): Promise<NotificationListResponse> {
-        const response = await http.get<NotificationListResponse>("/notification/list", {
+        const response = await http.get<NotificationListResponse>("/notifications", {
             params: {
                 offset: params?.offset ?? 0,
                 size: params?.size ?? 20,
@@ -20,7 +20,7 @@ export class NotificationService {
      * 获取未读通知数量
      */
     static async getUnreadCount(): Promise<{ count: number }> {
-        const response = await http.get<{ count: number }>("/notification/unread_count");
+        const response = await http.get<{ count: number }>("/notifications/unread-count");
         return response.data;
     }
 
@@ -28,7 +28,7 @@ export class NotificationService {
      * 标记通知为已读（支持单条或批量）
      */
     static async markAsRead(notificationId: number | string): Promise<void> {
-        await http.post("/notification/read", null, {
+        await http.patch("/notifications", null, {
             params: { id: notificationId },
         });
     }
@@ -37,7 +37,7 @@ export class NotificationService {
      * 批量标记通知为已读
      */
     static async markMultipleAsRead(ids: (number | string)[]): Promise<void> {
-        await http.post("/notification/read", null, {
+        await http.patch("/notifications", null, {
             params: { ids: ids.join(",") },
         });
     }
@@ -46,7 +46,7 @@ export class NotificationService {
      * 标记所有通知为已读
      */
     static async markAllAsRead(): Promise<void> {
-        await http.post("/notification/read_all");
+        await http.patch("/notifications/all");
     }
 
     /**
@@ -83,14 +83,14 @@ export class NotificationService {
         if (params.end_time !== undefined) {
             formData.append("end_time", String(params.end_time));
         }
-        await http.postForm("/notification/send", formData);
+        await http.postForm("/notifications", formData);
     }
 
     /**
      * 获取广播跑马灯列表
      */
     static async getBroadcasts(): Promise<{ id: number; title: string; content: string; level: string }[]> {
-        const response = await http.get<{ list: { id: number; title: string; content: string; level: string }[] }>("/broadcast/list");
+        const response = await http.get<{ list: { id: number; title: string; content: string; level: string }[] }>("/broadcasts");
         return response.data?.list ?? [];
     }
 
@@ -98,9 +98,7 @@ export class NotificationService {
      * 关闭广播（手动下线）
      */
     static async closeBroadcast(id: number): Promise<void> {
-        const formData = new URLSearchParams();
-        formData.append("id", String(id));
-        await http.postForm("/broadcast/close", formData);
+        await http.delete(`/broadcasts/${id}`);
     }
 }
 

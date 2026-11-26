@@ -12,7 +12,7 @@ interface LoginParams {
  * 登录响应数据
  *
  * 新认证体系不再返回 token；登录成功由服务端设置 HttpOnly SESSIONID。
- * 启用 TOTP 的账号会先返回 require_2fa/temp_token，需要再调用 /user/2fa/verify。
+ * 启用 TOTP 的账号会先返回 require_2fa/temp_token，需要再调用 /auth/2fa/verifications。
  */
 interface LoginResponse {
     require_2fa?: boolean;
@@ -151,7 +151,7 @@ export class AuthService {
             formData.append("auth_id", params.auth_id);
             formData.append("passwd", params.passwd);
 
-            return http.post<LoginResponse>("/user/login", formData.toString(), {
+            return http.post<LoginResponse>("/auth/sessions", formData.toString(), {
                 headers: {
                     "Content-Type": "application/x-www-form-urlencoded",
                 },
@@ -174,7 +174,7 @@ export class AuthService {
             params.set("redirect", redirect);
         }
         const query = params.toString();
-        return `/api/v1/user/oauth/github${query ? `?${query}` : ""}`;
+        return `/api/v1/auth/oauth/github${query ? `?${query}` : ""}`;
     }
 
     /**
@@ -199,7 +199,7 @@ export class AuthService {
         formData.append("agent", params.agent);
         formData.append("type", params.type);
 
-        return http.postForm("/user/send_code", formData);
+        return http.postForm("/auth/verification-codes", formData);
     }
 
     /**
@@ -253,7 +253,7 @@ export class AuthService {
      * @returns 注册响应
      */
     static async register(params: RegisterParams) {
-        // 使用新的 /user/create 接口
+        // 使用 POST /users 接口
         const registerParams = {
             account: params.account,
             email: params.email,
@@ -268,7 +268,7 @@ export class AuthService {
         formData.append("passwd", registerParams.passwd);
         formData.append("auth_code", registerParams.auth_code);
 
-        return http.postForm("/user/create", formData);
+        return http.postForm("/users", formData);
     }
 
     /**
@@ -276,7 +276,7 @@ export class AuthService {
      */
     static logout() {
         // 调用后端的登出接口
-        return http.post("/user/logout");
+        return http.delete("/auth/sessions/current");
     }
 
     /**
@@ -285,7 +285,7 @@ export class AuthService {
      * @param code 动态验证码
      */
     static async verify2fa(tempToken: string, code: string) {
-        return http.postForm("/user/2fa/verify", {
+        return http.postForm("/auth/2fa/verifications", {
             temp_token: tempToken,
             code,
         });
@@ -297,7 +297,7 @@ export class AuthService {
      * @param recoveryCode 一次性恢复码
      */
     static async verify2faRecovery(tempToken: string, recoveryCode: string) {
-        return http.postForm("/user/2fa/recovery", {
+        return http.postForm("/auth/recovery-code-verifications", {
             temp_token: tempToken,
             recovery_code: recoveryCode,
         });
@@ -309,7 +309,7 @@ export class AuthService {
      * @param authCode 邮箱验证码
      */
     static async recoverWithEmail(email: string, authCode: string) {
-        return http.postForm("/auth/email/recovery", {
+        return http.postForm("/auth/email-recoveries", {
             email,
             auth_code: authCode,
         });
@@ -322,7 +322,7 @@ export class AuthService {
      * @returns 用户信息
      */
     static async getUserInfo(userId?: number | string, config?: HttpRequestConfig): Promise<HttpResponse<UserInfo>> {
-        const url = userId ? `/user/info?user_id=${userId}` : "/user/info";
+        const url = userId ? `/users/${userId}` : "/users/me";
         return http.get<UserInfo>(url, config);
     }
 
@@ -331,12 +331,12 @@ export class AuthService {
      * @returns 用户ID列表
      */
     static async listUsers(): Promise<Array<number | string>> {
-        const response = await http.get<{ ids: Array<number | string> }>("/user/list");
+        const response = await http.get<{ ids: Array<number | string> }>("/users/ids");
         return response.data.ids;
     }
 
     static async listUsersAdmin(params: UserAdminListParams): Promise<UserAdminListResponse> {
-        const response = await http.get<UserAdminListResponse>("/user/admin/lists", { params, cacheTtl: 15_000 });
+        const response = await http.get<UserAdminListResponse>("/admin/users", { params, cacheTtl: 15_000 });
         return response.data;
     }
 
@@ -351,16 +351,14 @@ export class AuthService {
         formData.append("role", String(params.role));
         formData.append("state", String(params.state));
 
-        return http.postForm("/user/admin/create", formData);
+        return http.postForm("/admin/users", formData);
     }
 
     /**
      * 管理员删除用户
      */
     static async deleteUserAdmin(userId: number | string) {
-        const formData = new URLSearchParams();
-        formData.append("user_id", String(userId));
-        return http.postForm("/user/admin/delete", formData);
+        return http.delete(`/admin/users/${userId}`);
     }
 
     /**
@@ -385,7 +383,7 @@ export class AuthService {
             formData.append("passwd", params.passwd);
         }
 
-        return http.put("/user/admin/update", formData.toString(), {
+        return http.patch(`/admin/users/${params.user_id}`, formData.toString(), {
             headers: {
                 "Content-Type": "application/x-www-form-urlencoded",
             },
@@ -396,7 +394,7 @@ export class AuthService {
      * 管理员获取用户统计数据
      */
     static async getAdminUserStats(): Promise<AdminUserStatsResponse> {
-        const response = await http.get<AdminUserStatsResponse>("/user/admin/stats", { cacheTtl: 15_000 });
+        const response = await http.get<AdminUserStatsResponse>("/admin/users/stats", { cacheTtl: 15_000 });
         return response.data;
     }
 
@@ -404,7 +402,7 @@ export class AuthService {
      * 管理员获取用户详情
      */
     static async getUserAdminDetail(userId: number | string) {
-        const response = await http.get(`/user/admin/detail?user_id=${userId}`);
+        const response = await http.get(`/admin/users/${userId}`);
         return response.data;
     }
 
@@ -414,7 +412,7 @@ export class AuthService {
      * @returns 是否存在
      */
     static async checkUserExists(authId: string): Promise<boolean> {
-        const response = await http.get<{ is_exists: string }>(`/user/exists?auth_id=${authId}`);
+        const response = await http.get<{ is_exists: string }>(`/users/exists?auth_id=${authId}`);
         return response.data.is_exists === "1";
     }
 
@@ -462,7 +460,9 @@ export class AuthService {
             formData.append("github", github);
         }
 
-        return http.postForm("/user/update", formData);
+        return http.patch("/users/me", formData.toString(), {
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        });
     }
 
     /**
@@ -472,7 +472,7 @@ export class AuthService {
      */
     static async queryUsersBatch(userIds: Array<number | string>): Promise<Array<{ id: number | string; name: string }>> {
         const idsStr = userIds.join(",");
-        const response = await http.get<Array<{ id: number | string; name: string }>>(`/user/query?user_ids=${idsStr}`);
+        const response = await http.get<Array<{ id: number | string; name: string }>>(`/users?user_ids=${idsStr}`);
         return response.data;
     }
 
@@ -496,14 +496,14 @@ export class AuthService {
         formData.append("passwd", params.passwd);
         formData.append("auth_code", params.auth_code);
 
-        return http.postForm("/user/forget_passwd", formData);
+        return http.postForm("/auth/password-resets", formData);
     }
 
     /**
      * 获取用户统计数据
      */
     static async getUserStats(userId?: number | string): Promise<UserStats> {
-        const url = userId ? `/user/stats?user_id=${userId}` : "/user/stats";
+        const url = userId ? `/users/${userId}/stats` : "/users/me/stats";
         const response = await http.get<UserStats>(url);
         return response.data;
     }
@@ -512,12 +512,12 @@ export class AuthService {
      * 获取 AI 接口配置
      */
     static async getAchievements(): Promise<AchievementData> {
-        const response = await http.get<AchievementData>("/user/achievements");
+        const response = await http.get<AchievementData>("/users/me/achievements");
         return response.data;
     }
 
     static async getAiConfig(): Promise<AiConfig | null> {
-        const response = await http.get<AiConfig | null>("/user/ai-config");
+        const response = await http.get<AiConfig | null>("/users/me/ai-config");
         return response.data ?? null;
     }
 
@@ -525,7 +525,7 @@ export class AuthService {
      * 保存 AI 接口配置
      */
     static async saveAiConfig(config: AiConfigParams): Promise<void> {
-        await http.put("/user/ai-config", config);
+        await http.put("/users/me/ai-config", config);
     }
 }
 

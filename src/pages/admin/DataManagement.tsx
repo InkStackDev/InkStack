@@ -295,7 +295,7 @@ const DataManagement: React.FC = () => {
     // 下载文件
     const downloadFile = async (item: BackupRecord | ExportRecord) => {
         const isBackup = "fileCount" in item;
-        const url = isBackup ? `/admin/database/backups/${item.id}/download` : `/admin/database/exports/${item.id}/download`;
+        const url = isBackup ? `/admin/backups/${item.id}/content` : `/admin/exports/${item.id}/content`;
         try {
             await http.download(url, (item as BackupRecord).name || (item as ExportRecord).name);
         } catch (err: any) {

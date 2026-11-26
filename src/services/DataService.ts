@@ -163,7 +163,7 @@ export class DataService {
         pageSize?: number;
     }): Promise<{ list: BackupRecord[]; total: number }> {
         const { pageSize, ...rest } = params || {};
-        const res = await http.get<PaginatedResponse<BackupRecordResponse>>("/admin/database/backups", {
+        const res = await http.get<PaginatedResponse<BackupRecordResponse>>("/admin/backups", {
             params: { ...rest, page_size: pageSize },
             cacheTtl: 15_000,
         });
@@ -176,13 +176,13 @@ export class DataService {
 
     /** 创建备份 */
     static async createBackup(type: "full" | "incremental"): Promise<BackupRecord> {
-        const res = await http.post<BackupRecordResponse>("/admin/database/backups/create", { type });
+        const res = await http.post<BackupRecordResponse>("/admin/backups", { type });
         return toBackupRecord(res.data);
     }
 
     /** 删除备份 */
     static async deleteBackup(id: string): Promise<void> {
-        await http.post(`/admin/database/backups/${id}/delete`);
+        await http.delete(`/admin/backups/${id}`);
     }
 
     /** 导出记录列表 */
@@ -194,7 +194,7 @@ export class DataService {
         pageSize?: number;
     }): Promise<{ list: ExportRecord[]; total: number }> {
         const { pageSize, ...rest } = params || {};
-        const res = await http.get<PaginatedResponse<ExportRecordResponse>>("/admin/database/exports", {
+        const res = await http.get<PaginatedResponse<ExportRecordResponse>>("/admin/exports", {
             params: { ...rest, page_size: pageSize },
             cacheTtl: 15_000,
         });
@@ -206,18 +206,18 @@ export class DataService {
 
     /** 创建导出任务 */
     static async createExport(type: "articles" | "users" | "comments" | "full"): Promise<ExportRecord> {
-        const res = await http.post<ExportRecordResponse>("/admin/database/exports/create", { type });
+        const res = await http.post<ExportRecordResponse>("/admin/exports", { type });
         return toExportRecord(res.data);
     }
 
     /** 删除导出记录 */
     static async deleteExport(id: string): Promise<void> {
-        await http.post(`/admin/database/exports/${id}/delete`);
+        await http.delete(`/admin/exports/${id}`);
     }
 
     /** 清理过期数据 */
     static async cleanup(): Promise<void> {
-        await http.post("/admin/database/cleanup");
+        await http.post("/admin/database/cleanups");
     }
 }
 

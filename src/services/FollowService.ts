@@ -9,23 +9,21 @@ export class FollowService {
      * 关注用户
      */
     static async follow(followingId: number | string): Promise<void> {
-        await http.postForm("/user/follow", { following_id: followingId });
+        await http.post(`/users/${followingId}/followers`);
     }
 
     /**
      * 取消关注
      */
     static async unfollow(followingId: number | string): Promise<void> {
-        await http.postForm("/user/unfollow", { following_id: followingId });
+        await http.delete(`/users/${followingId}/followers/me`);
     }
 
     /**
      * 判断是否已关注某用户
      */
     static async isFollowing(userId: number | string): Promise<boolean> {
-        const response = await http.get<{ is_following: boolean }>("/user/is_following", {
-            params: { user_id: userId },
-        });
+        const response = await http.get<{ is_following: boolean }>(`/users/${userId}/following/me`);
         return response.data.is_following;
     }
 
@@ -38,7 +36,10 @@ export class FollowService {
         offset?: number;
         size?: number;
     }): Promise<FollowListResponse> {
-        const response = await http.get<FollowListResponse>("/user/following/list", { params });
+        const response = await http.get<FollowListResponse>(
+            params?.user_id ? `/users/${params.user_id}/following` : "/users/me/following",
+            { params },
+        );
         return response.data;
     }
 
@@ -47,7 +48,10 @@ export class FollowService {
      * @param userId 不传则查当前用户
      */
     static async getFollowerList(params?: { user_id?: number | string; offset?: number; size?: number }): Promise<FollowListResponse> {
-        const response = await http.get<FollowListResponse>("/user/follower/list", { params });
+        const response = await http.get<FollowListResponse>(
+            params?.user_id ? `/users/${params.user_id}/followers` : "/users/me/followers",
+            { params },
+        );
         return response.data;
     }
 
@@ -59,7 +63,7 @@ export class FollowService {
         offset?: number;
         size?: number;
     }): Promise<MutualFollowListResponse> {
-        const response = await http.get<MutualFollowListResponse>("/user/mutual_following/list", {
+        const response = await http.get<MutualFollowListResponse>("/users/me/mutual-following", {
             params: {
                 keyword: params?.keyword ?? "",
                 offset: params?.offset ?? 0,

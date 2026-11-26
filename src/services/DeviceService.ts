@@ -33,7 +33,7 @@ export class DeviceService {
      * is_current 标识当前请求所在设备
      */
     static async listDevices(): Promise<HttpResponse<LoginDeviceListResponse>> {
-        return http.get<LoginDeviceListResponse>("/user/device/list");
+        return http.get<LoginDeviceListResponse>("/users/me/devices");
     }
 
     /**
@@ -41,9 +41,7 @@ export class DeviceService {
      * @param deviceId 设备标识（对应列表中的 device_id）
      */
     static async kickDevice(deviceId: string): Promise<HttpResponse> {
-        const formData = new URLSearchParams();
-        formData.append("device_id", deviceId);
-        return http.postForm("/user/device/kick", formData);
+        return http.delete(`/users/me/devices/${encodeURIComponent(deviceId)}`);
     }
 }
 
