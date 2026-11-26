@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { FaGithub, FaStar, FaExternalLinkAlt, FaTrash, FaKey, FaSync } from "react-icons/fa";
+import { FaGithub, FaStar, FaExternalLinkAlt, FaTrash, FaKey, FaSync, FaEdit } from "react-icons/fa";
 import Modal from "../modal/Modal";
 import Input from "../input/Input";
 import message from "../message/Message";
@@ -33,6 +33,7 @@ export interface Repo {
     language: string;
     languageColor: string;
     stars: number;
+    sortOrder: number;
     updatedAt: string | number;
     organizationId: string;
     hasToken: boolean;
@@ -86,6 +87,18 @@ const OrganizationRepos: React.FC<Props> = ({ orgId, canManage, refreshKey = 0, 
     const [tokenValue, setTokenValue] = useState("");
     const [tokenSaving, setTokenSaving] = useState(false);
 
+    // 编辑仓库 modal
+    const [editModalVisible, setEditModalVisible] = useState(false);
+    const [editingRepo, setEditingRepo] = useState<Repo | null>(null);
+    const [editForm, setEditForm] = useState({
+        name: "",
+        url: "",
+        description: "",
+        language: "",
+        sortOrder: "0",
+    });
+    const [editSaving, setEditSaving] = useState(false);
+
     // polling ref
     const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -110,6 +123,7 @@ const OrganizationRepos: React.FC<Props> = ({ orgId, canManage, refreshKey = 0, 
                     language: cleanLang(item.language),
                     languageColor: languageColors[cleanLang(item.language)] || "#6c757d",
                     stars: item.stars_count ?? 0,
+                    sortOrder: item.sort_order ?? 0,
                     updatedAt:
                         item.updated_at == null || (typeof item.updated_at === "number" && item.updated_at > 9999999999999)
                             ? ""
@@ -236,6 +250,65 @@ const OrganizationRepos: React.FC<Props> = ({ orgId, canManage, refreshKey = 0, 
         }
     };
 
+    // ---- 编辑仓库 ----
+    const openEditModal = (e: React.MouseEvent, repo: Repo) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setEditingRepo(repo);
+        setEditForm({
+            name: repo.name,
+            url: repo.url,
+            description: repo.description,
+            language: repo.language,
+            sortOrder: String(repo.sortOrder ?? 0),
+        });
+        setEditModalVisible(true);
+    };
+
+    const handleSaveEdit = async () => {
+        const name = editForm.name.trim();
+        const url = editForm.url.trim();
+        if (!name) {
+            message.warn(t("repos.editModal.nameRequired"));
+            return;
+        }
+        if (!url) {
+            message.warn(t("repos.editModal.urlRequired"));
+            return;
+        }
+        if (!url.startsWith("https://github.com/")) {
+            message.warn(t("repos.editModal.githubOnly"));
+            return;
+        }
+        const sortOrder = Number(editForm.sortOrder.trim());
+        if (editForm.sortOrder.trim() === "" || !Number.isInteger(sortOrder)) {
+            message.warn(t("repos.editModal.sortOrderInvalid"));
+            return;
+        }
+        if (!editingRepo) {
+            return;
+        }
+        setEditSaving(true);
+        try {
+            await OrganizationService.updateRepo({
+                id: editingRepo.id,
+                name,
+                description: editForm.description.trim(),
+                url,
+                language: editForm.language.trim(),
+                sort_order: sortOrder,
+            });
+            setEditModalVisible(false);
+            setEditingRepo(null);
+            message.success(t("repos.editSuccess"));
+            await fetchRepos();
+        } catch (err: any) {
+            message.error(err?.message || t("repos.editFailed"));
+        } finally {
+            setEditSaving(false);
+        }
+    };
+
     // ---- 同步仓库 ----
     const handleSyncRepo = async (e: React.MouseEvent, repo: Repo) => {
         e.preventDefault();
@@ -319,6 +392,13 @@ const OrganizationRepos: React.FC<Props> = ({ orgId, canManage, refreshKey = 0, 
                                         >
                                             <FaSync size={10} />
                                         </span>
+                                        <span
+                                            className={styles.repoEditBtn}
+                                            title={t("repos.editTitle")}
+                                            onClick={(e) => openEditModal(e, repo)}
+                                        >
+                                            <FaEdit size={11} />
+                                        </span>
                                         <button
                                             className={styles.repoDeleteBtn}
                                             title={t("repos.deleteTitle")}
@@ -387,6 +467,78 @@ const OrganizationRepos: React.FC<Props> = ({ orgId, canManage, refreshKey = 0, 
                             value={tokenValue}
                             onChange={(v) => setTokenValue(v)}
                             placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+                            size="large"
+                        />
+                    </div>
+                </div>
+            </Modal>
+
+            {/* 编辑仓库 Modal */}
+            <Modal
+                visible={editModalVisible}
+                title={editingRepo ? t("repos.editModal.titleWithRepo", { name: editingRepo.name }) : t("repos.editModal.title")}
+                onClose={() => setEditModalVisible(false)}
+                width={520}
+                footer={
+                    <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end" }}>
+                        <button className={styles.cancelButton} onClick={() => setEditModalVisible(false)}>
+                            {t("repos.editModal.cancel")}
+                        </button>
+                        <button className={styles.confirmButton} onClick={handleSaveEdit} disabled={editSaving}>
+                            {editSaving ? t("repos.editModal.saving") : t("repos.editModal.save")}
+                        </button>
+                    </div>
+                }
+            >
+                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                    <div>
+                        <label className={styles.formLabel}>{t("repos.editModal.nameLabel")}</label>
+                        <Input
+                            value={editForm.name}
+                            onChange={(v) => setEditForm((prev) => ({ ...prev, name: v }))}
+                            placeholder={t("repos.editModal.namePlaceholder")}
+                            maxLength={128}
+                            size="large"
+                        />
+                    </div>
+                    <div>
+                        <label className={styles.formLabel}>{t("repos.editModal.urlLabel")}</label>
+                        <Input
+                            value={editForm.url}
+                            onChange={(v) => setEditForm((prev) => ({ ...prev, url: v }))}
+                            placeholder={t("repos.editModal.urlPlaceholder")}
+                            maxLength={512}
+                            size="large"
+                        />
+                    </div>
+                    <div>
+                        <label className={styles.formLabel}>{t("repos.editModal.descriptionLabel")}</label>
+                        <Input
+                            value={editForm.description}
+                            onChange={(v) => setEditForm((prev) => ({ ...prev, description: v }))}
+                            placeholder={t("repos.editModal.descriptionPlaceholder")}
+                            maxLength={1024}
+                            size="large"
+                        />
+                    </div>
+                    <div>
+                        <label className={styles.formLabel}>{t("repos.editModal.languageLabel")}</label>
+                        <Input
+                            value={editForm.language}
+                            onChange={(v) => setEditForm((prev) => ({ ...prev, language: v }))}
+                            placeholder={t("repos.editModal.languagePlaceholder")}
+                            maxLength={64}
+                            size="large"
+                        />
+                    </div>
+                    <div>
+                        <label className={styles.formLabel}>{t("repos.editModal.sortOrderLabel")}</label>
+                        <Input
+                            type="number"
+                            value={editForm.sortOrder}
+                            onChange={(v) => setEditForm((prev) => ({ ...prev, sortOrder: v }))}
+                            placeholder={t("repos.editModal.sortOrderPlaceholder")}
+                            step={1}
                             size="large"
                         />
                     </div>

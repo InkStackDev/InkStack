@@ -508,6 +508,7 @@ export class OrganizationService {
             url: string;
             language: string;
             stars_count: number;
+            sort_order?: number;
             updated_at: string;
             created_at: string;
         }>;
@@ -542,6 +543,38 @@ export class OrganizationService {
 
         const response = await http.postForm<{ id: number | string }>("/organization/repos/add", formData);
         return response.data;
+    }
+
+    /**
+     * 编辑仓库
+     */
+    static async updateRepo(params: {
+        id: string;
+        name?: string;
+        description?: string;
+        url?: string;
+        language?: string;
+        sort_order?: number;
+    }): Promise<void> {
+        const formData = new URLSearchParams();
+        formData.append("id", params.id);
+        if (params.name !== undefined) {
+            formData.append("name", params.name);
+        }
+        if (params.description !== undefined) {
+            formData.append("description", params.description);
+        }
+        if (params.url !== undefined) {
+            formData.append("url", params.url);
+        }
+        if (params.language !== undefined) {
+            formData.append("language", params.language);
+        }
+        if (params.sort_order !== undefined) {
+            formData.append("sort_order", String(params.sort_order));
+        }
+
+        await http.postForm("/organization/repos/update", formData);
     }
 
     /**
