@@ -19,11 +19,11 @@ import {
 import CustomSelect from "@/components/customSelect/CustomSelect";
 import Input from "@/components/input/Input";
 import Button from "@/components/button/Button";
-import AdminListSkeleton from "@/components/adminListSkeleton/AdminListSkeleton";
 import Modal from "@/components/modal/Modal";
 import { confirm } from "@/components/confirm/Confirm";
 import message from "@/components/message/Message";
 import type { SelectOption } from "@/types";
+import Loading from "@/components/loading/Loading";
 import PageHeader from "@/components/pageHeader/PageHeader";
 import styles from "./CategoryManagement.module.css";
 import CategoryService from "@/services/CategoryService.ts";
@@ -450,7 +450,7 @@ const CategoryManagement: React.FC = () => {
     if (!initialLoaded) {
         return (
             <div className={styles.categoryManagement}>
-                <AdminListSkeleton stats={4} columns={6} />
+                <Loading size="large" />
             </div>
         );
     }

@@ -21,6 +21,7 @@ import message from "@/components/message/Message";
 import SettingsService, { type SiteSettings, type EmailSettings, type SystemSettings } from "@/services/SettingsService.ts";
 import { useSiteSettings } from "@/contexts/SiteSettingsContext";
 import { useTranslation } from "react-i18next";
+import Loading from "@/components/loading/Loading";
 
 const Settings: React.FC = () => {
     const { t } = useTranslation("admin");
@@ -214,8 +215,7 @@ const Settings: React.FC = () => {
     return loading ? (
         <div className={styles.settings}>
             <div className={styles.loadingContainer}>
-                <FaSpinner className="fa-spin" />
-                <span>{t("settings.loading")}</span>
+                <Loading size="large" />
             </div>
         </div>
     ) : (

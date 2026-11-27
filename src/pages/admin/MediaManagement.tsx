@@ -708,7 +708,7 @@ const MediaManagement: React.FC = () => {
     if (loading) {
         return (
             <div className={styles.mediaManagement}>
-                <Loading text={t("media.loading")} size="large" />
+                <Loading size="large" />
             </div>
         );
     }

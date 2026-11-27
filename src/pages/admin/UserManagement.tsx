@@ -16,7 +16,6 @@ import CustomSelect from "@/components/customSelect/CustomSelect";
 import Input from "@/components/input/Input";
 import Button from "@/components/button/Button";
 import Loading from "@/components/loading/Loading";
-import AdminListSkeleton from "@/components/adminListSkeleton/AdminListSkeleton";
 import ErrorState from "@/components/errorState/ErrorState";
 import Avatar from "@/components/avatar/Avatar";
 import Modal from "@/components/modal/Modal";
@@ -478,7 +477,7 @@ const UserManagement: React.FC = () => {
     if (loading && !initialLoaded) {
         return (
             <div className={styles.userManagement}>
-                <AdminListSkeleton stats={4} columns={7} />
+                <Loading size="large" />
             </div>
         );
     }

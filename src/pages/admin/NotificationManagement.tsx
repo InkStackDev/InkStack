@@ -11,6 +11,7 @@ import Avatar from "@/components/avatar/Avatar";
 import NotificationService from "@/services/NotificationService.ts";
 import type { SelectOption } from "@/types";
 import PageHeader from "@/components/pageHeader/PageHeader";
+import Loading from "@/components/loading/Loading";
 import styles from "./NotificationManagement.module.css";
 
 const NotificationManagement: React.FC = () => {
@@ -25,6 +26,7 @@ const NotificationManagement: React.FC = () => {
     const [startTime, setStartTime] = useState<Date | null>(null);
     const [endTime, setEndTime] = useState<Date | null>(null);
     const [sending, setSending] = useState(false);
+    const [broadcastsLoading, setBroadcastsLoading] = useState(true);
     const [activeBroadcasts, setActiveBroadcasts] = useState<
         {
             id: number;
@@ -38,11 +40,14 @@ const NotificationManagement: React.FC = () => {
     >([]);
 
     const fetchBroadcasts = async () => {
+        setBroadcastsLoading(true);
         try {
             const list = await NotificationService.getBroadcasts();
             setActiveBroadcasts(list);
         } catch {
             // ignore
+        } finally {
+            setBroadcastsLoading(false);
         }
     };
 
@@ -279,44 +284,52 @@ const NotificationManagement: React.FC = () => {
             </div>
 
             {/* 当前广播列表 */}
-            {activeBroadcasts.length > 0 && (
+            {(broadcastsLoading || activeBroadcasts.length > 0) && (
                 <div className={styles.formCard} style={{ marginTop: 24 }}>
                     <h3 className={styles.formSectionTitle}>{t("notifications.broadcasts.title")}</h3>
                     <div className={styles.broadcastList}>
-                        {activeBroadcasts.map((bc) => (
-                            <div key={bc.id} className={styles.broadcastItem}>
-                                <div className={styles.broadcastContent}>
-                                    <div className={styles.broadcastTitle}>
-                                        <span
-                                            style={{
-                                                display: "inline-block",
-                                                width: 8,
-                                                height: 8,
-                                                borderRadius: "50%",
-                                                background:
-                                                    bc.level === "danger" ? "#ef4444" : bc.level === "warning" ? "#f59e0b" : "#3b82f6",
-                                            }}
-                                        />
-                                        <strong style={{ fontSize: 14 }}>{bc.title}</strong>
-                                    </div>
-                                    <div className={styles.broadcastText}>{bc.content}</div>
-                                    {bc.sender_name && (
-                                        <div className={styles.broadcastSender}>
-                                            <Avatar src={bc.sender_avatar} name={bc.sender_name} size={20} />
-                                            <span>{bc.sender_name}</span>
+                        {broadcastsLoading ? (
+                            <Loading size="small" />
+                        ) : (
+                            activeBroadcasts.map((bc) => (
+                                <div key={bc.id} className={styles.broadcastItem}>
+                                    <div className={styles.broadcastContent}>
+                                        <div className={styles.broadcastTitle}>
+                                            <span
+                                                style={{
+                                                    display: "inline-block",
+                                                    width: 8,
+                                                    height: 8,
+                                                    borderRadius: "50%",
+                                                    background:
+                                                        bc.level === "danger"
+                                                            ? "#ef4444"
+                                                            : bc.level === "warning"
+                                                              ? "#f59e0b"
+                                                              : "#3b82f6",
+                                                }}
+                                            />
+                                            <strong style={{ fontSize: 14 }}>{bc.title}</strong>
                                         </div>
-                                    )}
+                                        <div className={styles.broadcastText}>{bc.content}</div>
+                                        {bc.sender_name && (
+                                            <div className={styles.broadcastSender}>
+                                                <Avatar src={bc.sender_avatar} name={bc.sender_name} size={20} />
+                                                <span>{bc.sender_name}</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <button
+                                        onClick={() => handleCloseBroadcast(bc.id)}
+                                        className={styles.broadcastCloseButton}
+                                        title={t("notifications.broadcasts.closeTitle")}
+                                    >
+                                        <FaTimes size={10} style={{ marginRight: 4 }} />
+                                        {t("notifications.broadcasts.close")}
+                                    </button>
                                 </div>
-                                <button
-                                    onClick={() => handleCloseBroadcast(bc.id)}
-                                    className={styles.broadcastCloseButton}
-                                    title={t("notifications.broadcasts.closeTitle")}
-                                >
-                                    <FaTimes size={10} style={{ marginRight: 4 }} />
-                                    {t("notifications.broadcasts.close")}
-                                </button>
-                            </div>
-                        ))}
+                            ))
+                        )}
                     </div>
                 </div>
             )}

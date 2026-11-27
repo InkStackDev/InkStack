@@ -384,7 +384,7 @@ const OrganizationManagement: React.FC = () => {
     };
 
     if (loading && !initialLoaded && activeTab === "orgs") {
-        return <Loading />;
+        return <Loading size="large" />;
     }
 
     const getApplyStatusBadge = (status: number) => {
@@ -899,7 +899,7 @@ const OrganizationManagement: React.FC = () => {
                             <h3 className={styles.tableTitle}>{t("organizations.applies.tableTitle")}</h3>
                         </div>
                         {appliesLoading ? (
-                            <Loading />
+                            <Loading size="large" />
                         ) : (
                             <>
                                 <table className={`${styles.orgTable} ${styles.applyTable}`}>

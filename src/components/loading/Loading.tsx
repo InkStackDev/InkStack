@@ -6,13 +6,15 @@ interface LoadingProps {
     size?: "small" | "medium" | "large";
     text?: string;
     overlay?: boolean;
+    /** 去掉容器内边距，用于统计数字等紧凑位置的占位 */
+    inline?: boolean;
 }
 
-const Loading: React.FC<LoadingProps> = ({ size = "medium", text, overlay = false }) => {
+const Loading: React.FC<LoadingProps> = ({ size = "medium", text, overlay = false, inline = false }) => {
     const { t } = useTranslation("components");
     const resolvedText = text ?? t("loading.defaultText");
     const content = (
-        <div className={`${styles.loadingContainer} ${styles[size]}`}>
+        <div className={`${styles.loadingContainer} ${styles[size]} ${inline ? styles.inline : ""}`}>
             <div className={styles.spinner}>
                 <div className={styles.spinnerCircle}></div>
                 <div className={styles.spinnerCircle}></div>

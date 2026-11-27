@@ -483,7 +483,7 @@ const Dashboard: React.FC = () => {
     if (loading) {
         return (
             <div className={styles.dashboard}>
-                <Loading text={t("dashboard.loading")} size="large" />
+                <Loading size="large" />
             </div>
         );
     }

@@ -30,7 +30,6 @@ import {
 import CustomSelect from "@/components/customSelect/CustomSelect";
 import Input from "@/components/input/Input";
 import Loading from "@/components/loading/Loading";
-import AdminListSkeleton from "@/components/adminListSkeleton/AdminListSkeleton";
 import { confirm } from "@/components/confirm/Confirm";
 import { message } from "@/components/message/Message";
 import { formatToChinaTime } from "@/utils/Utils.ts";
@@ -410,7 +409,7 @@ const DataManagement: React.FC = () => {
     if (initialLoading) {
         return (
             <div className={styles.dataManagement}>
-                <AdminListSkeleton stats={6} columns={6} />
+                <Loading size="large" />
             </div>
         );
     }
@@ -692,7 +691,7 @@ const DataManagement: React.FC = () => {
                         {activeTab === "backups" ? (
                             loadingBackups ? (
                                 <div style={{ padding: "60px 0" }}>
-                                    <Loading text={t("data.table.loadingBackups")} size="large" />
+                                    <Loading size="large" />
                                 </div>
                             ) : (
                                 <table className={`${styles.recordsTable} ${styles.backupRecordsTable}`}>
@@ -797,7 +796,7 @@ const DataManagement: React.FC = () => {
                             )
                         ) : loadingExports ? (
                             <div style={{ padding: "60px 0" }}>
-                                <Loading text={t("data.table.loadingExports")} size="large" />
+                                <Loading size="large" />
                             </div>
                         ) : (
                             <table className={`${styles.recordsTable} ${styles.exportRecordsTable}`}>

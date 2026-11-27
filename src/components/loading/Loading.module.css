@@ -24,6 +24,12 @@
     padding: 60px 20px;
 }
 
+/* 紧凑占位（统计数字等），需放在尺寸变体之后以覆盖其内边距 */
+.loadingContainer.inline {
+    padding: 0;
+    gap: 6px;
+}
+
 /* 旋转动画 */
 .spinner {
     position: relative;

@@ -494,7 +494,7 @@ const Metrics: FC = () => {
     if (loading && !snapshot) {
         return (
             <div className={styles.metrics}>
-                <Loading text={t("metrics.loading")} size="large" />
+                <Loading size="large" />
             </div>
         );
     }

@@ -30,7 +30,6 @@ import {
 import CustomSelect from "@/components/customSelect/CustomSelect";
 import Input from "@/components/input/Input";
 import Loading from "@/components/loading/Loading";
-import AdminListSkeleton from "@/components/adminListSkeleton/AdminListSkeleton";
 import { confirm } from "@/components/confirm/Confirm";
 import type { SelectOption } from "@/types";
 import { PlatformRoleByKey, type PlatformRole } from "@/types/Roles.ts";
@@ -613,7 +612,7 @@ const ArticleManagement: React.FC = () => {
     if (loading && !initialLoaded) {
         return (
             <div className={styles.articleManagement}>
-                <AdminListSkeleton stats={5} columns={7} />
+                <Loading size="large" />
             </div>
         );
     }
