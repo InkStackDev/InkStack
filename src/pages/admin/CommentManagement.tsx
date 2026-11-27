@@ -33,6 +33,7 @@ import type { CommentStatus } from "@/types/Enums.ts";
 import { useEnumLabels } from "@/i18n/UseEnumLabels";
 import { useInitialLoaded } from "@/hooks/UseInitialLoaded";
 import { useDebouncedValue } from "@/hooks/UseDebouncedValue";
+import PageHeader from "@/components/pageHeader/PageHeader";
 import styles from "./CommentManagement.module.css";
 
 interface FilterOptions {
@@ -354,13 +355,7 @@ const CommentManagement: React.FC = () => {
 
     return (
         <div className={styles.commentManagement}>
-            {/* 页面头部 */}
-            <div className={styles.pageHeader}>
-                <div>
-                    <h1 className={styles.pageTitle}>{t("comments.title")}</h1>
-                    <p className={styles.pageDescription}>{t("comments.description")}</p>
-                </div>
-            </div>
+            <PageHeader title={t("comments.title")} description={t("comments.description")} />
 
             {/* 统计卡片 */}
             <div className={styles.statsContainer}>

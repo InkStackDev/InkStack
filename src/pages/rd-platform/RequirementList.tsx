@@ -26,6 +26,7 @@ import CustomSelect from "@/components/customSelect/CustomSelect";
 import Modal from "@/components/modal/Modal";
 import Loading from "@/components/loading/Loading";
 import ErrorState from "@/components/errorState/ErrorState";
+import EmptyState from "@/components/emptyState/EmptyState";
 import { confirm } from "@/components/confirm/Confirm";
 import message from "@/components/message/Message";
 import { useAuth } from "@/contexts/AuthContext";
@@ -412,10 +413,11 @@ const RequirementList: React.FC = () => {
                             {!loading && !error && requirements.length === 0 && (
                                 <tr>
                                     <td colSpan={8} className={styles.emptyCell}>
-                                        <div className={styles.emptyCellIcon}>
-                                            <FaClipboardList />
-                                        </div>
-                                        <div className={styles.emptyCellText}>{t("requirements.table.empty")}</div>
+                                        <EmptyState
+                                            variant="inline"
+                                            icon={<FaClipboardList />}
+                                            title={t("requirements.table.empty")}
+                                        />
                                     </td>
                                 </tr>
                             )}

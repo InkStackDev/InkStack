@@ -26,6 +26,7 @@ import type { SelectOption } from "@/types";
 import { PlatformRoleCSS, PlatformRoleByKey, type PlatformRole } from "@/types/Roles.ts";
 import { useEnumLabels } from "@/i18n/UseEnumLabels";
 import { useInitialLoaded } from "@/hooks/UseInitialLoaded";
+import PageHeader from "@/components/pageHeader/PageHeader";
 import styles from "./UserManagement.module.css";
 import { AuthService } from "@/services/AuthService.ts";
 import { formatToChinaTime } from "@/utils/Utils.ts";
@@ -484,19 +485,16 @@ const UserManagement: React.FC = () => {
 
     return (
         <div className={styles.userManagement}>
-            {/* 页面头部 */}
-            <div className={styles.pageHeader}>
-                <div>
-                    <h1 className={styles.pageTitle}>{t("users.title")}</h1>
-                    <p className={styles.pageDescription}>{t("users.description")}</p>
-                </div>
-                <div className={styles.headerActions}>
-                    <button className={`${styles.btn} ${styles.btnPrimary}`} onClick={openCreateModal}>
+            <PageHeader
+                title={t("users.title")}
+                description={t("users.description")}
+                actions={
+                    <Button onClick={openCreateModal}>
                         <FaPlus />
                         {t("users.addUser")}
-                    </button>
-                </div>
-            </div>
+                    </Button>
+                }
+            />
 
             {/* 统计卡片 */}
             <div className={styles.statsContainer}>

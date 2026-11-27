@@ -40,6 +40,7 @@ import type { BackupRecord, DataStats, ExportRecord } from "@/services/DataServi
 import type { SelectOption } from "@/types";
 import type { BackupStatus } from "@/types/Enums.ts";
 import { useEnumLabels } from "@/i18n/UseEnumLabels";
+import PageHeader from "@/components/pageHeader/PageHeader";
 import styles from "./DataManagement.module.css";
 
 // 筛选条件接口
@@ -416,13 +417,7 @@ const DataManagement: React.FC = () => {
 
     return (
         <div className={styles.dataManagement}>
-            {/* 页面头部 */}
-            <div className={styles.pageHeader}>
-                <div>
-                    <h1 className={styles.pageTitle}>{t("data.title")}</h1>
-                    <p className={styles.pageDescription}>{t("data.description")}</p>
-                </div>
-            </div>
+            <PageHeader title={t("data.title")} description={t("data.description")} />
 
             {/* 标签页切换 */}
             <div className={styles.tabContainer}>

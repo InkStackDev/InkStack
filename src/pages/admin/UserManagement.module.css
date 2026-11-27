@@ -2,23 +2,6 @@
     max-width: 100%;
 }
 
-/* 页面头部 */
-.pageHeader {
-    composes: pageHeader from "./AdminPageShared.module.css";
-}
-
-.pageTitle {
-    composes: pageTitle from "./AdminPageShared.module.css";
-}
-
-.pageDescription {
-    composes: pageDescription from "./AdminPageShared.module.css";
-}
-
-.headerActions {
-    composes: headerActions from "./AdminPageShared.module.css";
-}
-
 /* 统计卡片 */
 .statsContainer {
     display: grid;
@@ -421,16 +404,6 @@
 
 /* 响应式设计 */
 @media (max-width: 768px) {
-    .pageHeader {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-
-    .headerActions {
-        width: 100%;
-        justify-content: flex-start;
-    }
-
     .statsContainer {
         grid-template-columns: 1fr;
     }
@@ -459,10 +432,6 @@
 }
 
 @media (max-width: 480px) {
-    .pageTitle {
-        font-size: 1.2rem;
-    }
-
     .statCard {
         padding: 14px;
     }

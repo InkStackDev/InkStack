@@ -24,6 +24,7 @@ import Modal from "@/components/modal/Modal";
 import { confirm } from "@/components/confirm/Confirm";
 import message from "@/components/message/Message";
 import type { SelectOption } from "@/types";
+import PageHeader from "@/components/pageHeader/PageHeader";
 import styles from "./CategoryManagement.module.css";
 import CategoryService from "@/services/CategoryService.ts";
 import AuthService from "@/services/AuthService.ts";
@@ -456,19 +457,16 @@ const CategoryManagement: React.FC = () => {
 
     return (
         <div className={styles.categoryManagement}>
-            {/* 页面头部 */}
-            <div className={styles.pageHeader}>
-                <div>
-                    <h1 className={styles.pageTitle}>{t("categories.title")}</h1>
-                    <p className={styles.pageDescription}>{t("categories.description")}</p>
-                </div>
-                <div className={styles.headerActions}>
-                    <button className={`${styles.btn} ${styles.btnPrimary}`} onClick={() => openModal()}>
+            <PageHeader
+                title={t("categories.title")}
+                description={t("categories.description")}
+                actions={
+                    <Button onClick={() => openModal()}>
                         <FaPlus />
                         {t("categories.addCategory")}
-                    </button>
-                </div>
-            </div>
+                    </Button>
+                }
+            />
 
             {/* 统计卡片 */}
             <div className={styles.statsContainer}>

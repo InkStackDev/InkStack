@@ -3,34 +3,6 @@
 }
 
 /* 页面头部 */
-.pageHeader {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 24px;
-    margin-bottom: 24px;
-    flex-wrap: wrap;
-}
-
-.pageTitleBlock {
-    min-width: 0;
-    flex: 1 1 420px;
-}
-
-.pageTitle {
-    font-size: 28px;
-    font-weight: 700;
-    color: var(--text-primary);
-    margin: 0 0 8px;
-}
-
-.pageDescription {
-    font-size: 15px;
-    color: var(--text-secondary);
-    line-height: 1.5;
-    margin: 0;
-}
-
 .workerHint {
     display: flex;
     align-items: flex-start;
@@ -44,14 +16,6 @@
 .workerHint svg {
     flex: none;
     margin-top: 3px;
-}
-
-.headerActions {
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    gap: 10px;
-    flex-wrap: wrap;
 }
 
 .lastUpdated {
@@ -585,21 +549,9 @@
 
 /* 响应式 */
 @media (max-width: 900px) {
-    .pageHeader {
-        flex-direction: column;
-    }
-
-    .headerActions {
-        justify-content: flex-start;
-        width: 100%;
-    }
 }
 
 @media (max-width: 640px) {
-    .pageTitle {
-        font-size: 24px;
-    }
-
     .statsGrid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
         gap: 12px;

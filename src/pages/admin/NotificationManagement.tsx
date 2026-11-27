@@ -10,6 +10,7 @@ import message from "@/components/message/Message";
 import Avatar from "@/components/avatar/Avatar";
 import NotificationService from "@/services/NotificationService.ts";
 import type { SelectOption } from "@/types";
+import PageHeader from "@/components/pageHeader/PageHeader";
 import styles from "./NotificationManagement.module.css";
 
 const NotificationManagement: React.FC = () => {
@@ -126,16 +127,15 @@ const NotificationManagement: React.FC = () => {
 
     return (
         <div className={styles.notificationManagement}>
-            {/* 页面头部 */}
-            <div className={styles.pageHeader}>
-                <div>
-                    <h1 className={styles.pageTitle}>
-                        <FaBell />
+            <PageHeader
+                title={
+                    <>
+                        <FaBell style={{ color: "var(--primary)" }} />
                         {t("notifications.page.title")}
-                    </h1>
-                    <p className={styles.pageDescription}>{t("notifications.page.description")}</p>
-                </div>
-            </div>
+                    </>
+                }
+                description={t("notifications.page.description")}
+            />
 
             {/* 表单卡片 */}
             <div className={styles.formCard}>

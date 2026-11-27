@@ -26,6 +26,7 @@ import CustomSelect from "@/components/customSelect/CustomSelect";
 import Modal from "@/components/modal/Modal";
 import Loading from "@/components/loading/Loading";
 import ErrorState from "@/components/errorState/ErrorState";
+import EmptyState from "@/components/emptyState/EmptyState";
 import { confirm } from "@/components/confirm/Confirm";
 import message from "@/components/message/Message";
 import { useAuth } from "@/contexts/AuthContext";
@@ -384,10 +385,7 @@ const TaskList: React.FC = () => {
                             {!loading && !error && tasks.length === 0 && (
                                 <tr>
                                     <td colSpan={7} className={styles.emptyCell}>
-                                        <div className={styles.emptyCellIcon}>
-                                            <FaTasks />
-                                        </div>
-                                        <div className={styles.emptyCellText}>{t("tasks.table.empty")}</div>
+                                        <EmptyState variant="inline" icon={<FaTasks />} title={t("tasks.table.empty")} />
                                     </td>
                                 </tr>
                             )}

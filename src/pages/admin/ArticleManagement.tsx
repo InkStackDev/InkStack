@@ -43,6 +43,8 @@ import { CategoryService } from "@/services/CategoryService.ts";
 import { formatToChinaTime } from "@/utils/Utils.ts";
 import message from "@/components/message/Message";
 import Avatar from "@/components/avatar/Avatar";
+import PageHeader from "@/components/pageHeader/PageHeader";
+import Button from "@/components/button/Button";
 
 // 文章接口定义
 interface Article {
@@ -618,19 +620,16 @@ const ArticleManagement: React.FC = () => {
 
     return (
         <div className={styles.articleManagement}>
-            {/* 页面头部 */}
-            <div className={styles.pageHeader}>
-                <div>
-                    <h1 className={styles.pageTitle}>{t("articles.title")}</h1>
-                    <p className={styles.pageDescription}>{t("articles.description")}</p>
-                </div>
-                <div className={styles.headerActions}>
-                    <button className={`${styles.btn} ${styles.btnPrimary}`}>
+            <PageHeader
+                title={t("articles.title")}
+                description={t("articles.description")}
+                actions={
+                    <Button>
                         <FaPlus />
                         {t("articles.addArticle")}
-                    </button>
-                </div>
-            </div>
+                    </Button>
+                }
+            />
 
             {/* 统计卡片 */}
             <div className={styles.statsContainer}>

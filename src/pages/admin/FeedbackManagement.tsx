@@ -29,6 +29,8 @@ import { formatDateTime } from "@/utils/Utils.ts";
 import { HelpService, type FeedbackItem, type HelpFaq } from "@/services/HelpService.ts";
 import { OrganizationService } from "@/services/OrganizationService.ts";
 import Avatar from "@/components/avatar/Avatar";
+import PageHeader from "@/components/pageHeader/PageHeader";
+import Button from "@/components/button/Button";
 
 const PAGE_SIZE = 10;
 
@@ -336,17 +338,15 @@ const FeedbackManagement: React.FC = () => {
 
     return (
         <div className={styles.feedbackManagement}>
-            <div className={styles.pageHeader}>
-                <div>
-                    <h1 className={styles.pageTitle}>{t("feedbacks.pageTitle")}</h1>
-                    <p className={styles.pageDescription}>{t("feedbacks.pageDescription")}</p>
-                </div>
-                <div className={styles.headerActions}>
-                    <button className={`${styles.btn} ${styles.btnPrimary}`} onClick={handleRefresh}>
+            <PageHeader
+                title={t("feedbacks.pageTitle")}
+                description={t("feedbacks.pageDescription")}
+                actions={
+                    <Button onClick={handleRefresh}>
                         <FaSyncAlt /> {t("feedbacks.refresh")}
-                    </button>
-                </div>
-            </div>
+                    </Button>
+                }
+            />
 
             <div className={styles.statsContainer}>
                 <div className={styles.statCard}>

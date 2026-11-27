@@ -26,6 +26,7 @@ import CustomSelect from "@/components/customSelect/CustomSelect";
 import Modal from "@/components/modal/Modal";
 import Loading from "@/components/loading/Loading";
 import ErrorState from "@/components/errorState/ErrorState";
+import EmptyState from "@/components/emptyState/EmptyState";
 import { confirm } from "@/components/confirm/Confirm";
 import message from "@/components/message/Message";
 import { useAuth } from "@/contexts/AuthContext";
@@ -453,10 +454,7 @@ const BugList: React.FC = () => {
                             {!loading && !error && bugs.length === 0 && (
                                 <tr>
                                     <td colSpan={9} className={styles.emptyCell}>
-                                        <div className={styles.emptyCellIcon}>
-                                            <FaBug />
-                                        </div>
-                                        <div className={styles.emptyCellText}>{t("bugs.table.empty")}</div>
+                                        <EmptyState variant="inline" icon={<FaBug />} title={t("bugs.table.empty")} />
                                     </td>
                                 </tr>
                             )}

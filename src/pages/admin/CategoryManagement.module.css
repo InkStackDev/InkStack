@@ -2,22 +2,6 @@
     max-width: 100%;
 }
 
-.pageHeader {
-    composes: pageHeader from "./AdminPageShared.module.css";
-}
-
-.pageTitle {
-    composes: pageTitle from "./AdminPageShared.module.css";
-}
-
-.pageDescription {
-    composes: pageDescription from "./AdminPageShared.module.css";
-}
-
-.headerActions {
-    composes: headerActions from "./AdminPageShared.module.css";
-}
-
 .statsContainer {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -519,16 +503,6 @@
 }
 
 @media (max-width: 768px) {
-    .pageHeader {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-
-    .headerActions {
-        width: 100%;
-        justify-content: flex-start;
-    }
-
     .statsContainer {
         grid-template-columns: repeat(2, 1fr);
     }
@@ -557,10 +531,6 @@
 }
 
 @media (max-width: 480px) {
-    .pageTitle {
-        font-size: 1.2rem;
-    }
-
     .statsContainer {
         grid-template-columns: 1fr;
         gap: 8px;

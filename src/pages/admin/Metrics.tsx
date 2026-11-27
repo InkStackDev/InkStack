@@ -19,6 +19,7 @@ import {
     FaUsers,
 } from "react-icons/fa";
 import Button from "@/components/button/Button";
+import PageHeader from "@/components/pageHeader/PageHeader";
 import ErrorState from "@/components/errorState/ErrorState";
 import Loading from "@/components/loading/Loading";
 import Modal from "@/components/modal/Modal";
@@ -612,45 +613,46 @@ const Metrics: FC = () => {
 
     return (
         <div className={styles.metrics}>
-            <div className={styles.pageHeader}>
-                <div className={styles.pageTitleBlock}>
-                    <h1 className={styles.pageTitle}>{t("metrics.title")}</h1>
-                    <p className={styles.pageDescription}>{t("metrics.description")}</p>
+            <PageHeader
+                title={t("metrics.title")}
+                description={t("metrics.description")}
+                actions={
+                    <>
+                        <span className={styles.lastUpdated}>
+                            {lastUpdated ? t("metrics.lastUpdated", { time: lastUpdated.toLocaleTimeString() }) : ""}
+                        </span>
+                        <Button variant="outline" size="small" onClick={() => setRawVisible(true)}>
+                            <FaCode /> {t("metrics.rawData")}
+                        </Button>
+                        <Button size="small" loading={loading} onClick={reload}>
+                            <FaSync /> {t("metrics.refresh")}
+                        </Button>
+                        <div className={styles.autoRefresh}>
+                            <Switch checked={autoRefresh} onChange={(checked) => setAutoRefresh(checked)} size="small" />
+                            <span>{t("metrics.autoRefresh")}</span>
+                        </div>
+                        <Selector
+                            className={styles.intervalSelector}
+                            options={intervalOptions}
+                            value={refreshInterval}
+                            onChange={(value) => setRefreshInterval(Number(value))}
+                            disabled={!autoRefresh}
+                            size="small"
+                        />
+                    </>
+                }
+            >
+                <p className={styles.workerHint}>
+                    <FaInfoCircle />
+                    <span>{t("metrics.workerHint", { instances: snapshot.instanceCount })}</span>
+                </p>
+                {snapshot.degraded ? (
                     <p className={styles.workerHint}>
-                        <FaInfoCircle />
-                        <span>{t("metrics.workerHint", { instances: snapshot.instanceCount })}</span>
+                        <FaExclamationTriangle />
+                        <span>{t("metrics.degradedHint")}</span>
                     </p>
-                    {snapshot.degraded ? (
-                        <p className={styles.workerHint}>
-                            <FaExclamationTriangle />
-                            <span>{t("metrics.degradedHint")}</span>
-                        </p>
-                    ) : null}
-                </div>
-                <div className={styles.headerActions}>
-                    <span className={styles.lastUpdated}>
-                        {lastUpdated ? t("metrics.lastUpdated", { time: lastUpdated.toLocaleTimeString() }) : ""}
-                    </span>
-                    <Button variant="outline" size="small" onClick={() => setRawVisible(true)}>
-                        <FaCode /> {t("metrics.rawData")}
-                    </Button>
-                    <Button size="small" loading={loading} onClick={reload}>
-                        <FaSync /> {t("metrics.refresh")}
-                    </Button>
-                    <div className={styles.autoRefresh}>
-                        <Switch checked={autoRefresh} onChange={(checked) => setAutoRefresh(checked)} size="small" />
-                        <span>{t("metrics.autoRefresh")}</span>
-                    </div>
-                    <Selector
-                        className={styles.intervalSelector}
-                        options={intervalOptions}
-                        value={refreshInterval}
-                        onChange={(value) => setRefreshInterval(Number(value))}
-                        disabled={!autoRefresh}
-                        size="small"
-                    />
-                </div>
-            </div>
+                ) : null}
+            </PageHeader>
 
             {error ? (
                 <div className={styles.errorBanner}>
