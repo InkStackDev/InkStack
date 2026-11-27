@@ -1,23 +1,14 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { encodeId } from "@/utils/HashId.ts";
-import {
-    FaArrowRight,
-    FaBuilding,
-    FaCheckCircle,
-    FaClipboardList,
-    FaClock,
-    FaFlask,
-    FaLock,
-    FaPlus,
-    FaSearch,
-    FaUserFriends,
-} from "react-icons/fa";
+import { FaArrowRight, FaBuilding, FaClipboardList, FaClock, FaFlask, FaPlus, FaSearch, FaUserFriends } from "react-icons/fa";
 import Skeleton from "@/components/skeleton/Skeleton";
 import Button from "@/components/button/Button";
 import SearchBox from "@/components/searchBox/SearchBox";
 import ErrorState from "@/components/errorState/ErrorState";
+import EmptyState from "@/components/emptyState/EmptyState";
+import PageHeader from "@/components/pageHeader/PageHeader";
 import ApplyCreateOrg from "@/components/orgApply/ApplyCreateOrg";
 import styles from "./OrganizationList.module.css";
 import OrganizationService, { type ApplyItem } from "@/services/OrganizationService.ts";
@@ -25,6 +16,7 @@ import RdPlatformService from "@/services/RdPlatformService.ts";
 import AuthRequired from "@/components/auth/AuthRequired";
 import { useAuth } from "@/contexts/AuthContext";
 import { useDebouncedValue } from "@/hooks/UseDebouncedValue";
+import { formatDateTime } from "@/utils/Utils";
 
 type OrganizationFilter = "all" | "active" | "inactive";
 
@@ -35,10 +27,21 @@ interface Organization {
     status: "active" | "inactive";
     description?: string;
     memberCount: number | null;
+    createdAt?: number;
 }
 
 const FILTERS: OrganizationFilter[] = ["all", "active", "inactive"];
 const APPLY_PAGE_SIZE = 20;
+const AVATAR_TONES = 6;
+
+/** 用组织名稳定散列到 6 个色相，让每张卡片有一致的识别色（明暗主题各自适配） */
+const getAvatarTone = (name: string) => {
+    let hash = 0;
+    for (const char of name) {
+        hash = (hash * 31 + (char.codePointAt(0) ?? 0)) % 997;
+    }
+    return hash % AVATAR_TONES;
+};
 
 const OrganizationList: React.FC = () => {
     const navigate = useNavigate();
@@ -88,6 +91,7 @@ const OrganizationList: React.FC = () => {
                     status: Number(item.status) === 1 ? "active" : "inactive",
                     description: item.description,
                     memberCount: typeof item.count === "number" ? item.count : null,
+                    createdAt: item.created_at,
                 }));
                 setOrganizations(mapped);
             })
@@ -235,36 +239,27 @@ const OrganizationList: React.FC = () => {
         setAppliesToken((value) => value + 1);
     };
 
-    const getStatusBadge = (status: Organization["status"]) => {
-        switch (status) {
-            case "active":
-                return (
-                    <span className={`${styles.statusBadge} ${styles.statusActive}`}>
-                        <FaCheckCircle /> {t("list.status.active")}
-                    </span>
-                );
-            case "inactive":
-                return (
-                    <span className={`${styles.statusBadge} ${styles.statusInactive}`}>
-                        <FaLock /> {t("list.status.inactive")}
-                    </span>
-                );
-            default:
-                return null;
-        }
-    };
+    const getStatusBadge = (status: Organization["status"]) => (
+        <span className={`${styles.statusBadge} ${status === "active" ? styles.statusActive : styles.statusInactive}`}>
+            <span className={styles.statusDot} />
+            {t(`list.status.${status}`)}
+        </span>
+    );
 
     return (
         <>
             <div className={styles.mainContent}>
                 <AuthRequired message={t("list.authRequired")}>
                     <>
-                        <div className={styles.pageHeader}>
-                            <div className={styles.pageHeaderTop}>
-                                <h1 className={styles.pageTitle}>
+                        <PageHeader
+                            title={
+                                <>
                                     <FaBuilding /> {t("list.title")}
-                                </h1>
-                                <div className={styles.headerActions}>
+                                </>
+                            }
+                            description={t("list.description")}
+                            actions={
+                                <>
                                     {pendingApply && (
                                         <span
                                             className={styles.pendingBadge}
@@ -283,66 +278,62 @@ const OrganizationList: React.FC = () => {
                                     >
                                         <FaPlus /> {pendingApply ? t("list.applyPending") : t("list.applyCreate")}
                                     </Button>
-                                </div>
+                                </>
+                            }
+                        />
+                        <div className={styles.toolbar}>
+                            <div className={styles.searchWrap}>
+                                <SearchBox
+                                    value={searchInput}
+                                    onChange={handleSearchChange}
+                                    placeholder={t("list.searchPlaceholder")}
+                                    size="small"
+                                />
                             </div>
-                            <div className={styles.toolbar}>
-                                <div className={styles.searchWrap}>
-                                    <SearchBox
-                                        value={searchInput}
-                                        onChange={handleSearchChange}
-                                        placeholder={t("list.searchPlaceholder")}
-                                        size="small"
-                                    />
-                                </div>
-                                <div className={styles.filterBar} role="group" aria-label={t("list.filterLabel")}>
-                                    {FILTERS.map((value) => {
-                                        const active = filter === value;
-                                        return (
-                                            <Button
-                                                key={value}
-                                                className={styles.filterBtn}
-                                                size="small"
-                                                variant={active ? "solid" : "light"}
-                                                color={active ? "primary" : "secondary"}
-                                                aria-pressed={active}
-                                                onClick={() => handleFilterChange(value)}
-                                            >
-                                                {t(`list.filter.${value}`)}
-                                                <span className={active ? styles.filterCountActive : styles.filterCount}>
-                                                    {counts[value]}
-                                                </span>
-                                            </Button>
-                                        );
-                                    })}
-                                </div>
-                                {!loading && !loadFailed && (
-                                    <span className={styles.resultCount}>
-                                        {t("list.total", { value: filteredOrganizations.length })}
-                                    </span>
-                                )}
+                            <div className={styles.filterBar} role="group" aria-label={t("list.filterLabel")}>
+                                {FILTERS.map((value) => {
+                                    const active = filter === value;
+                                    return (
+                                        <Button
+                                            key={value}
+                                            className={styles.filterBtn}
+                                            size="small"
+                                            variant={active ? "solid" : "light"}
+                                            color={active ? "primary" : "secondary"}
+                                            aria-pressed={active}
+                                            onClick={() => handleFilterChange(value)}
+                                        >
+                                            {t(`list.filter.${value}`)}
+                                            <span className={active ? styles.filterCountActive : styles.filterCount}>
+                                                {counts[value]}
+                                            </span>
+                                        </Button>
+                                    );
+                                })}
                             </div>
+                            {!loading && !loadFailed && (
+                                <span className={styles.resultCount}>{t("list.total", { value: filteredOrganizations.length })}</span>
+                            )}
                         </div>
 
                         {loading ? (
-                            <div className={styles.grid}>
-                                {/* 骨架屏加载状态 */}
+                            <div className={styles.grid} aria-hidden="true">
                                 {Array.from({ length: 6 }).map((_, index) => (
-                                    <div key={index} className={styles.card}>
-                                        <div className={styles.cardHeader}>
-                                            <Skeleton variant="rectangular" width={100} height={24} style={{ borderRadius: "6px" }} />
-                                            <Skeleton variant="rounded" width={80} height={24} style={{ borderRadius: "30px" }} />
+                                    <div key={index} className={`${styles.card} ${styles.skeletonCard}`}>
+                                        <div className={styles.cardTop}>
+                                            <Skeleton variant="circular" width={44} height={44} />
+                                            <div className={styles.cardHeadText}>
+                                                <Skeleton variant="text" width="65%" height={20} />
+                                                <Skeleton variant="text" width="45%" height={14} style={{ marginTop: 8 }} />
+                                            </div>
+                                            <Skeleton variant="rounded" width={64} height={22} style={{ borderRadius: 999 }} />
                                         </div>
-
-                                        <div style={{ margin: "1rem 0" }}>
-                                            <Skeleton variant="text" width="80%" height={28} style={{ marginBottom: "0.5rem" }} />
+                                        <div className={styles.skeletonBody}>
                                             <Skeleton variant="text" lines={2} />
                                         </div>
-
                                         <div className={styles.cardFooter}>
-                                            <div style={{ width: "120px" }}>
-                                                <Skeleton variant="text" width="100%" />
-                                            </div>
-                                            <Skeleton variant="rectangular" width={100} height={36} style={{ borderRadius: "8px" }} />
+                                            <Skeleton variant="text" width={90} height={12} />
+                                            <Skeleton variant="rounded" width={92} height={30} style={{ borderRadius: 8 }} />
                                         </div>
                                     </div>
                                 ))}
@@ -359,69 +350,87 @@ const OrganizationList: React.FC = () => {
                             <ul className={styles.grid}>
                                 {filteredOrganizations.map((org) => (
                                     <li key={org.id} className={styles.card}>
-                                        <div className={styles.cardHeader}>
-                                            <span className={styles.courseBadge}>{org.type}</span>
+                                        <div className={styles.cardTop}>
+                                            <span
+                                                className={`${styles.orgAvatar} ${styles[`avatarTone${getAvatarTone(org.name)}`]}`}
+                                                aria-hidden="true"
+                                            >
+                                                {org.name.trim().charAt(0).toUpperCase()}
+                                            </span>
+                                            <div className={styles.cardHeadText}>
+                                                <h2 className={styles.cardTitle}>
+                                                    <Link
+                                                        to={`/organization/detail/${encodeId(org.id, "organization")}`}
+                                                        className={styles.cardLink}
+                                                    >
+                                                        {org.name}
+                                                    </Link>
+                                                </h2>
+                                                <div className={styles.cardMeta}>
+                                                    <span className={styles.typeTag}>{org.type}</span>
+                                                    {org.memberCount !== null && (
+                                                        <span className={styles.metaItem}>
+                                                            <FaUserFriends />
+                                                            {t("list.memberCount", { value: org.memberCount })}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
                                             {getStatusBadge(org.status)}
                                         </div>
 
-                                        <h2 className={styles.cardTitle}>{org.name}</h2>
-                                        <p className={styles.cardDesc}>{org.description}</p>
+                                        {org.description && <p className={styles.cardDesc}>{org.description}</p>}
 
-                                        <div
-                                            className={`${styles.cardFooter} ${org.memberCount === null ? styles.cardFooterEnd : ""}`}
-                                        >
-                                            {org.memberCount !== null && (
-                                                <div className={styles.cardMetric}>
-                                                    <FaUserFriends />
-                                                    {t("list.memberCount", { value: org.memberCount })}
-                                                </div>
+                                        <div className={styles.cardFooter}>
+                                            {org.createdAt ? (
+                                                <span className={styles.createdAt}>
+                                                    {t("list.createdAt", {
+                                                        date: formatDateTime(org.createdAt).slice(0, 10),
+                                                    })}
+                                                </span>
+                                            ) : (
+                                                <span className={styles.createdAt} />
                                             )}
                                             <div className={styles.cardActions}>
                                                 {rdOrgIds.has(org.id) && (
                                                     <Button
+                                                        className={styles.rdBtn}
                                                         size="small"
                                                         variant="light"
                                                         color="secondary"
+                                                        aria-label={t("list.rd")}
+                                                        title={t("list.rd")}
                                                         onClick={() => navigate(`/rd?org=${encodeId(org.id, "organization")}`)}
                                                     >
                                                         <FaFlask />
-                                                        {t("list.rd")}
+                                                        <span className={styles.rdLabel}>{t("list.rd")}</span>
                                                     </Button>
                                                 )}
-                                                <Button
-                                                    size="small"
-                                                    onClick={() =>
-                                                        navigate(`/organization/detail/${encodeId(org.id, "organization")}`)
-                                                    }
-                                                >
+                                                <span className={styles.cardCta} aria-hidden="true">
                                                     {t("list.viewDetail")}
                                                     <FaArrowRight />
-                                                </Button>
+                                                </span>
                                             </div>
                                         </div>
                                     </li>
                                 ))}
                             </ul>
                         ) : organizations.length === 0 ? (
-                            <div className={styles.emptyState}>
-                                <FaClipboardList className={styles.emptyIcon} />
-                                <h2 className={styles.emptyText}>{t("list.empty.title")}</h2>
-                                <p className={styles.emptySubtext}>{t("list.empty.subtitle")}</p>
-                                {!pendingApply && (
-                                    <Button className={styles.emptyAction} onClick={() => setApplyVisible(true)}>
-                                        <FaPlus /> {t("list.applyCreate")}
-                                    </Button>
-                                )}
-                            </div>
+                            <EmptyState
+                                icon={<FaClipboardList />}
+                                title={t("list.empty.title")}
+                                description={t("list.empty.subtitle")}
+                                actionText={pendingApply ? undefined : t("list.applyCreate")}
+                                onAction={pendingApply ? undefined : () => setApplyVisible(true)}
+                            />
                         ) : (
-                            <div className={styles.emptyState}>
-                                <FaSearch className={styles.emptyIcon} />
-                                <h2 className={styles.emptyText}>{t("list.emptyFiltered.title")}</h2>
-                                <p className={styles.emptySubtext}>{t("list.emptyFiltered.subtitle")}</p>
-                                <Button className={styles.emptyAction} variant="light" color="secondary" onClick={handleClearFilters}>
-                                    {t("list.clearFilter")}
-                                </Button>
-                            </div>
+                            <EmptyState
+                                icon={<FaSearch />}
+                                title={t("list.emptyFiltered.title")}
+                                description={t("list.emptyFiltered.subtitle")}
+                                actionText={t("list.clearFilter")}
+                                onAction={handleClearFilters}
+                            />
                         )}
                     </>
                 </AuthRequired>

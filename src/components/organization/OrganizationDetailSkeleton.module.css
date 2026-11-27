@@ -1,213 +1,207 @@
-@keyframes pulse {
-    0% {
-        opacity: 0.6;
-    }
-    50% {
-        opacity: 1;
-    }
-    100% {
-        opacity: 0.6;
-    }
-}
-
 .wrapper {
-    padding: 2rem;
-    max-width: 1560px;
-    margin: 0 auto;
-    width: 100%;
-    min-height: 60vh;
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
+    display: block;
 }
 
 .block {
-    background-color: var(--bg-secondary, #f0f0f0);
-    border-radius: 6px;
-    animation: pulse 1.5s ease-in-out infinite;
+    background: var(--bg-tertiary);
+    border-radius: var(--radius-sm);
+    animation: skeletonPulse 1.4s ease-in-out infinite;
 }
 
-/* Top area */
-.topArea {
-    margin-bottom: 1.5rem;
+@keyframes skeletonPulse {
+    0%,
+    100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.55;
+    }
 }
 
-.backPlaceholder {
-    height: 36px;
-    width: 100px;
-    margin-bottom: 1.5rem;
-    composes: block;
-}
-
-.headerRow {
+/* 顶部返回 / 操作按钮 */
+.heroTop {
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    justify-content: space-between;
+    gap: var(--space-3);
+    margin-bottom: var(--space-4);
 }
 
-.titleGroup {
-    flex: 1;
+.back {
+    width: 86px;
+    height: 18px;
 }
 
-.titleLine {
+.action {
+    width: 108px;
     height: 32px;
-    width: 40%;
-    margin-bottom: 0.5rem;
-    composes: block;
+    border-radius: var(--radius-sm);
 }
 
-.subtitleLine {
-    height: 20px;
-    width: 25%;
-    composes: block;
-}
-
-.badgeGroup {
+/* Hero */
+.heroMain {
     display: flex;
-    gap: 0.5rem;
+    align-items: flex-start;
+    gap: var(--space-4);
 }
 
-.badge {
-    height: 28px;
-    width: 80px;
-    composes: block;
+.avatar {
+    flex: 0 0 64px;
+    width: 64px;
+    height: 64px;
+    border-radius: var(--radius-xl);
 }
 
-.badgeWide {
-    height: 28px;
-    width: 100px;
-    composes: block;
-}
-
-/* Description */
-.descBlock {
-    height: 60px;
-    border-radius: 8px;
-    margin-bottom: 2rem;
-    composes: block;
-}
-
-/* Stats grid */
-.statGrid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
-    margin-bottom: 2rem;
-}
-
-.statCard {
-    border-radius: 8px;
-    padding: 1.5rem;
-    height: 100px;
-    composes: block;
-}
-
-/* Table header */
-.tableSection {
-    margin-bottom: 1rem;
-}
-
-.tableTopBar {
+.heroBody {
+    flex: 1;
+    min-width: 0;
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1rem;
+    flex-direction: column;
+    gap: var(--space-2);
 }
 
-.tableTitle {
+.title {
+    width: min(320px, 55%);
+    height: 28px;
+}
+
+.desc {
+    width: 100%;
+    max-width: 620px;
+    height: 14px;
+}
+
+.meta {
+    width: 160px;
     height: 24px;
-    width: 100px;
-    composes: block;
+    border-radius: var(--radius-pill);
 }
 
-.tableCount {
-    height: 20px;
-    width: 80px;
-    composes: block;
+/* 统计条 */
+.statsRow {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: var(--space-3);
+    margin: var(--space-5) 0;
 }
 
-.tableHeaderRow {
+.stat {
+    height: 62px;
+    border-radius: var(--radius-lg);
+}
+
+/* 面板 */
+.panel {
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-xl);
+    background: var(--surface-chrome);
+    overflow: hidden;
+}
+
+.panelHead {
     display: flex;
-    gap: 1rem;
-    padding: 1rem;
-    border-radius: 8px;
-    margin-bottom: 1rem;
-    height: 40px;
-    composes: block;
-}
-
-.tableHeaderCol {
-    height: 16px;
-    background-color: var(--bg-tertiary, #e0e0e0);
-    border-radius: 4px;
-    animation: pulse 1.5s ease-in-out infinite;
-}
-
-.tableHeaderCol:first-child {
-    flex: 2;
-}
-
-.tableHeaderCol:not(:first-child) {
-    flex: 1;
-}
-
-/* Table rows */
-.tableRow {
-    display: flex;
-    gap: 1rem;
-    padding: 1rem;
-    border-radius: 8px;
-    margin-bottom: 0.5rem;
-    height: 60px;
-    composes: block;
-}
-
-.tableCol {
-    background-color: var(--bg-tertiary, #e0e0e0);
-    border-radius: 4px;
-    animation: pulse 1.5s ease-in-out infinite;
-}
-
-.tableCol:first-child {
-    flex: 2;
-    height: 32px;
-    border-radius: 16px;
-}
-
-.tableCol:not(:first-child) {
-    flex: 1;
-    height: 16px;
-}
-
-/* Pagination */
-.pagination {
-    display: flex;
-    justify-content: space-between;
     align-items: center;
-    padding: 1rem 0;
+    justify-content: space-between;
+    gap: var(--space-3);
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--border-primary);
+}
+
+.tabs {
+    width: 320px;
+    max-width: 60%;
+    height: 34px;
+    border-radius: var(--radius-pill);
+}
+
+.panelAction {
+    width: 92px;
+    height: 30px;
+}
+
+.row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr 1fr;
+    gap: var(--space-4);
+    align-items: center;
+    padding: 14px var(--space-5);
+    border-bottom: 1px solid var(--border-primary);
+}
+
+.cellUser {
+    height: 16px;
+    width: 70%;
+}
+
+.cell {
+    height: 12px;
+    width: 56%;
+    justify-self: center;
+}
+
+.paginationRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px var(--space-5);
 }
 
 .paginationInfo {
-    height: 18px;
-    width: 120px;
-    composes: block;
-}
-
-.paginationBtns {
-    display: flex;
-    gap: 0.5rem;
+    width: 90px;
+    height: 12px;
 }
 
 .paginationBtn {
-    height: 32px;
-    border-radius: 6px;
-    composes: block;
+    width: 140px;
+    height: 28px;
+    border-radius: var(--radius-sm);
 }
 
-.paginationBtnSmall {
-    width: 32px;
+@media (max-width: 1280px) {
+    .statsRow {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
 }
 
-.paginationBtnLarge {
-    width: 70px;
+@media (max-width: 768px) {
+    .avatar {
+        flex-basis: 48px;
+        width: 48px;
+        height: 48px;
+    }
+
+    .title {
+        width: min(240px, 70%);
+        height: 22px;
+    }
+
+    .statsRow {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .row {
+        grid-template-columns: 1fr 1fr;
+        gap: var(--space-2) var(--space-4);
+        padding: 12px var(--space-3);
+    }
+
+    .cellUser {
+        grid-column: 1 / -1;
+        width: 50%;
+    }
+
+    .cell {
+        justify-self: start;
+        width: 64%;
+    }
+
+    .paginationRow {
+        padding: 12px var(--space-3);
+    }
+}
+
+@media (max-width: 480px) {
+    .statsRow {
+        grid-template-columns: 1fr;
+    }
 }

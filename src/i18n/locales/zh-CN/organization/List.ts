@@ -1,6 +1,7 @@
 const section = {
     authRequired: "您需要登录后才能查看和管理组织列表。",
     title: "组织列表",
+    description: "浏览全部组织，查看详情或申请创建新的组织。",
     applyCreate: "申请创建组织",
     searchPlaceholder: "搜索组织名称、类型或描述",
     filterLabel: "按状态筛选组织",
@@ -19,7 +20,8 @@ const section = {
         active: "正常",
         inactive: "停用",
     },
-    memberCount: "{{value}} 成员",
+    memberCount: "{value} 成员",
+    createdAt: "创建于 {{date}}",
     rd: "研发",
     viewDetail: "查看详情",
     error: {

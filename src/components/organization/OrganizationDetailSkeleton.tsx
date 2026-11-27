@@ -3,64 +3,44 @@ import styles from "./OrganizationDetailSkeleton.module.css";
 
 const OrganizationDetailSkeleton: React.FC = () => {
     return (
-        <div className={styles.wrapper}>
-            {/* 顶部区域骨架 */}
-            <div className={styles.topArea}>
-                <div className={styles.backPlaceholder} />
-                <div className={styles.headerRow}>
-                    <div className={styles.titleGroup}>
-                        <div className={styles.titleLine} />
-                        <div className={styles.subtitleLine} />
-                    </div>
-                    <div className={styles.badgeGroup}>
-                        <div className={styles.badge} />
-                        <div className={styles.badgeWide} />
-                    </div>
+        <div className={styles.wrapper} aria-hidden="true">
+            <div className={styles.heroTop}>
+                <div className={`${styles.block} ${styles.back}`} />
+                <div className={`${styles.block} ${styles.action}`} />
+            </div>
+
+            <div className={styles.heroMain}>
+                <div className={`${styles.block} ${styles.avatar}`} />
+                <div className={styles.heroBody}>
+                    <div className={`${styles.block} ${styles.title}`} />
+                    <div className={`${styles.block} ${styles.desc}`} />
+                    <div className={`${styles.block} ${styles.meta}`} />
                 </div>
             </div>
 
-            {/* 描述区域骨架 */}
-            <div className={styles.descBlock} />
-
-            {/* 统计卡片区域骨架 */}
-            <div className={styles.statGrid}>
-                {[...Array(4)].map((_, i) => (
-                    <div key={i} className={styles.statCard} />
+            <div className={styles.statsRow}>
+                {Array.from({ length: 5 }).map((_, index) => (
+                    <div key={index} className={`${styles.block} ${styles.stat}`} />
                 ))}
             </div>
 
-            {/* 成员列表骨架 */}
-            <div className={styles.tableSection}>
-                <div className={styles.tableTopBar}>
-                    <div className={styles.tableTitle} />
-                    <div className={styles.tableCount} />
+            <div className={styles.panel}>
+                <div className={styles.panelHead}>
+                    <div className={`${styles.block} ${styles.tabs}`} />
+                    <div className={`${styles.block} ${styles.panelAction}`} />
                 </div>
-
-                {/* 表格头部 */}
-                <div className={styles.tableHeaderRow}>
-                    {[...Array(5)].map((_, i) => (
-                        <div key={i} className={styles.tableHeaderCol} />
-                    ))}
-                </div>
-
-                {/* 表格行 */}
-                {[...Array(5)].map((_, i) => (
-                    <div key={i} className={styles.tableRow}>
-                        {[...Array(5)].map((_, j) => (
-                            <div key={j} className={styles.tableCol} />
-                        ))}
+                {Array.from({ length: 5 }).map((_, index) => (
+                    <div key={index} className={styles.row}>
+                        <div className={`${styles.block} ${styles.cellUser}`} />
+                        <div className={`${styles.block} ${styles.cell}`} />
+                        <div className={`${styles.block} ${styles.cell}`} />
+                        <div className={`${styles.block} ${styles.cell}`} />
+                        <div className={`${styles.block} ${styles.cell}`} />
                     </div>
                 ))}
-            </div>
-
-            {/* 分页骨架 */}
-            <div className={styles.pagination}>
-                <div className={styles.paginationInfo} />
-                <div className={styles.paginationBtns}>
-                    <div className={`${styles.paginationBtn} ${styles.paginationBtnLarge}`} />
-                    <div className={`${styles.paginationBtn} ${styles.paginationBtnSmall}`} />
-                    <div className={`${styles.paginationBtn} ${styles.paginationBtnSmall}`} />
-                    <div className={`${styles.paginationBtn} ${styles.paginationBtnLarge}`} />
+                <div className={styles.paginationRow}>
+                    <div className={`${styles.block} ${styles.paginationInfo}`} />
+                    <div className={`${styles.block} ${styles.paginationBtn}`} />
                 </div>
             </div>
         </div>

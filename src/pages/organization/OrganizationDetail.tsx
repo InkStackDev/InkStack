@@ -928,80 +928,75 @@ const OrganizationDetail: React.FC = () => {
                             onAction={() => setReloadKey((value) => value + 1)}
                         />
                     ) : (
-                        <div className={styles.detailCard}>
-                            {org && (
-                                <>
-                                    <OrganizationInfo
-                                        org={org}
-                                        stats={stats}
-                                        repoCount={repoCount}
-                                        onJoin={handleJoin}
-                                        onLeave={handleLeaveOrganization}
-                                        onToggleStatus={handleToggleOrganizationStatus}
-                                        onDelete={handleDeleteOrganization}
-                                    />
+                        <>
+                            <OrganizationInfo
+                                org={org}
+                                stats={stats}
+                                repoCount={repoCount}
+                                onJoin={handleJoin}
+                                onLeave={handleLeaveOrganization}
+                                onToggleStatus={handleToggleOrganizationStatus}
+                                onDelete={handleDeleteOrganization}
+                            />
 
-                                    <OrganizationTabs
-                                        org={org}
-                                        userRole={userRole}
-                                        currentUser={currentUser}
-                                        showPendingRequests={showPendingRequests}
-                                        showTasks={showTasks}
-                                        showRepos={showRepos}
-                                        members={members}
-                                        membersTotal={membersTotal}
-                                        page={page}
-                                        isRefreshing={isRefreshing}
-                                        pendingRequests={pendingRequests}
-                                        pendingRequestsTotal={pendingRequestsTotal}
-                                        pendingRequestsPage={pendingRequestsPage}
-                                        pendingRequestsLoading={pendingRequestsLoading}
-                                        tasks={tasks}
-                                        tasksTotal={tasksTotal}
-                                        tasksPage={tasksPage}
-                                        tasksLoading={tasksLoading}
-                                        roleModalVisible={roleModalVisible}
-                                        taskPreviewModalVisible={taskPreviewModalVisible}
-                                        memberPreviewModalVisible={memberPreviewModalVisible}
-                                        selectedMember={selectedMember}
-                                        selectedRole={selectedRole}
-                                        getAvailableRoleOptions={getAvailableRoleOptions}
-                                        onTabChange={(showPending, showTasks, showRepo) => {
-                                            setShowPendingRequests(showPending);
-                                            setShowTasks(showTasks);
-                                            setShowRepos(showRepo ?? false);
-                                            const tab = showRepo ? "repos" : showTasks ? "tasks" : showPending ? "pending" : "members";
-                                            setSearchParams({ tab }, { replace: true });
-                                        }}
-                                        onRefreshMembers={() => setRefreshTrigger((prev) => prev + 1)}
-                                        onRefreshPending={() => setPendingRequestsRefreshTrigger((prev) => prev + 1)}
-                                        onPageChange={setPage}
-                                        onPendingPageChange={setPendingRequestsPage}
-                                        onTasksPageChange={handleTasksPageChange}
-                                        onActionPendingRequest={handleActionPendingRequest}
-                                        onKickMember={handleKickMember}
-                                        onSetMemberRole={handleSetMemberRole}
-                                        onRoleModalClose={() => setRoleModalVisible(false)}
-                                        onTaskPreviewModalClose={() => setTaskPreviewModalVisible(false)}
-                                        onMemberPreviewModalClose={() => setMemberPreviewModalVisible(false)}
-                                        onViewMember={handleViewMember}
-                                        onRoleChange={setSelectedRole}
-                                        onConfirmRole={handleConfirmRole}
-                                        onCreateTask={handleCreateTask}
-                                        onRefreshTasks={(page) => fetchTasksList(page || 1)}
-                                        onEditTask={handleEditTask}
-                                        onViewTask={handleViewTask}
-                                        onDeleteTask={handleDeleteTask}
-                                        canManageMember={canManageMember}
-                                        canSetRole={canSetRole}
-                                        canManageTask={canManageTask}
-                                        onReposChange={(delta) => setRepoCount((prev) => Math.max(0, prev + delta))}
-                                        selectedTask={selectedTask}
-                                    />
-                                    {/* 申请加入按钮已移至header最右侧 */}
-                                </>
-                            )}
-                        </div>
+                            <OrganizationTabs
+                                org={org}
+                                userRole={userRole}
+                                currentUser={currentUser}
+                                showPendingRequests={showPendingRequests}
+                                showTasks={showTasks}
+                                showRepos={showRepos}
+                                members={members}
+                                membersTotal={membersTotal}
+                                page={page}
+                                isRefreshing={isRefreshing}
+                                pendingRequests={pendingRequests}
+                                pendingRequestsTotal={pendingRequestsTotal}
+                                pendingRequestsPage={pendingRequestsPage}
+                                pendingRequestsLoading={pendingRequestsLoading}
+                                tasks={tasks}
+                                tasksTotal={tasksTotal}
+                                tasksPage={tasksPage}
+                                tasksLoading={tasksLoading}
+                                roleModalVisible={roleModalVisible}
+                                taskPreviewModalVisible={taskPreviewModalVisible}
+                                memberPreviewModalVisible={memberPreviewModalVisible}
+                                selectedMember={selectedMember}
+                                selectedRole={selectedRole}
+                                getAvailableRoleOptions={getAvailableRoleOptions}
+                                onTabChange={(showPending, showTasks, showRepo) => {
+                                    setShowPendingRequests(showPending);
+                                    setShowTasks(showTasks);
+                                    setShowRepos(showRepo ?? false);
+                                    const tab = showRepo ? "repos" : showTasks ? "tasks" : showPending ? "pending" : "members";
+                                    setSearchParams({ tab }, { replace: true });
+                                }}
+                                onRefreshMembers={() => setRefreshTrigger((prev) => prev + 1)}
+                                onRefreshPending={() => setPendingRequestsRefreshTrigger((prev) => prev + 1)}
+                                onPageChange={setPage}
+                                onPendingPageChange={setPendingRequestsPage}
+                                onTasksPageChange={handleTasksPageChange}
+                                onActionPendingRequest={handleActionPendingRequest}
+                                onKickMember={handleKickMember}
+                                onSetMemberRole={handleSetMemberRole}
+                                onRoleModalClose={() => setRoleModalVisible(false)}
+                                onTaskPreviewModalClose={() => setTaskPreviewModalVisible(false)}
+                                onMemberPreviewModalClose={() => setMemberPreviewModalVisible(false)}
+                                onViewMember={handleViewMember}
+                                onRoleChange={setSelectedRole}
+                                onConfirmRole={handleConfirmRole}
+                                onCreateTask={handleCreateTask}
+                                onRefreshTasks={(page) => fetchTasksList(page || 1)}
+                                onEditTask={handleEditTask}
+                                onViewTask={handleViewTask}
+                                onDeleteTask={handleDeleteTask}
+                                canManageMember={canManageMember}
+                                canSetRole={canSetRole}
+                                canManageTask={canManageTask}
+                                onReposChange={(delta) => setRepoCount((prev) => Math.max(0, prev + delta))}
+                                selectedTask={selectedTask}
+                            />
+                        </>
                     )}
                 </AuthRequired>
             </div>

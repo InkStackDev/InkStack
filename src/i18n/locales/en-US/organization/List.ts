@@ -1,6 +1,7 @@
 const section = {
     authRequired: "You need to sign in to view and manage organizations.",
     title: "Organizations",
+    description: "Browse all organizations, view details, or apply to create a new one.",
     applyCreate: "Apply to Create",
     searchPlaceholder: "Search by name, type, or description",
     filterLabel: "Filter organizations by status",
@@ -19,7 +20,8 @@ const section = {
         active: "Active",
         inactive: "Inactive",
     },
-    memberCount: "{{value}} members",
+    memberCount: "{value} members",
+    createdAt: "Created {{date}}",
     rd: "R&D",
     viewDetail: "View Details",
     error: {

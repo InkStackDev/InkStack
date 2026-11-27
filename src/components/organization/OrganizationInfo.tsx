@@ -18,7 +18,6 @@ import {
     FaChevronDown,
 } from "react-icons/fa";
 import Button from "@/components/button/Button";
-import Avatar from "@/components/avatar/Avatar";
 import type { OrganizationDetail, MemberStats } from "@/types/Organization.ts";
 import { OrgMembershipStatus } from "@/types/Enums.ts";
 import { useEnumLabels } from "@/i18n/UseEnumLabels";
@@ -79,107 +78,78 @@ const OrganizationInfo: React.FC<OrganizationInfoProps> = ({ org, stats, repoCou
 
     return (
         <>
-            <div className={styles.cardHeader}>
-                <button className={styles.backBtn} onClick={() => navigate(-1)}>
-                    <FaArrowLeft /> {t("info.back")}
-                </button>
-                <div className={styles.headerContent}>
-                    <div className={styles.titleGroup}>
-                        <h1 className={styles.pageTitle}>
-                            <FaBuilding /> {org.name}
-                        </h1>
-                        <span className={styles.orgType}>{org.type}</span>
-                    </div>
-                    <div className={styles.headerRight}>
-                        <span className={org.status === "active" ? styles.statusActive : styles.statusInactive}>
-                            {org.status === "active" ? <FaCheckCircle /> : <FaLock />}
-                            {org.status === "active" ? t("info.status.active") : t("info.status.inactive")}
-                        </span>
+            <div className={styles.hero}>
+                <div className={styles.heroTop}>
+                    <button type="button" className={styles.backBtn} onClick={() => navigate(-1)}>
+                        <FaArrowLeft /> {t("info.back")}
+                    </button>
+                    <div className={styles.heroActions}>
                         {org.is_owner ? (
-                            <>
-                                <span className={styles.ownerBadge}>
-                                    <FaCrown /> {t("info.owner")}
-                                </span>
-                                <div className={styles.headerActions}>
-                                    <div className={styles.moreMenuWrapper} ref={moreRef}>
-                                        <Button
-                                            variant="light"
-                                            color="secondary"
-                                            size="small"
-                                            loading={busy === "status" || busy === "delete"}
-                                            onClick={() => setMoreOpen((open) => !open)}
-                                            aria-haspopup="menu"
-                                            aria-expanded={moreOpen}
+                            <div className={styles.moreMenuWrapper} ref={moreRef}>
+                                <Button
+                                    variant="light"
+                                    color="secondary"
+                                    size="small"
+                                    loading={busy === "status" || busy === "delete"}
+                                    onClick={() => setMoreOpen((open) => !open)}
+                                    aria-haspopup="menu"
+                                    aria-expanded={moreOpen}
+                                >
+                                    {t("info.more")} <FaChevronDown />
+                                </Button>
+                                {moreOpen && (
+                                    <div className={styles.moreMenu} role="menu">
+                                        <button
+                                            type="button"
+                                            role="menuitem"
+                                            className={org.status === "active" ? styles.moreMenuWarning : styles.moreMenuSuccess}
+                                            disabled={busy !== null}
+                                            onClick={() => {
+                                                setMoreOpen(false);
+                                                void runAction("status", onToggleStatus);
+                                            }}
                                         >
-                                            {t("info.more")} <FaChevronDown />
-                                        </Button>
-                                        {moreOpen && (
-                                            <div className={styles.moreMenu} role="menu">
-                                                <button
-                                                    type="button"
-                                                    role="menuitem"
-                                                    className={
-                                                        org.status === "active" ? styles.moreMenuWarning : styles.moreMenuSuccess
-                                                    }
-                                                    disabled={busy !== null}
-                                                    onClick={() => {
-                                                        setMoreOpen(false);
-                                                        void runAction("status", onToggleStatus);
-                                                    }}
-                                                >
-                                                    {org.status === "active" ? <FaPowerOff /> : <FaCheckCircle />}
-                                                    {org.status === "active" ? t("info.disable") : t("info.enable")}
-                                                </button>
-                                                <div className={styles.moreMenuDivider} />
-                                                <button
-                                                    type="button"
-                                                    role="menuitem"
-                                                    className={styles.moreMenuDanger}
-                                                    disabled={busy !== null}
-                                                    onClick={() => {
-                                                        setMoreOpen(false);
-                                                        void runAction("delete", onDelete);
-                                                    }}
-                                                >
-                                                    <FaTrash /> {t("info.delete")}
-                                                </button>
-                                            </div>
-                                        )}
+                                            {org.status === "active" ? <FaPowerOff /> : <FaCheckCircle />}
+                                            {org.status === "active" ? t("info.disable") : t("info.enable")}
+                                        </button>
+                                        <div className={styles.moreMenuDivider} />
+                                        <button
+                                            type="button"
+                                            role="menuitem"
+                                            className={styles.moreMenuDanger}
+                                            disabled={busy !== null}
+                                            onClick={() => {
+                                                setMoreOpen(false);
+                                                void runAction("delete", onDelete);
+                                            }}
+                                        >
+                                            <FaTrash /> {t("info.delete")}
+                                        </button>
                                     </div>
-                                </div>
-                            </>
+                                )}
+                            </div>
                         ) : org.user_in_org === OrgMembershipStatus.JOINED ? (
-                            <>
-                                <span className={styles.joined}>{enums.orgMembershipStatus[org.user_in_org]}</span>
-                                <div className={styles.headerActions}>
-                                    <Button
-                                        variant="light"
-                                        color="error"
-                                        size="small"
-                                        loading={busy === "leave"}
-                                        disabled={busy !== null && busy !== "leave"}
-                                        onClick={() => void runAction("leave", onLeave)}
-                                    >
-                                        <FaSignOutAlt /> {t("info.leave")}
-                                    </Button>
-                                </div>
-                            </>
+                            <Button
+                                variant="light"
+                                color="error"
+                                size="small"
+                                loading={busy === "leave"}
+                                disabled={busy !== null && busy !== "leave"}
+                                onClick={() => void runAction("leave", onLeave)}
+                            >
+                                <FaSignOutAlt /> {t("info.leave")}
+                            </Button>
                         ) : org.user_in_org === OrgMembershipStatus.PENDING ? (
-                            <>
-                                <span className={styles.joined}>{enums.orgMembershipStatus[org.user_in_org]}</span>
-                                <div className={styles.headerActions}>
-                                    <Button
-                                        variant="light"
-                                        color="warning"
-                                        size="small"
-                                        loading={busy === "leave"}
-                                        disabled={busy !== null && busy !== "leave"}
-                                        onClick={() => void runAction("leave", onLeave)}
-                                    >
-                                        <FaSignOutAlt /> {t("info.cancelApply")}
-                                    </Button>
-                                </div>
-                            </>
+                            <Button
+                                variant="light"
+                                color="warning"
+                                size="small"
+                                loading={busy === "leave"}
+                                disabled={busy !== null && busy !== "leave"}
+                                onClick={() => void runAction("leave", onLeave)}
+                            >
+                                <FaSignOutAlt /> {t("info.cancelApply")}
+                            </Button>
                         ) : (
                             <button
                                 className={styles.joinBtn}
@@ -187,58 +157,86 @@ const OrganizationInfo: React.FC<OrganizationInfoProps> = ({ org, stats, repoCou
                                 disabled={org.status !== "active"}
                                 title={org.status !== "active" ? t("info.joinDisabled") : ""}
                             >
-                                <FaPlus /> {org.user_in_org === OrgMembershipStatus.LEFT ? t("info.rejoin") : t("info.applyJoin")}
+                                <FaPlus />
+                                {org.user_in_org === OrgMembershipStatus.LEFT ? t("info.rejoin") : t("info.applyJoin")}
                             </button>
                         )}
                     </div>
                 </div>
+
+                <div className={styles.heroMain}>
+                    <div className={styles.heroAvatar} aria-hidden="true">
+                        <FaBuilding />
+                    </div>
+                    <div className={styles.heroBody}>
+                        <div className={styles.heroTitleRow}>
+                            <h1 className={styles.heroTitle}>{org.name}</h1>
+                            <span className={styles.orgType}>{org.type}</span>
+                            <span className={org.status === "active" ? styles.statusActive : styles.statusInactive}>
+                                {org.status === "active" ? <FaCheckCircle /> : <FaLock />}
+                                {org.status === "active" ? t("info.status.active") : t("info.status.inactive")}
+                            </span>
+                            {org.is_owner && (
+                                <span className={styles.ownerBadge}>
+                                    <FaCrown /> {t("info.owner")}
+                                </span>
+                            )}
+                            {!org.is_owner &&
+                                (org.user_in_org === OrgMembershipStatus.JOINED ||
+                                    org.user_in_org === OrgMembershipStatus.PENDING) && (
+                                    <span className={styles.joined}>{enums.orgMembershipStatus[org.user_in_org]}</span>
+                                )}
+                        </div>
+                        {org.description && <p className={styles.heroDescription}>{org.description}</p>}
+                    </div>
+                </div>
             </div>
-            <div className={styles.description}>{org.description}</div>
 
-            {org.owner_name && (
-                <div className={styles.ownerRow}>
-                    <span className={styles.ownerLabel}>{t("info.owner")}</span>
-                    <Avatar src={org.owner_avatar} name={org.owner_name} size={28} />
-                    <span>{org.owner_name}</span>
-                </div>
-            )}
-
-            {/* 统计卡片 */}
-            <div className={styles.statsContainer}>
-                <div className={styles.statCard}>
-                    <div className={`${styles.statIcon} ${styles.primary}`}>
+            <div className={styles.statsRow}>
+                <div className={styles.statItem}>
+                    <span className={`${styles.statIcon} ${styles.primary}`} aria-hidden="true">
                         <FaUserFriends />
-                    </div>
-                    <div className={styles.statValue}>{stats.totalMembers}</div>
-                    <div className={styles.statLabel}>{t("info.stats.totalMembers")}</div>
+                    </span>
+                    <span className={styles.statText}>
+                        <span className={styles.statValue}>{stats.totalMembers}</span>
+                        <span className={styles.statLabel}>{t("info.stats.totalMembers")}</span>
+                    </span>
                 </div>
-                <div className={styles.statCard}>
-                    <div className={`${styles.statIcon} ${styles.success}`}>
+                <div className={styles.statItem}>
+                    <span className={`${styles.statIcon} ${styles.success}`} aria-hidden="true">
                         <FaCheckCircle />
-                    </div>
-                    <div className={styles.statValue}>{stats.activeMembers}</div>
-                    <div className={styles.statLabel}>{t("info.stats.activeMembers")}</div>
+                    </span>
+                    <span className={styles.statText}>
+                        <span className={styles.statValue}>{stats.activeMembers}</span>
+                        <span className={styles.statLabel}>{t("info.stats.activeMembers")}</span>
+                    </span>
                 </div>
-                <div className={styles.statCard}>
-                    <div className={`${styles.statIcon} ${styles.warning}`}>
+                <div className={styles.statItem}>
+                    <span className={`${styles.statIcon} ${styles.warning}`} aria-hidden="true">
                         <FaUser />
-                    </div>
-                    <div className={styles.statValue}>{stats.orgAdminMembers}</div>
-                    <div className={styles.statLabel}>{t("info.stats.orgAdmins")}</div>
+                    </span>
+                    <span className={styles.statText}>
+                        <span className={styles.statValue}>{stats.orgAdminMembers}</span>
+                        <span className={styles.statLabel}>{t("info.stats.orgAdmins")}</span>
+                    </span>
                 </div>
-                <div className={styles.statCard}>
-                    <div className={`${styles.statIcon} ${styles.error}`}>
+                <div className={styles.statItem}>
+                    <span className={`${styles.statIcon} ${styles.error}`} aria-hidden="true">
                         <FaUserAlt />
-                    </div>
-                    <div className={styles.statValue}>{stats.regularMembers}</div>
-                    <div className={styles.statLabel}>{t("info.stats.regularMembers")}</div>
+                    </span>
+                    <span className={styles.statText}>
+                        <span className={styles.statValue}>{stats.regularMembers}</span>
+                        <span className={styles.statLabel}>{t("info.stats.regularMembers")}</span>
+                    </span>
                 </div>
-                <div className={styles.statCard}>
-                    <div className={`${styles.statIcon} ${styles.info}`}>
+                <div className={styles.statItem}>
+                    <span className={`${styles.statIcon} ${styles.info}`} aria-hidden="true">
                         <FaGithub />
-                    </div>
-                    <div className={styles.statValue}>{repoCount}</div>
-                    <div className={styles.statLabel}>{t("info.stats.repos")}</div>
+                    </span>
+                    <span className={styles.statText}>
+                        <span className={styles.statValue}>{repoCount}</span>
+                        <span className={styles.statLabel}>{t("info.stats.repos")}</span>
+                    </span>
                 </div>
             </div>
         </>
