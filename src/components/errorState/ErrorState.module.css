@@ -6,19 +6,19 @@
     padding: 3.5rem 2rem;
     text-align: center;
     background-color: var(--card-bg);
-    border-radius: 12px;
+    border-radius: var(--radius-lg);
     border: 1px solid var(--border-primary);
     box-shadow: var(--shadow-sm);
 }
 
 .icon {
     font-size: 3.5rem;
-    color: var(--error-color, #ef4444);
+    color: var(--color-error);
     margin-bottom: 1.25rem;
 }
 
 .title {
-    font-size: 1.5rem;
+    font-size: var(--text-2xl);
     font-weight: 700;
     color: var(--text-primary);
     margin: 0 0 0.75rem;
@@ -33,31 +33,4 @@
 
 .actionBtn {
     min-width: 160px;
-    padding: 0.85rem 1.4rem;
-    border-radius: 10px;
-    border: none;
-    background: var(--primary);
-    color: #ffffff;
-    font-weight: 600;
-    font-size: 1rem;
-    cursor: pointer;
-    box-shadow: 0 6px 18px rgba(59, 130, 246, 0.3);
-}
-
-.actionBtn:hover {
-    background: var(--primary-hover);
-    transform: translateY(-1px);
-    box-shadow: 0 10px 24px rgba(59, 130, 246, 0.35);
-}
-
-.actionBtn:active {
-    transform: translateY(0);
-    box-shadow: 0 6px 16px rgba(59, 130, 246, 0.3);
-}
-
-.actionBtn:disabled {
-    opacity: 0.7;
-    cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
 }

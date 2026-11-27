@@ -17,6 +17,7 @@ import {
     FaChevronRight,
 } from "react-icons/fa";
 import Loading from "@/components/loading/Loading";
+import PageHeader from "@/components/pageHeader/PageHeader";
 import Avatar from "@/components/avatar/Avatar";
 import DashboardService, {
     type DashboardStats,
@@ -482,18 +483,14 @@ const Dashboard: React.FC = () => {
     if (loading) {
         return (
             <div className={styles.dashboard}>
-                <Loading text={t("dashboard.loading")} size="large" />
+                <Loading size="large" />
             </div>
         );
     }
 
     return (
         <div className={styles.dashboard}>
-            {/* 页面头部 */}
-            <div className={styles.pageHeader}>
-                <h1 className={styles.pageTitle}>{t("dashboard.title")}</h1>
-                <p className={styles.pageDescription}>{t("dashboard.description")}</p>
-            </div>
+            <PageHeader title={t("dashboard.title")} description={t("dashboard.description")} />
 
             {/* 统计卡片 */}
             <div className={styles.statsGrid}>

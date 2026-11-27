@@ -35,6 +35,7 @@ import Input from "@/components/input/Input";
 import Loading from "@/components/loading/Loading";
 import { confirm } from "@/components/confirm/Confirm";
 import type { SelectOption } from "@/types";
+import PageHeader from "@/components/pageHeader/PageHeader";
 import styles from "./MediaManagement.module.css";
 
 // 媒体文件接口
@@ -707,20 +708,14 @@ const MediaManagement: React.FC = () => {
     if (loading) {
         return (
             <div className={styles.mediaManagement}>
-                <Loading text={t("media.loading")} size="large" />
+                <Loading size="large" />
             </div>
         );
     }
 
     return (
         <div className={styles.mediaManagement}>
-            {/* 页面头部 */}
-            <div className={styles.pageHeader}>
-                <div>
-                    <h1 className={styles.pageTitle}>{t("media.title")}</h1>
-                    <p className={styles.pageDescription}>{t("media.description")}</p>
-                </div>
-            </div>
+            <PageHeader title={t("media.title")} description={t("media.description")} />
 
             {/* 文件夹导航 */}
             <div className={styles.folderNavigation}>

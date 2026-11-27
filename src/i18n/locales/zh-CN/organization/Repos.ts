@@ -1,6 +1,8 @@
 const section = {
     fetchFailed: "获取仓库列表失败",
     empty: "暂无仓库",
+    emptyHint: "添加组织仓库后，这里会展示仓库的同步状态与语言信息。",
+    emptyAction: "添加仓库",
     deleteConfirm: {
         title: "确认删除",
         before: '确定要删除仓库 "',

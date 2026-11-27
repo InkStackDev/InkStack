@@ -23,7 +23,6 @@ import {
 import CustomSelect from "@/components/customSelect/CustomSelect";
 import Input from "@/components/input/Input";
 import Loading from "@/components/loading/Loading";
-import AdminListSkeleton from "@/components/adminListSkeleton/AdminListSkeleton";
 import Avatar from "@/components/avatar/Avatar";
 import { confirm } from "@/components/confirm/Confirm";
 import CommentService from "@/services/CommentService.ts";
@@ -33,6 +32,7 @@ import type { CommentStatus } from "@/types/Enums.ts";
 import { useEnumLabels } from "@/i18n/UseEnumLabels";
 import { useInitialLoaded } from "@/hooks/UseInitialLoaded";
 import { useDebouncedValue } from "@/hooks/UseDebouncedValue";
+import PageHeader from "@/components/pageHeader/PageHeader";
 import styles from "./CommentManagement.module.css";
 
 interface FilterOptions {
@@ -347,20 +347,14 @@ const CommentManagement: React.FC = () => {
     if (loading && !initialLoaded) {
         return (
             <div className={styles.commentManagement}>
-                <AdminListSkeleton stats={5} columns={7} />
+                <Loading size="large" />
             </div>
         );
     }
 
     return (
         <div className={styles.commentManagement}>
-            {/* 页面头部 */}
-            <div className={styles.pageHeader}>
-                <div>
-                    <h1 className={styles.pageTitle}>{t("comments.title")}</h1>
-                    <p className={styles.pageDescription}>{t("comments.description")}</p>
-                </div>
-            </div>
+            <PageHeader title={t("comments.title")} description={t("comments.description")} />
 
             {/* 统计卡片 */}
             <div className={styles.statsContainer}>
@@ -368,35 +362,35 @@ const CommentManagement: React.FC = () => {
                     <div className={`${styles.statIcon} ${styles.primary}`}>
                         <FaComments />
                     </div>
-                    <div className={styles.statValue}>{statsLoading ? "..." : stats.total}</div>
+                    <div className={styles.statValue}>{statsLoading ? <Loading size="small" text="" inline /> : stats.total}</div>
                     <div className={styles.statLabel}>{t("comments.stats.total")}</div>
                 </div>
                 <div className={styles.statCard}>
                     <div className={`${styles.statIcon} ${styles.warning}`}>
                         <FaClock />
                     </div>
-                    <div className={styles.statValue}>{statsLoading ? "..." : stats.pending}</div>
+                    <div className={styles.statValue}>{statsLoading ? <Loading size="small" text="" inline /> : stats.pending}</div>
                     <div className={styles.statLabel}>{t("comments.stats.pending")}</div>
                 </div>
                 <div className={styles.statCard}>
                     <div className={`${styles.statIcon} ${styles.success}`}>
                         <FaCheckCircle />
                     </div>
-                    <div className={styles.statValue}>{statsLoading ? "..." : stats.approved}</div>
+                    <div className={styles.statValue}>{statsLoading ? <Loading size="small" text="" inline /> : stats.approved}</div>
                     <div className={styles.statLabel}>{t("comments.stats.approved")}</div>
                 </div>
                 <div className={styles.statCard}>
                     <div className={`${styles.statIcon} ${styles.error}`}>
                         <FaExclamationTriangle />
                     </div>
-                    <div className={styles.statValue}>{statsLoading ? "..." : stats.spam}</div>
+                    <div className={styles.statValue}>{statsLoading ? <Loading size="small" text="" inline /> : stats.spam}</div>
                     <div className={styles.statLabel}>{t("comments.stats.spam")}</div>
                 </div>
                 <div className={styles.statCard}>
                     <div className={`${styles.statIcon} ${styles.reported}`}>
                         <FaFlag />
                     </div>
-                    <div className={styles.statValue}>{statsLoading ? "..." : stats.reported}</div>
+                    <div className={styles.statValue}>{statsLoading ? <Loading size="small" text="" inline /> : stats.reported}</div>
                     <div className={styles.statLabel}>{t("comments.stats.reported")}</div>
                 </div>
             </div>

@@ -23,6 +23,7 @@ import Input from "@/components/input/Input";
 import CustomSelect from "@/components/customSelect/CustomSelect";
 import Modal from "@/components/modal/Modal";
 import Loading from "@/components/loading/Loading";
+import EmptyState from "@/components/emptyState/EmptyState";
 import message from "@/components/message/Message";
 import { confirm } from "@/components/confirm/Confirm";
 import { useRdOrg } from "@/contexts/RdOrgContext";
@@ -636,12 +637,11 @@ const CodeReviewList: React.FC = () => {
                         ) : prs.length === 0 ? (
                             <tr>
                                 <td colSpan={7} className={styles.emptyCell}>
-                                    <div className={styles.emptyCellIcon}>
-                                        <FaGithub />
-                                    </div>
-                                    <div className={styles.emptyCellText}>
-                                        {selectedRepoId ? t("reviews.empty.noPr") : t("reviews.empty.selectRepo")}
-                                    </div>
+                                    <EmptyState
+                                        variant="inline"
+                                        icon={<FaGithub />}
+                                        title={selectedRepoId ? t("reviews.empty.noPr") : t("reviews.empty.selectRepo")}
+                                    />
                                 </td>
                             </tr>
                         ) : (
@@ -694,12 +694,11 @@ const CodeReviewList: React.FC = () => {
                     </div>
                 ) : prs.length === 0 ? (
                     <div className={crStyles.mobileEmpty}>
-                        <div className={styles.emptyCellIcon}>
-                            <FaGithub />
-                        </div>
-                        <div className={styles.emptyCellText}>
-                            {selectedRepoId ? t("reviews.empty.noPr") : t("reviews.empty.selectRepo")}
-                        </div>
+                        <EmptyState
+                            variant="inline"
+                            icon={<FaGithub />}
+                            title={selectedRepoId ? t("reviews.empty.noPr") : t("reviews.empty.selectRepo")}
+                        />
                     </div>
                 ) : (
                     prs.map((pr) => (

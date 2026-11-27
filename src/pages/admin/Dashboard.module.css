@@ -3,23 +3,6 @@
 }
 
 /* 页面头部 */
-.pageHeader {
-    margin-bottom: 32px;
-}
-
-.pageTitle {
-    font-size: 28px;
-    font-weight: 700;
-    color: var(--text-primary);
-    margin-bottom: 8px;
-}
-
-.pageDescription {
-    font-size: 16px;
-    color: var(--text-secondary);
-    line-height: 1.5;
-}
-
 /* 统计卡片网格 */
 .statsGrid {
     display: grid;
@@ -399,18 +382,6 @@
         grid-template-columns: 1fr;
     }
 
-    .pageHeader {
-        margin-bottom: 24px;
-    }
-
-    .pageTitle {
-        font-size: 24px;
-    }
-
-    .pageDescription {
-        font-size: 14px;
-    }
-
     .statCard {
         padding: 20px;
     }
@@ -432,14 +403,6 @@
 }
 
 @media (max-width: 480px) {
-    .pageTitle {
-        font-size: 20px;
-    }
-
-    .pageDescription {
-        font-size: 13px;
-    }
-
     .statsGrid {
         gap: 12px;
     }

@@ -38,7 +38,7 @@ const section = {
         acceptTitle: "接受",
         rejectTitle: "拒绝",
         emptyTitle: "暂无待处理请求",
-        emptySubtext: "所有申请已处理完毕",
+        emptySubtext: "新的加入申请会出现在这里",
     },
     tasks: {
         refreshTitle: "刷新任务列表",

@@ -81,6 +81,7 @@ import {
 import styles from "./ArticleView.module.css";
 import Avatar from "@/components/avatar/Avatar";
 import AiSummary from "@/components/articleView/AiSummary";
+import ErrorState from "@/components/errorState/ErrorState";
 import FollowService from "@/services/FollowService.ts";
 import PraiseService from "@/services/PraiseService.ts";
 import CommentService from "@/services/CommentService.ts";
@@ -119,6 +120,32 @@ interface ArticleViewProps {
 }
 
 const COMMENT_PAGE_SIZE = 20;
+
+/** 按 id 去重后追加评论，避免分页请求重叠时出现重复项 */
+const mergeComments = (base: ArticleComment[], incoming: ArticleComment[]): ArticleComment[] => {
+    const seen = new Set(base.map((comment) => comment.id));
+    const merged = [...base];
+    incoming.forEach((comment) => {
+        if (!seen.has(comment.id)) {
+            seen.add(comment.id);
+            merged.push(comment);
+        }
+    });
+    return merged;
+};
+
+/** 收集评论树中已点赞的 id */
+const collectLikedIds = (comments: ArticleComment[], likedIds: Set<number> = new Set<number>()): Set<number> => {
+    comments.forEach((comment) => {
+        if (comment.is_liked) {
+            likedIds.add(comment.id);
+        }
+        if (comment.replies?.length) {
+            collectLikedIds(comment.replies, likedIds);
+        }
+    });
+    return likedIds;
+};
 
 // 使用 react-markdown 期望的标题属性类型
 interface HeadingComponentProps extends React.HTMLAttributes<HTMLHeadingElement> {
@@ -163,7 +190,11 @@ const ArticleView: React.FC<ArticleViewProps> = ({
     const [likesCount, setLikesCount] = useState(praises);
     const [authorLikesCount, setAuthorLikesCount] = useState(authorStats?.likes ?? 0);
     const [commentsList, setCommentsList] = useState<ArticleComment[]>([]);
-    const [commentLoading, setCommentLoading] = useState(false);
+    const [commentsTotal, setCommentsTotal] = useState(0);
+    const [commentsLoading, setCommentsLoading] = useState(false);
+    const [commentsError, setCommentsError] = useState(false);
+    const [commentsLoadingMore, setCommentsLoadingMore] = useState(false);
+    const [commentsLoadMoreError, setCommentsLoadMoreError] = useState(false);
     const [commentText, setCommentText] = useState("");
     const [showCommentInput, setShowCommentInput] = useState(false);
     const [replyToId, setReplyToId] = useState<number | null>(null);
@@ -219,66 +250,138 @@ const ArticleView: React.FC<ArticleViewProps> = ({
         }
     }, [isAuthenticated, authorId, articleId]);
 
-    // 评论数据获取（供首次加载与轮询复用）
+    // 评论数据获取（供首次加载、轮询与发表评论后刷新复用）
+    const mountedRef = useRef(true);
     const commentRequestRef = useRef(0);
-    const fetchComments = useCallback(() => {
-        if (!articleId) {
-            return;
-        }
-        const requestId = ++commentRequestRef.current;
-        CommentService.getList({ article_id: articleId, offset: 0, size: COMMENT_PAGE_SIZE })
-            .then((data) => {
-                if (requestId !== commentRequestRef.current) {
+    const commentMoreRequestRef = useRef(0);
+    const commentsLoadingMoreRef = useRef(false);
+    const hasLoadedMoreRef = useRef(false);
+
+    useEffect(() => {
+        mountedRef.current = true;
+        return () => {
+            // 卸载后让所有进行中的评论请求失效，避免继续 setState
+            mountedRef.current = false;
+            commentRequestRef.current += 1;
+            commentMoreRequestRef.current += 1;
+            commentsLoadingMoreRef.current = false;
+        };
+    }, []);
+
+    const loadComments = useCallback(
+        async (options: { silent?: boolean } = {}) => {
+            if (!articleId) {
+                return;
+            }
+            const { silent = false } = options;
+            const requestId = ++commentRequestRef.current;
+            if (!silent) {
+                setCommentsLoading(true);
+                setCommentsError(false);
+            }
+            try {
+                const data = await CommentService.getList({ article_id: articleId, offset: 0, size: COMMENT_PAGE_SIZE });
+                if (requestId !== commentRequestRef.current || !mountedRef.current) {
                     return;
                 }
                 setCommentsList(data.list);
+                setCommentsTotal(data.total);
+                setCommentsError(false);
+                setCommentsLoadMoreError(false);
                 setLikedCommentIds((prev) => {
-                    const liked = new Set<number>();
-                    const collectLiked = (comments: ArticleComment[]) => {
-                        comments.forEach((c) => {
-                            if (c.is_liked) {
-                                liked.add(c.id);
-                            }
-                            if (c.replies?.length) {
-                                collectLiked(c.replies);
-                            }
-                        });
-                    };
-                    collectLiked(data.list);
+                    const liked = collectLikedIds(data.list);
                     // 合并本地已有的点赞状态（用户操作过但服务端可能尚未反映的）
                     prev.forEach((id) => liked.add(id));
                     return liked;
                 });
-                setCommentLoading(false);
-            })
-            .catch(() => {})
-            .finally(() => {
-                if (requestId === commentRequestRef.current) {
-                    setCommentLoading(false);
+            } catch (err: unknown) {
+                if (requestId !== commentRequestRef.current || !mountedRef.current) {
+                    return;
                 }
-            });
-    }, [articleId]);
+                // 轮询失败保持现状；初次加载/重试失败展示错误态
+                if (!silent) {
+                    setCommentsError(true);
+                }
+                console.error("加载评论失败:", err);
+            } finally {
+                if (requestId === commentRequestRef.current && mountedRef.current) {
+                    setCommentsLoading(false);
+                }
+            }
+        },
+        [articleId],
+    );
 
+    // 切换文章时重置评论分页状态，再拉取第一页
     useEffect(() => {
-        if (!articleId) {
-            return;
+        commentRequestRef.current += 1;
+        commentMoreRequestRef.current += 1;
+        commentsLoadingMoreRef.current = false;
+        hasLoadedMoreRef.current = false;
+        setCommentsList([]);
+        setCommentsTotal(0);
+        setCommentsError(false);
+        setCommentsLoading(false);
+        setCommentsLoadingMore(false);
+        setCommentsLoadMoreError(false);
+        if (articleId) {
+            void loadComments();
         }
-        setCommentLoading(true);
-        fetchComments();
-    }, [fetchComments]);
+    }, [articleId, loadComments]);
 
-    // 评论轮询：每 15 秒刷新一次；页面隐藏时暂停，避免后台无意义请求
+    // 评论轮询：每 15 秒静默刷新一次；页面隐藏时暂停。
+    // 已加载多页时暂停轮询，避免用第一页数据覆盖用户已加载的后续评论。
     useEffect(() => {
         if (!articleId) {
             return;
         }
         const timer = setInterval(() => {
-            if (document.visibilityState === "visible") {
-                fetchComments();
+            if (document.visibilityState === "visible" && !commentsLoadingMoreRef.current && !hasLoadedMoreRef.current) {
+                void loadComments({ silent: true });
             }
         }, 15_000);
         return () => clearInterval(timer);
-    }, [fetchComments]);
+    }, [articleId, loadComments]);
+
+    // 加载更多评论：以当前已加载数量作为 offset 追加，并按 id 去重
+    const handleLoadMoreComments = useCallback(async () => {
+        if (!articleId || commentsLoadingMoreRef.current) {
+            return;
+        }
+        commentsLoadingMoreRef.current = true;
+        setCommentsLoadingMore(true);
+        setCommentsLoadMoreError(false);
+        const requestId = ++commentMoreRequestRef.current;
+        const offset = commentsList.length;
+        try {
+            const data = await CommentService.getList({ article_id: articleId, offset, size: COMMENT_PAGE_SIZE });
+            if (requestId !== commentMoreRequestRef.current || !mountedRef.current) {
+                return;
+            }
+            hasLoadedMoreRef.current = true;
+            setCommentsList((prev) => mergeComments(prev, data.list));
+            setCommentsTotal(data.total);
+            setCommentsLoadMoreError(false);
+            setLikedCommentIds((prev) => {
+                const liked = collectLikedIds(data.list);
+                prev.forEach((id) => liked.add(id));
+                return liked;
+            });
+        } catch (err: unknown) {
+            if (requestId !== commentMoreRequestRef.current || !mountedRef.current) {
+                return;
+            }
+            // 保留已加载的评论，提示失败并允许重试
+            setCommentsLoadMoreError(true);
+            message.error(t("comment.loadFailed"));
+            console.error("加载更多评论失败:", err);
+        } finally {
+            if (requestId === commentMoreRequestRef.current && mountedRef.current) {
+                commentsLoadingMoreRef.current = false;
+                setCommentsLoadingMore(false);
+            }
+        }
+    }, [articleId, commentsList.length, t]);
 
     const handleFollowToggle = async () => {
         if (!isAuthenticated) {
@@ -363,6 +466,9 @@ const ArticleView: React.FC<ArticleViewProps> = ({
             ]);
             setCommentText("");
             message.success(t("toast.commentSuccess"));
+            // 重新拉第一页并重置列表/总数，确保新评论与评论总数及时同步
+            hasLoadedMoreRef.current = false;
+            void loadComments({ silent: true });
         } catch (err: any) {
             message.error(err?.response?.data?.msg || err?.msg || err?.message || t("toast.commentFailed"));
         }
@@ -900,7 +1006,7 @@ const ArticleView: React.FC<ArticleViewProps> = ({
                             </span>
                             <span className={styles.metaItem}>
                                 <MessageSquare size={14} />
-                                {t("view.comments", { value: commentsList.length })}
+                                {t("view.comments", { value: commentsTotal })}
                             </span>
                             {readingTime && (
                                 <span className={styles.metaItem}>
@@ -955,7 +1061,7 @@ const ArticleView: React.FC<ArticleViewProps> = ({
                         <div className={styles.commentHeader}>
                             <h3 className={styles.commentTitle}>
                                 <MessageSquare size={18} />
-                                {t("comment.title", { value: commentsList.length })}
+                                {t("comment.title", { value: commentsTotal })}
                             </h3>
                             <button className={styles.writeCommentButton} onClick={() => setShowCommentInput(!showCommentInput)}>
                                 {showCommentInput ? t("comment.collapse") : t("comment.write")}
@@ -991,37 +1097,74 @@ const ArticleView: React.FC<ArticleViewProps> = ({
 
                         {/* 评论列表 */}
                         <div className={styles.commentList}>
-                            {commentLoading ? (
+                            {commentsError ? (
+                                <ErrorState
+                                    title={t("comment.loadFailed")}
+                                    actionText={t("comment.retry")}
+                                    onAction={() => {
+                                        void loadComments();
+                                    }}
+                                    className={styles.commentError}
+                                />
+                            ) : commentsLoading ? (
                                 <div className={styles.commentEmpty}>{t("comment.loading")}</div>
                             ) : commentsList.length === 0 ? (
                                 <div className={styles.commentEmpty}>{t("comment.empty")}</div>
                             ) : (
-                                commentsList.map((comment) => (
-                                    <CommentNode
-                                        key={comment.id}
-                                        comment={comment}
-                                        depth={0}
-                                        likedCommentIds={likedCommentIds}
-                                        editingId={editingId}
-                                        editText={editText}
-                                        replyToId={replyToId}
-                                        replyText={replyText}
-                                        currentUserId={user?.id != null ? Number(user.id) : undefined}
-                                        isAuthenticated={isAuthenticated}
-                                        onLike={handleCommentLike}
-                                        onToggleReply={(id) => setReplyToId(replyToId === id ? null : id)}
-                                        onStartEdit={handleStartEdit}
-                                        onSaveEdit={handleSaveEdit}
-                                        onCancelEdit={handleCancelEdit}
-                                        onReplyTextChange={setReplyText}
-                                        onReplySubmit={handleReplySubmit}
-                                        onReplyCancel={() => {
-                                            setReplyToId(null);
-                                            setReplyText("");
-                                        }}
-                                        onEditTextChange={setEditText}
-                                    />
-                                ))
+                                <>
+                                    {commentsList.map((comment) => (
+                                        <CommentNode
+                                            key={comment.id}
+                                            comment={comment}
+                                            depth={0}
+                                            likedCommentIds={likedCommentIds}
+                                            editingId={editingId}
+                                            editText={editText}
+                                            replyToId={replyToId}
+                                            replyText={replyText}
+                                            currentUserId={user?.id != null ? Number(user.id) : undefined}
+                                            isAuthenticated={isAuthenticated}
+                                            onLike={handleCommentLike}
+                                            onToggleReply={(id) => setReplyToId(replyToId === id ? null : id)}
+                                            onStartEdit={handleStartEdit}
+                                            onSaveEdit={handleSaveEdit}
+                                            onCancelEdit={handleCancelEdit}
+                                            onReplyTextChange={setReplyText}
+                                            onReplySubmit={handleReplySubmit}
+                                            onReplyCancel={() => {
+                                                setReplyToId(null);
+                                                setReplyText("");
+                                            }}
+                                            onEditTextChange={setEditText}
+                                        />
+                                    ))}
+                                    {commentsList.length < commentsTotal && (
+                                        <div className={styles.commentLoadMore}>
+                                            {commentsLoadMoreError && (
+                                                <span className={styles.commentLoadMoreError}>{t("comment.loadFailed")}</span>
+                                            )}
+                                            <button
+                                                type="button"
+                                                className={styles.commentLoadMoreButton}
+                                                onClick={() => {
+                                                    void handleLoadMoreComments();
+                                                }}
+                                                disabled={commentsLoadingMore}
+                                            >
+                                                {commentsLoadingMore ? (
+                                                    <>
+                                                        <Loader2 size={14} className={styles.loadingSpin} />
+                                                        {t("comment.loading")}
+                                                    </>
+                                                ) : commentsLoadMoreError ? (
+                                                    t("comment.retry")
+                                                ) : (
+                                                    t("comment.loadMore")
+                                                )}
+                                            </button>
+                                        </div>
+                                    )}
+                                </>
                             )}
                         </div>
                     </div>

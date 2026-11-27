@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useRdNavigate } from "@/hooks/UseRdNavigate.ts";
 import { formatDateTime } from "@/utils/Utils.ts";
@@ -41,7 +41,9 @@ const MyTickets: React.FC = () => {
     const [activeTab, setActiveTab] = useState<TabKey>("req");
     const [data, setData] = useState<TabData[]>([]);
     const [total, setTotal] = useState(0);
-    const [totalMap, setTotalMap] = useState<Record<TabKey, number>>({ req: 0, bug: 0, task: 0 });
+    const [totalMap, setTotalMap] = useState<Record<TabKey, number | null>>({ req: null, bug: null, task: null });
+    const requestIdRef = useRef(0);
+    const totalRequestIdRef = useRef(0);
     const [loading, setLoading] = useState(true);
     const [initialLoaded, setInitialLoaded] = useState(false);
     const [search, setSearch] = useState("");
@@ -145,6 +147,7 @@ const MyTickets: React.FC = () => {
     const typeParam = activeTab === "req" ? "requirement" : activeTab === "bug" ? "bug" : "task";
 
     const fetchData = useCallback(async () => {
+        const requestId = ++requestIdRef.current;
         setLoading(true);
         try {
             const res = await RdAPI.getMyTickets({
@@ -155,16 +158,24 @@ const MyTickets: React.FC = () => {
                 status: status || undefined,
                 orgId: selectedOrgId || undefined,
             });
+            if (requestId !== requestIdRef.current) {
+                return;
+            }
             setData(res.data);
             setTotal(res.total);
             setTotalMap((prev) => ({ ...prev, [activeTab]: res.total }));
         } catch (err) {
+            if (requestId !== requestIdRef.current) {
+                return;
+            }
             message.error(err instanceof Error ? err.message : t("myTickets.message.fetchFailed"));
             setData([]);
             setTotal(0);
         } finally {
-            setLoading(false);
-            setInitialLoaded(true);
+            if (requestId === requestIdRef.current) {
+                setLoading(false);
+                setInitialLoaded(true);
+            }
         }
     }, [typeParam, page, search, status, selectedOrgId, activeTab]);
 
@@ -173,6 +184,7 @@ const MyTickets: React.FC = () => {
     }, [fetchData]);
 
     const fetchTotalMap = useCallback(async () => {
+        const requestId = ++totalRequestIdRef.current;
         const types: { type: "requirement" | "bug" | "task"; key: TabKey }[] = [
             { type: "requirement", key: "req" },
             { type: "bug", key: "bug" },
@@ -184,11 +196,15 @@ const MyTickets: React.FC = () => {
                     const res = await RdAPI.getMyTickets({ type, pageSize: 1, orgId: selectedOrgId || undefined });
                     return [key, res.total] as const;
                 } catch {
-                    return [key, 0] as const;
+                    // 失败时保持「未知」，不要显示成 0
+                    return [key, null] as const;
                 }
             }),
         );
-        setTotalMap(Object.fromEntries(results) as Record<TabKey, number>);
+        if (requestId !== totalRequestIdRef.current) {
+            return;
+        }
+        setTotalMap(Object.fromEntries(results) as Record<TabKey, number | null>);
     }, [selectedOrgId]);
 
     useEffect(() => {
@@ -526,9 +542,9 @@ const MyTickets: React.FC = () => {
 
     const renderField_ = renderField;
 
-    const tabBtn = (key: TabKey, icon: React.ReactNode, label: string, count: number) => (
+    const tabBtn = (key: TabKey, icon: React.ReactNode, label: string, count: number | null) => (
         <button onClick={() => setActiveTab(key)} className={`${myStyles.tabBtn} ${activeTab === key ? myStyles.tabBtnActive : ""}`}>
-            {icon} {label} ({count})
+            {icon} {label} ({count ?? "—"})
         </button>
     );
     const renderPriorityBadge = (p: string) => (

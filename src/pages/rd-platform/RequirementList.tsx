@@ -25,6 +25,8 @@ import Input from "@/components/input/Input";
 import CustomSelect from "@/components/customSelect/CustomSelect";
 import Modal from "@/components/modal/Modal";
 import Loading from "@/components/loading/Loading";
+import ErrorState from "@/components/errorState/ErrorState";
+import EmptyState from "@/components/emptyState/EmptyState";
 import { confirm } from "@/components/confirm/Confirm";
 import message from "@/components/message/Message";
 import { useAuth } from "@/contexts/AuthContext";
@@ -102,7 +104,9 @@ const RequirementList: React.FC = () => {
         total,
         loading,
         initialLoaded,
+        error,
         refresh: fetchData,
+        reload,
     } = useRdList(RdAPI.getRequirements, filters, currentPage, selectedOrgId, PAGE_SIZE);
 
     const handleFilterChange = (field: string, value: string) => {
@@ -317,103 +321,113 @@ const RequirementList: React.FC = () => {
             </div>
 
             {/* table */}
-            <div className={styles.tableWrapper}>
-                <table className={styles.table}>
-                    <thead>
-                        <tr>
-                            <th>{t("requirements.table.title")}</th>
-                            <th>{t("requirements.table.priority")}</th>
-                            <th>{t("requirements.table.status")}</th>
-                            <th>{t("requirements.table.assignee")}</th>
-                            <th>{t("requirements.table.iteration")}</th>
-                            <th>{t("requirements.table.creator")}</th>
-                            <th>{t("requirements.table.createdAt")}</th>
-                            <th>{t("requirements.table.actions")}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {loading && (
+            {error ? (
+                <ErrorState
+                    title={i18n.t("services:rdList.loadFailed")}
+                    message={error}
+                    actionText={i18n.t("common:actions.retry")}
+                    onAction={reload}
+                />
+            ) : (
+                <div className={styles.tableWrapper}>
+                    <table className={styles.table}>
+                        <thead>
                             <tr>
-                                <td colSpan={8} className={styles.emptyCell}>
-                                    <Loading size="small" />
-                                </td>
+                                <th>{t("requirements.table.title")}</th>
+                                <th>{t("requirements.table.priority")}</th>
+                                <th>{t("requirements.table.status")}</th>
+                                <th>{t("requirements.table.assignee")}</th>
+                                <th>{t("requirements.table.iteration")}</th>
+                                <th>{t("requirements.table.creator")}</th>
+                                <th>{t("requirements.table.createdAt")}</th>
+                                <th>{t("requirements.table.actions")}</th>
                             </tr>
-                        )}
-                        {!loading &&
-                            requirements.map((r) => (
-                                <tr key={r.id}>
-                                    <td
-                                        className={styles.titleCell}
-                                        data-label={t("requirements.table.title")}
-                                        onClick={() => navigate(`/rd/requirements/${encodeId(r.id, "requirement")}`)}
-                                    >
-                                        {r.title}
-                                    </td>
-                                    <td data-label={t("requirements.table.priority")}>
-                                        <span className={`${styles.badge} ${styles[`priority_${r.priority}`]}`}>
-                                            {labels.rdPriority[r.priority]}
-                                        </span>
-                                    </td>
-                                    <td data-label={t("requirements.table.status")}>
-                                        <span className={`${styles.badge} ${styles[`status_${r.status}`]}`}>
-                                            {labels.reqStatus[r.status]}
-                                        </span>
-                                    </td>
-                                    <td data-label={t("requirements.table.assignee")}>
-                                        <AssigneeDisplay name={r.assignee} avatar={r.assigneeAvatar} />
-                                    </td>
-                                    <td data-label={t("requirements.table.iteration")}>{r.iteration || "-"}</td>
-                                    <td data-label={t("requirements.table.creator")}>
-                                        <AssigneeDisplay name={r.creator} avatar={r.creatorAvatar} />
-                                    </td>
-                                    <td data-label={t("requirements.table.createdAt")}>{formatDateTime(r.createdAt)}</td>
-                                    <td data-label={t("requirements.table.actions")}>
-                                        <div className={styles.actionButtons}>
-                                            <button
-                                                className={`${styles.actionBtn} ${styles.view}`}
-                                                title={t("requirements.table.view")}
-                                                onClick={() => navigate(`/rd/requirements/${encodeId(r.id, "requirement")}`)}
-                                            >
-                                                <FaEye />
-                                            </button>
-                                            {OrgPermission.canEdit(maxOrgRole) && (
-                                                <button
-                                                    className={`${styles.actionBtn} ${styles.edit}`}
-                                                    title={t("requirements.table.edit")}
-                                                    onClick={() => openEdit(r)}
-                                                >
-                                                    <FaEdit />
-                                                </button>
-                                            )}
-                                            {OrgPermission.canDelete(maxOrgRole) && (
-                                                <button
-                                                    className={`${styles.actionBtn} ${styles.delete}`}
-                                                    title={t("requirements.table.delete")}
-                                                    onClick={() => handleDelete(r)}
-                                                >
-                                                    <FaTrash />
-                                                </button>
-                                            )}
-                                        </div>
+                        </thead>
+                        <tbody>
+                            {loading && (
+                                <tr>
+                                    <td colSpan={8} className={styles.emptyCell}>
+                                        <Loading size="small" />
                                     </td>
                                 </tr>
-                            ))}
-                        {!loading && requirements.length === 0 && (
-                            <tr>
-                                <td colSpan={8} className={styles.emptyCell}>
-                                    <div className={styles.emptyCellIcon}>
-                                        <FaClipboardList />
-                                    </div>
-                                    <div className={styles.emptyCellText}>{t("requirements.table.empty")}</div>
-                                </td>
-                            </tr>
-                        )}
-                    </tbody>
-                </table>
-            </div>
+                            )}
+                            {!loading &&
+                                requirements.map((r) => (
+                                    <tr key={r.id}>
+                                        <td
+                                            className={styles.titleCell}
+                                            data-label={t("requirements.table.title")}
+                                            onClick={() => navigate(`/rd/requirements/${encodeId(r.id, "requirement")}`)}
+                                        >
+                                            {r.title}
+                                        </td>
+                                        <td data-label={t("requirements.table.priority")}>
+                                            <span className={`${styles.badge} ${styles[`priority_${r.priority}`]}`}>
+                                                {labels.rdPriority[r.priority]}
+                                            </span>
+                                        </td>
+                                        <td data-label={t("requirements.table.status")}>
+                                            <span className={`${styles.badge} ${styles[`status_${r.status}`]}`}>
+                                                {labels.reqStatus[r.status]}
+                                            </span>
+                                        </td>
+                                        <td data-label={t("requirements.table.assignee")}>
+                                            <AssigneeDisplay name={r.assignee} avatar={r.assigneeAvatar} />
+                                        </td>
+                                        <td data-label={t("requirements.table.iteration")}>{r.iteration || "-"}</td>
+                                        <td data-label={t("requirements.table.creator")}>
+                                            <AssigneeDisplay name={r.creator} avatar={r.creatorAvatar} />
+                                        </td>
+                                        <td data-label={t("requirements.table.createdAt")}>{formatDateTime(r.createdAt)}</td>
+                                        <td data-label={t("requirements.table.actions")}>
+                                            <div className={styles.actionButtons}>
+                                                <button
+                                                    className={`${styles.actionBtn} ${styles.view}`}
+                                                    title={t("requirements.table.view")}
+                                                    onClick={() => navigate(`/rd/requirements/${encodeId(r.id, "requirement")}`)}
+                                                >
+                                                    <FaEye />
+                                                </button>
+                                                {OrgPermission.canEdit(maxOrgRole) && (
+                                                    <button
+                                                        className={`${styles.actionBtn} ${styles.edit}`}
+                                                        title={t("requirements.table.edit")}
+                                                        onClick={() => openEdit(r)}
+                                                    >
+                                                        <FaEdit />
+                                                    </button>
+                                                )}
+                                                {OrgPermission.canDelete(maxOrgRole) && (
+                                                    <button
+                                                        className={`${styles.actionBtn} ${styles.delete}`}
+                                                        title={t("requirements.table.delete")}
+                                                        onClick={() => handleDelete(r)}
+                                                    >
+                                                        <FaTrash />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            {!loading && !error && requirements.length === 0 && (
+                                <tr>
+                                    <td colSpan={8} className={styles.emptyCell}>
+                                        <EmptyState
+                                            variant="inline"
+                                            icon={<FaClipboardList />}
+                                            title={t("requirements.table.empty")}
+                                        />
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            )}
 
             {/* pagination */}
-            {
+            {!error && (
                 <div className={styles.pagination}>
                     <span className={styles.paginationInfo}>{t("requirements.pagination.total", { total })}</span>
                     <div className={styles.paginationControls}>
@@ -450,7 +464,7 @@ const RequirementList: React.FC = () => {
                         </button>
                     </div>
                 </div>
-            }
+            )}
 
             {/* ============ MODAL ============ */}
             <Modal

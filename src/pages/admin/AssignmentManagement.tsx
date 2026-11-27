@@ -22,10 +22,11 @@ import { formatDateTime } from "@/utils/Utils.ts";
 import CustomSelect from "@/components/customSelect/CustomSelect";
 import Input from "@/components/input/Input";
 import Loading from "@/components/loading/Loading";
-import AdminListSkeleton from "@/components/adminListSkeleton/AdminListSkeleton";
 import { confirm } from "@/components/confirm/Confirm";
 import message from "@/components/message/Message";
 import Modal from "@/components/modal/Modal";
+import PageHeader from "@/components/pageHeader/PageHeader";
+import Button from "@/components/button/Button";
 import styles from "./AssignmentManagement.module.css";
 import AssignmentService, { type AssignmentStatsResponse } from "@/services/AssignmentService.ts";
 import { AssignmentStatus, AssignmentPriority } from "@/types/Enums.ts";
@@ -376,24 +377,22 @@ const AssignmentManagement: React.FC = () => {
     if (loading && !initialLoaded) {
         return (
             <div className={styles.container}>
-                <AdminListSkeleton stats={4} columns={6} />
+                <Loading size="large" />
             </div>
         );
     }
 
     return (
         <div className={styles.container}>
-            <div className={styles.pageHeader}>
-                <div>
-                    <h1 className={styles.pageTitle}>{t("assignments.pageTitle")}</h1>
-                    <p className={styles.pageDescription}>{t("assignments.pageDescription")}</p>
-                </div>
-                <div className={styles.headerActions}>
-                    <button className={`${styles.btn} ${styles.btnPrimary}`} onClick={openCreateModal}>
+            <PageHeader
+                title={t("assignments.pageTitle")}
+                description={t("assignments.pageDescription")}
+                actions={
+                    <Button onClick={openCreateModal}>
                         <FaPlus /> {t("assignments.publishTask")}
-                    </button>
-                </div>
-            </div>
+                    </Button>
+                }
+            />
             <div className={styles.statsContainer}>
                 <div className={styles.statCard}>
                     <div className={`${styles.statIcon} ${styles.primary}`}>

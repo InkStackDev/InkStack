@@ -29,6 +29,9 @@ import { formatDateTime } from "@/utils/Utils.ts";
 import { HelpService, type FeedbackItem, type HelpFaq } from "@/services/HelpService.ts";
 import { OrganizationService } from "@/services/OrganizationService.ts";
 import Avatar from "@/components/avatar/Avatar";
+import PageHeader from "@/components/pageHeader/PageHeader";
+import Button from "@/components/button/Button";
+import Loading from "@/components/loading/Loading";
 
 const PAGE_SIZE = 10;
 
@@ -336,24 +339,22 @@ const FeedbackManagement: React.FC = () => {
 
     return (
         <div className={styles.feedbackManagement}>
-            <div className={styles.pageHeader}>
-                <div>
-                    <h1 className={styles.pageTitle}>{t("feedbacks.pageTitle")}</h1>
-                    <p className={styles.pageDescription}>{t("feedbacks.pageDescription")}</p>
-                </div>
-                <div className={styles.headerActions}>
-                    <button className={`${styles.btn} ${styles.btnPrimary}`} onClick={handleRefresh}>
+            <PageHeader
+                title={t("feedbacks.pageTitle")}
+                description={t("feedbacks.pageDescription")}
+                actions={
+                    <Button onClick={handleRefresh}>
                         <FaSyncAlt /> {t("feedbacks.refresh")}
-                    </button>
-                </div>
-            </div>
+                    </Button>
+                }
+            />
 
             <div className={styles.statsContainer}>
                 <div className={styles.statCard}>
                     <div className={`${styles.statIcon} ${styles.primary}`}>
                         <FaClipboardList />
                     </div>
-                    <div className={styles.statValue}>{loading ? "..." : total}</div>
+                    <div className={styles.statValue}>{loading ? <Loading size="small" text="" inline /> : total}</div>
                     <div className={styles.statLabel}>{t("feedbacks.stats.all")}</div>
                 </div>
             </div>
@@ -401,7 +402,7 @@ const FeedbackManagement: React.FC = () => {
                 </div>
 
                 {loading ? (
-                    <div className={styles.empty}>{t("feedbacks.list.loading")}</div>
+                    <Loading size="large" />
                 ) : filtered.length === 0 ? (
                     <div className={styles.empty}>{t("feedbacks.list.empty")}</div>
                 ) : (
@@ -555,7 +556,7 @@ const FeedbackManagement: React.FC = () => {
                 </div>
 
                 {faqLoading ? (
-                    <div className={styles.empty}>{t("feedbacks.faq.loading")}</div>
+                    <Loading size="large" />
                 ) : filteredFaqs.length === 0 ? (
                     <div className={styles.empty}>{faqSearch ? t("feedbacks.faq.noMatch") : t("feedbacks.faq.empty")}</div>
                 ) : (

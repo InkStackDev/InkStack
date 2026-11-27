@@ -2,22 +2,6 @@
     max-width: 100%;
 }
 
-.pageHeader {
-    composes: pageHeader from "./AdminPageShared.module.css";
-}
-
-.pageTitle {
-    composes: pageTitle from "./AdminPageShared.module.css";
-}
-
-.pageDescription {
-    composes: pageDescription from "./AdminPageShared.module.css";
-}
-
-.headerActions {
-    composes: headerActions from "./AdminPageShared.module.css";
-}
-
 .statsContainer {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -432,10 +416,6 @@
 }
 
 @media (max-width: 768px) {
-    .headerActions {
-        width: 100%;
-    }
-
     .statsContainer {
         grid-template-columns: 1fr;
     }

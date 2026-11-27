@@ -30,7 +30,6 @@ import {
 import CustomSelect from "@/components/customSelect/CustomSelect";
 import Input from "@/components/input/Input";
 import Loading from "@/components/loading/Loading";
-import AdminListSkeleton from "@/components/adminListSkeleton/AdminListSkeleton";
 import { confirm } from "@/components/confirm/Confirm";
 import { message } from "@/components/message/Message";
 import { formatToChinaTime } from "@/utils/Utils.ts";
@@ -40,6 +39,7 @@ import type { BackupRecord, DataStats, ExportRecord } from "@/services/DataServi
 import type { SelectOption } from "@/types";
 import type { BackupStatus } from "@/types/Enums.ts";
 import { useEnumLabels } from "@/i18n/UseEnumLabels";
+import PageHeader from "@/components/pageHeader/PageHeader";
 import styles from "./DataManagement.module.css";
 
 // 筛选条件接口
@@ -409,20 +409,14 @@ const DataManagement: React.FC = () => {
     if (initialLoading) {
         return (
             <div className={styles.dataManagement}>
-                <AdminListSkeleton stats={6} columns={6} />
+                <Loading size="large" />
             </div>
         );
     }
 
     return (
         <div className={styles.dataManagement}>
-            {/* 页面头部 */}
-            <div className={styles.pageHeader}>
-                <div>
-                    <h1 className={styles.pageTitle}>{t("data.title")}</h1>
-                    <p className={styles.pageDescription}>{t("data.description")}</p>
-                </div>
-            </div>
+            <PageHeader title={t("data.title")} description={t("data.description")} />
 
             {/* 标签页切换 */}
             <div className={styles.tabContainer}>
@@ -697,7 +691,7 @@ const DataManagement: React.FC = () => {
                         {activeTab === "backups" ? (
                             loadingBackups ? (
                                 <div style={{ padding: "60px 0" }}>
-                                    <Loading text={t("data.table.loadingBackups")} size="large" />
+                                    <Loading size="large" />
                                 </div>
                             ) : (
                                 <table className={`${styles.recordsTable} ${styles.backupRecordsTable}`}>
@@ -802,7 +796,7 @@ const DataManagement: React.FC = () => {
                             )
                         ) : loadingExports ? (
                             <div style={{ padding: "60px 0" }}>
-                                <Loading text={t("data.table.loadingExports")} size="large" />
+                                <Loading size="large" />
                             </div>
                         ) : (
                             <table className={`${styles.recordsTable} ${styles.exportRecordsTable}`}>

@@ -51,6 +51,7 @@ const section = {
             actions: "Actions",
         },
         empty: "No data",
+        emptySearch: "No matching organizations",
     },
     pagination: {
         showing: "Showing {{start}} - {{end}} of {{total}} records",

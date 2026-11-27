@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { decodeId } from "@/utils/HashId.ts";
 import OrganizationDetailSkeleton from "@/components/organization/OrganizationDetailSkeleton";
+import ErrorState from "@/components/errorState/ErrorState";
 import AuthRequired from "@/components/auth/AuthRequired";
 import { useAuth } from "@/contexts/AuthContext";
 import styles from "./OrganizationDetail.module.css";
@@ -22,6 +23,7 @@ import { OrgRole, canManageOrgTask, canRemoveMember, canSetMemberRole, getAvaila
 import { AssignmentStatus, AssignmentPriority, OrgMembershipStatus } from "@/types/Enums.ts";
 import { useEnumLabels } from "@/i18n/UseEnumLabels";
 import { useTranslation } from "react-i18next";
+import i18n from "@/i18n";
 // import type { Assignment } from '../../types';
 
 const STATE_STR_MAP_NUMBER: Record<string, number> = {
@@ -64,6 +66,8 @@ const OrganizationDetail: React.FC = () => {
     const enums = useEnumLabels();
     const { t } = useTranslation("organization");
     const [loading, setLoading] = useState(true);
+    const [detailError, setDetailError] = useState(false);
+    const [reloadKey, setReloadKey] = useState(0);
     const [org, setOrg] = useState<OrganizationDetailType | null>(null);
     const [page, setPage] = useState(1);
     const [members, setMembers] = useState<Member[]>([]);
@@ -158,6 +162,7 @@ const OrganizationDetail: React.FC = () => {
                 return;
             }
             setLoading(true);
+            setDetailError(false);
             try {
                 if (!id) {
                     throw new Error("无效的组织ID");
@@ -183,13 +188,14 @@ const OrganizationDetail: React.FC = () => {
                 const role = checkUserRole(res.user_role);
                 setUserRole(role);
             } catch (e) {
+                setDetailError(true);
                 message.error(t("detail.message.fetchDetailFailed"));
             } finally {
                 setLoading(false);
             }
         };
         fetchDetail();
-    }, [id, currentUser, checkUserRole]);
+    }, [id, currentUser, checkUserRole, reloadKey]);
 
     // 获取组织成员统计（独立接口，不依赖当前 Tab）
     const fetchStats = useCallback(async () => {
@@ -913,83 +919,84 @@ const OrganizationDetail: React.FC = () => {
         <>
             <div className={styles.mainContent}>
                 <AuthRequired message={t("detail.page.authRequired")}>
-                    {loading || !org ? (
+                    {loading || (!org && !detailError) ? (
                         <OrganizationDetailSkeleton />
+                    ) : !org ? (
+                        <ErrorState
+                            title={t("detail.message.fetchDetailFailed")}
+                            actionText={i18n.t("common:actions.retry")}
+                            onAction={() => setReloadKey((value) => value + 1)}
+                        />
                     ) : (
-                        <div className={styles.detailCard}>
-                            {org && (
-                                <>
-                                    <OrganizationInfo
-                                        org={org}
-                                        stats={stats}
-                                        repoCount={repoCount}
-                                        onJoin={handleJoin}
-                                        onLeave={handleLeaveOrganization}
-                                        onToggleStatus={handleToggleOrganizationStatus}
-                                        onDelete={handleDeleteOrganization}
-                                    />
+                        <>
+                            <OrganizationInfo
+                                org={org}
+                                stats={stats}
+                                repoCount={repoCount}
+                                onJoin={handleJoin}
+                                onLeave={handleLeaveOrganization}
+                                onToggleStatus={handleToggleOrganizationStatus}
+                                onDelete={handleDeleteOrganization}
+                            />
 
-                                    <OrganizationTabs
-                                        org={org}
-                                        userRole={userRole}
-                                        currentUser={currentUser}
-                                        showPendingRequests={showPendingRequests}
-                                        showTasks={showTasks}
-                                        showRepos={showRepos}
-                                        members={members}
-                                        membersTotal={membersTotal}
-                                        page={page}
-                                        isRefreshing={isRefreshing}
-                                        pendingRequests={pendingRequests}
-                                        pendingRequestsTotal={pendingRequestsTotal}
-                                        pendingRequestsPage={pendingRequestsPage}
-                                        pendingRequestsLoading={pendingRequestsLoading}
-                                        tasks={tasks}
-                                        tasksTotal={tasksTotal}
-                                        tasksPage={tasksPage}
-                                        tasksLoading={tasksLoading}
-                                        roleModalVisible={roleModalVisible}
-                                        taskPreviewModalVisible={taskPreviewModalVisible}
-                                        memberPreviewModalVisible={memberPreviewModalVisible}
-                                        selectedMember={selectedMember}
-                                        selectedRole={selectedRole}
-                                        getAvailableRoleOptions={getAvailableRoleOptions}
-                                        onTabChange={(showPending, showTasks, showRepo) => {
-                                            setShowPendingRequests(showPending);
-                                            setShowTasks(showTasks);
-                                            setShowRepos(showRepo ?? false);
-                                            const tab = showRepo ? "repos" : showTasks ? "tasks" : showPending ? "pending" : "members";
-                                            setSearchParams({ tab }, { replace: true });
-                                        }}
-                                        onRefreshMembers={() => setRefreshTrigger((prev) => prev + 1)}
-                                        onRefreshPending={() => setPendingRequestsRefreshTrigger((prev) => prev + 1)}
-                                        onPageChange={setPage}
-                                        onPendingPageChange={setPendingRequestsPage}
-                                        onTasksPageChange={handleTasksPageChange}
-                                        onActionPendingRequest={handleActionPendingRequest}
-                                        onKickMember={handleKickMember}
-                                        onSetMemberRole={handleSetMemberRole}
-                                        onRoleModalClose={() => setRoleModalVisible(false)}
-                                        onTaskPreviewModalClose={() => setTaskPreviewModalVisible(false)}
-                                        onMemberPreviewModalClose={() => setMemberPreviewModalVisible(false)}
-                                        onViewMember={handleViewMember}
-                                        onRoleChange={setSelectedRole}
-                                        onConfirmRole={handleConfirmRole}
-                                        onCreateTask={handleCreateTask}
-                                        onRefreshTasks={(page) => fetchTasksList(page || 1)}
-                                        onEditTask={handleEditTask}
-                                        onViewTask={handleViewTask}
-                                        onDeleteTask={handleDeleteTask}
-                                        canManageMember={canManageMember}
-                                        canSetRole={canSetRole}
-                                        canManageTask={canManageTask}
-                                        onReposChange={(delta) => setRepoCount((prev) => Math.max(0, prev + delta))}
-                                        selectedTask={selectedTask}
-                                    />
-                                    {/* 申请加入按钮已移至header最右侧 */}
-                                </>
-                            )}
-                        </div>
+                            <OrganizationTabs
+                                org={org}
+                                userRole={userRole}
+                                currentUser={currentUser}
+                                showPendingRequests={showPendingRequests}
+                                showTasks={showTasks}
+                                showRepos={showRepos}
+                                members={members}
+                                membersTotal={membersTotal}
+                                page={page}
+                                isRefreshing={isRefreshing}
+                                pendingRequests={pendingRequests}
+                                pendingRequestsTotal={pendingRequestsTotal}
+                                pendingRequestsPage={pendingRequestsPage}
+                                pendingRequestsLoading={pendingRequestsLoading}
+                                tasks={tasks}
+                                tasksTotal={tasksTotal}
+                                tasksPage={tasksPage}
+                                tasksLoading={tasksLoading}
+                                roleModalVisible={roleModalVisible}
+                                taskPreviewModalVisible={taskPreviewModalVisible}
+                                memberPreviewModalVisible={memberPreviewModalVisible}
+                                selectedMember={selectedMember}
+                                selectedRole={selectedRole}
+                                getAvailableRoleOptions={getAvailableRoleOptions}
+                                onTabChange={(showPending, showTasks, showRepo) => {
+                                    setShowPendingRequests(showPending);
+                                    setShowTasks(showTasks);
+                                    setShowRepos(showRepo ?? false);
+                                    const tab = showRepo ? "repos" : showTasks ? "tasks" : showPending ? "pending" : "members";
+                                    setSearchParams({ tab }, { replace: true });
+                                }}
+                                onRefreshMembers={() => setRefreshTrigger((prev) => prev + 1)}
+                                onRefreshPending={() => setPendingRequestsRefreshTrigger((prev) => prev + 1)}
+                                onPageChange={setPage}
+                                onPendingPageChange={setPendingRequestsPage}
+                                onTasksPageChange={handleTasksPageChange}
+                                onActionPendingRequest={handleActionPendingRequest}
+                                onKickMember={handleKickMember}
+                                onSetMemberRole={handleSetMemberRole}
+                                onRoleModalClose={() => setRoleModalVisible(false)}
+                                onTaskPreviewModalClose={() => setTaskPreviewModalVisible(false)}
+                                onMemberPreviewModalClose={() => setMemberPreviewModalVisible(false)}
+                                onViewMember={handleViewMember}
+                                onRoleChange={setSelectedRole}
+                                onConfirmRole={handleConfirmRole}
+                                onCreateTask={handleCreateTask}
+                                onRefreshTasks={(page) => fetchTasksList(page || 1)}
+                                onEditTask={handleEditTask}
+                                onViewTask={handleViewTask}
+                                onDeleteTask={handleDeleteTask}
+                                canManageMember={canManageMember}
+                                canSetRole={canSetRole}
+                                canManageTask={canManageTask}
+                                onReposChange={(delta) => setRepoCount((prev) => Math.max(0, prev + delta))}
+                                selectedTask={selectedTask}
+                            />
+                        </>
                     )}
                 </AuthRequired>
             </div>

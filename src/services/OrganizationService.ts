@@ -334,13 +334,11 @@ export class OrganizationService {
     /**
      * 获取组织列表
      */
-    static async getOrganizationLists(params: GetOrganizationListsParams): Promise<GetOrganizationListsResponse> {
-        let url = "/organizations?";
-        if (params.status != -1 && params.status !== undefined && params.status !== null) {
-            url += `status=${params.status}`;
-        }
+    static async getOrganizationLists(params: GetOrganizationListsParams = {}): Promise<GetOrganizationListsResponse> {
+        const hasStatus = params.status !== undefined && params.status !== null && params.status !== -1;
+        const url = hasStatus ? `/organizations?status=${params.status}` : "/organizations";
 
-        const response = await http.get<GetOrganizationListsResponse>(url);
+        const response = await http.get<GetOrganizationListsResponse>(url, { cacheTtl: 15_000 });
         return response.data;
     }
 

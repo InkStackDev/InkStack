@@ -30,7 +30,6 @@ import {
 import CustomSelect from "@/components/customSelect/CustomSelect";
 import Input from "@/components/input/Input";
 import Loading from "@/components/loading/Loading";
-import AdminListSkeleton from "@/components/adminListSkeleton/AdminListSkeleton";
 import { confirm } from "@/components/confirm/Confirm";
 import type { SelectOption } from "@/types";
 import { PlatformRoleByKey, type PlatformRole } from "@/types/Roles.ts";
@@ -43,6 +42,8 @@ import { CategoryService } from "@/services/CategoryService.ts";
 import { formatToChinaTime } from "@/utils/Utils.ts";
 import message from "@/components/message/Message";
 import Avatar from "@/components/avatar/Avatar";
+import PageHeader from "@/components/pageHeader/PageHeader";
+import Button from "@/components/button/Button";
 
 // 文章接口定义
 interface Article {
@@ -611,26 +612,23 @@ const ArticleManagement: React.FC = () => {
     if (loading && !initialLoaded) {
         return (
             <div className={styles.articleManagement}>
-                <AdminListSkeleton stats={5} columns={7} />
+                <Loading size="large" />
             </div>
         );
     }
 
     return (
         <div className={styles.articleManagement}>
-            {/* 页面头部 */}
-            <div className={styles.pageHeader}>
-                <div>
-                    <h1 className={styles.pageTitle}>{t("articles.title")}</h1>
-                    <p className={styles.pageDescription}>{t("articles.description")}</p>
-                </div>
-                <div className={styles.headerActions}>
-                    <button className={`${styles.btn} ${styles.btnPrimary}`}>
+            <PageHeader
+                title={t("articles.title")}
+                description={t("articles.description")}
+                actions={
+                    <Button>
                         <FaPlus />
                         {t("articles.addArticle")}
-                    </button>
-                </div>
-            </div>
+                    </Button>
+                }
+            />
 
             {/* 统计卡片 */}
             <div className={styles.statsContainer}>

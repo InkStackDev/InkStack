@@ -1,6 +1,8 @@
 const section = {
     fetchFailed: "Failed to load repositories",
     empty: "No repositories",
+    emptyHint: "Add a repository to show its sync status and language details here.",
+    emptyAction: "Add repository",
     deleteConfirm: {
         title: "Confirm Delete",
         before: 'Are you sure you want to delete the repository "',

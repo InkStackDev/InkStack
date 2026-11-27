@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { FaGithub, FaStar, FaExternalLinkAlt, FaTrash, FaSync, FaEdit } from "react-icons/fa";
 import Modal from "../modal/Modal";
+import EmptyState from "../emptyState/EmptyState";
 import Input from "../input/Input";
 import message from "../message/Message";
 import { confirm } from "../confirm/Confirm";
@@ -64,9 +65,11 @@ interface Props {
     /** 外部触发列表刷新的信号，变化时静默重新拉取仓库列表 */
     refreshKey?: number;
     onChange?: (delta: number) => void;
+    /** 空态下点击「添加仓库」的回调 */
+    onAdd?: () => void;
 }
 
-const OrganizationRepos: React.FC<Props> = ({ orgId, canManage, refreshKey = 0, onChange }) => {
+const OrganizationRepos: React.FC<Props> = ({ orgId, canManage, refreshKey = 0, onChange, onAdd }) => {
     const { t } = useTranslation("organization");
     const [repos, setRepos] = useState<Repo[]>([]);
     const [loading, setLoading] = useState(true);
@@ -304,10 +307,13 @@ const OrganizationRepos: React.FC<Props> = ({ orgId, canManage, refreshKey = 0, 
     return (
         <div className={styles.repoSection}>
             {repos.length === 0 ? (
-                <div className={styles.emptyState}>
-                    <FaGithub size={40} style={{ opacity: 0.3, marginBottom: "12px" }} />
-                    <p style={{ color: "var(--text-secondary)", fontSize: "14px" }}>{t("repos.empty")}</p>
-                </div>
+                <EmptyState
+                    icon={<FaGithub />}
+                    title={t("repos.empty")}
+                    description={t("repos.emptyHint")}
+                    actionText={canManage && onAdd ? t("repos.emptyAction") : undefined}
+                    onAction={canManage && onAdd ? onAdd : undefined}
+                />
             ) : (
                 <div className={styles.repoGrid}>
                     {repos.map((repo) => (

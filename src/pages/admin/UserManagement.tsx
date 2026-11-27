@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import {
     FaFilter,
@@ -16,7 +16,7 @@ import CustomSelect from "@/components/customSelect/CustomSelect";
 import Input from "@/components/input/Input";
 import Button from "@/components/button/Button";
 import Loading from "@/components/loading/Loading";
-import AdminListSkeleton from "@/components/adminListSkeleton/AdminListSkeleton";
+import ErrorState from "@/components/errorState/ErrorState";
 import Avatar from "@/components/avatar/Avatar";
 import Modal from "@/components/modal/Modal";
 import { confirm } from "@/components/confirm/Confirm";
@@ -25,6 +25,7 @@ import type { SelectOption } from "@/types";
 import { PlatformRoleCSS, PlatformRoleByKey, type PlatformRole } from "@/types/Roles.ts";
 import { useEnumLabels } from "@/i18n/UseEnumLabels";
 import { useInitialLoaded } from "@/hooks/UseInitialLoaded";
+import PageHeader from "@/components/pageHeader/PageHeader";
 import styles from "./UserManagement.module.css";
 import { AuthService } from "@/services/AuthService.ts";
 import { formatToChinaTime } from "@/utils/Utils.ts";
@@ -59,6 +60,10 @@ interface FilterOptions {
     dateRange: string;
 }
 
+const USERS_PER_PAGE = 15; // 每页显示15条数据
+const FETCH_PAGE_SIZE = 100; // 全量拉取时每轮的条数
+const MAX_FETCH_PAGES = 50; // 全量拉取的页数上限，防止异常数据导致死循环
+
 const UserManagement: React.FC = () => {
     const { t } = useTranslation("admin");
     const enums = useEnumLabels();
@@ -79,7 +84,9 @@ const UserManagement: React.FC = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const [loading, setLoading] = useState(true);
     const initialLoaded = useInitialLoaded(loading);
-    const [totalUsers, setTotalUsers] = useState(0);
+    const [loadError, setLoadError] = useState<string | null>(null);
+    const requestIdRef = useRef(0);
+    const mountedRef = useRef(true);
     const [isModalVisible, setIsModalVisible] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [formData, setFormData] = useState({
@@ -92,8 +99,6 @@ const UserManagement: React.FC = () => {
     const [editingUser, setEditingUser] = useState<UserListItem | null>(null);
     const [detailUser, setDetailUser] = useState<UserListItem | null>(null);
     const [isDetailVisible, setIsDetailVisible] = useState(false);
-
-    const usersPerPage = 15; // 每页显示15条数据
 
     // 加载统计数据
     const fetchStats = async () => {
@@ -114,62 +119,112 @@ const UserManagement: React.FC = () => {
         fetchStats();
     }, []);
 
-    // 加载用户数据
+    // 组件卸载标记：卸载后忽略所有在途请求的回调，避免 setState after unmount
     useEffect(() => {
-        const fetchUsers = async () => {
-            setLoading(true);
-            try {
-                const dateRangeMap: Record<string, number> = {
-                    "7days": 7,
-                    "30days": 30,
-                    "90days": 90,
-                };
+        mountedRef.current = true;
+        return () => {
+            mountedRef.current = false;
+        };
+    }, []);
 
-                const params: any = {
-                    page_num: currentPage,
-                    page_size: usersPerPage,
-                };
+    // 循环分页拉取当前服务端筛选条件下的全量用户，搜索/分页全部在本地完成
+    const fetchUsers = useCallback(async () => {
+        const requestId = ++requestIdRef.current;
+        setLoading(true);
+        setLoadError(null);
+        try {
+            const dateRangeMap: Record<string, number> = {
+                "7days": 7,
+                "30days": 30,
+                "90days": 90,
+            };
 
-                if (filters.role) {
-                    params.role = PlatformRoleByKey[filters.role];
-                }
-                // 假设 1=active, 2=inactive (根据实际后端定义调整)
-                if (filters.status) {
-                    params.state = filters.status === "active" ? 1 : 2;
-                }
-                if (filters.dateRange) {
-                    params.regis_range = dateRangeMap[filters.dateRange];
+            const query: { role?: number; state?: number; days?: number } = {};
+
+            if (filters.role) {
+                query.role = PlatformRoleByKey[filters.role];
+            }
+            // 假设 1=active, 2=inactive (根据实际后端定义调整)
+            if (filters.status) {
+                query.state = filters.status === "active" ? 1 : 2;
+            }
+            if (filters.dateRange) {
+                query.days = dateRangeMap[filters.dateRange];
+            }
+
+            const collected: UserListItem[] = [];
+            const seenIds = new Set<string>();
+            let page = 1;
+            let total = Number.POSITIVE_INFINITY;
+
+            while (collected.length < total && page <= MAX_FETCH_PAGES) {
+                const rsp = await AuthService.listUsersAdmin({
+                    ...query,
+                    page_num: page,
+                    page_size: FETCH_PAGE_SIZE,
+                });
+
+                // 请求序号变化（切换筛选/重试）或组件已卸载，丢弃过期响应
+                if (!mountedRef.current || requestId !== requestIdRef.current) {
+                    return;
                 }
 
-                const rsp = await AuthService.listUsersAdmin(params);
-
-                let fetchedUsers: UserListItem[] = [];
-                if (Array.isArray(rsp.list) && rsp.list.length > 0) {
-                    fetchedUsers = rsp.list.map((user) => ({
-                        id: user.id,
-                        username: user.name,
-                        email: user.email,
-                        avatar: user.avatar || "",
-                        role: user.role,
-                        status: user.state === 1 ? "active" : "inactive",
-                        createdAt: formatToChinaTime(user.create_time),
-                        lastLogin: formatToChinaTime(user.login_time),
-                        articleCount: (user as any).article_count ?? 0,
-                        commentCount: (user as any).comment_count ?? 0,
-                    }));
+                total = rsp.total;
+                const list = Array.isArray(rsp.list) ? rsp.list : [];
+                // 某页返回空则停止，避免继续请求
+                if (list.length === 0) {
+                    break;
                 }
-                setUsers(fetchedUsers);
-                setTotalUsers(rsp.total);
-            } catch (error) {
-                console.error("获取用户列表失败:", error);
-                // 可以添加错误提示
-            } finally {
+
+                const sizeBeforeBatch = collected.length;
+                for (const raw of list) {
+                    const idKey = String(raw.id);
+                    if (seenIds.has(idKey)) {
+                        continue;
+                    }
+                    seenIds.add(idKey);
+                    collected.push({
+                        id: raw.id,
+                        username: raw.name,
+                        email: raw.email,
+                        avatar: raw.avatar || "",
+                        role: raw.role,
+                        status: raw.state === 1 ? "active" : "inactive",
+                        createdAt: formatToChinaTime(raw.create_time),
+                        lastLogin: formatToChinaTime(raw.login_time),
+                        articleCount: raw.article_count ?? 0,
+                        commentCount: raw.comment_count ?? 0,
+                    });
+                }
+
+                // 服务端忽略 page_num 时（返回重复数据）避免无意义地翻满上限页数
+                if (collected.length === sizeBeforeBatch) {
+                    break;
+                }
+                page += 1;
+            }
+
+            if (!mountedRef.current || requestId !== requestIdRef.current) {
+                return;
+            }
+            setUsers(collected);
+        } catch (error) {
+            if (!mountedRef.current || requestId !== requestIdRef.current) {
+                return;
+            }
+            console.error("获取用户列表失败:", error);
+            setLoadError(error instanceof Error ? error.message : t("users.message.loadFailed"));
+        } finally {
+            if (mountedRef.current && requestId === requestIdRef.current) {
                 setLoading(false);
             }
-        };
+        }
+    }, [filters.role, filters.status, filters.dateRange, t]);
 
+    // 服务端筛选条件变化时重新拉取全量数据
+    useEffect(() => {
         fetchUsers();
-    }, [currentPage, filters.role, filters.status, filters.dateRange]);
+    }, [fetchUsers]);
 
     // 筛选用户数据
     const filteredUsers = useMemo(() => {
@@ -185,11 +240,19 @@ const UserManagement: React.FC = () => {
         });
     }, [users, filters.search]);
 
-    // 分页计算
-    const totalPages = Math.max(1, Math.ceil(totalUsers / usersPerPage));
-    const startIndex = (currentPage - 1) * usersPerPage;
-    const endIndex = startIndex + users.length;
-    const currentUsers = filteredUsers;
+    // 分页计算（均基于本地搜索结果）
+    const filteredTotal = filteredUsers.length;
+    const totalPages = Math.max(1, Math.ceil(filteredTotal / USERS_PER_PAGE));
+    const startIndex = (currentPage - 1) * USERS_PER_PAGE;
+    const endIndex = startIndex + USERS_PER_PAGE;
+    const currentUsers = filteredUsers.slice(startIndex, endIndex);
+
+    // 搜索/筛选导致总页数变少时，把页码收敛到有效范围
+    useEffect(() => {
+        if (currentPage > totalPages) {
+            setCurrentPage(totalPages);
+        }
+    }, [currentPage, totalPages]);
 
     // 筛选选项数据
     const roleOptions: SelectOption[] = [
@@ -242,6 +305,10 @@ const UserManagement: React.FC = () => {
             ...prev,
             [field]: value,
         }));
+        // 搜索条件变化时回到第一页
+        if (field === "search") {
+            setCurrentPage(1);
+        }
     };
 
     // 清除筛选条件
@@ -330,25 +397,8 @@ const UserManagement: React.FC = () => {
                 message.success(t("users.message.createSuccess"));
             }
             setIsModalVisible(false);
-            // 刷新用户列表
-            const rsp = await AuthService.listUsersAdmin({ page_num: 1, page_size: usersPerPage });
-            let fetchedUsers: UserListItem[] = [];
-            if (Array.isArray(rsp.list) && rsp.list.length > 0) {
-                fetchedUsers = rsp.list.map((user) => ({
-                    id: user.id,
-                    username: user.name,
-                    email: user.email,
-                    avatar: user.avatar || `https://picsum.photos/id/${(Number(user.id) % 100) + 1}/80`,
-                    role: user.role,
-                    status: user.state === 1 ? "active" : "inactive",
-                    createdAt: formatToChinaTime(user.create_time),
-                    lastLogin: formatToChinaTime(user.login_time),
-                    articleCount: (user as any).article_count ?? 0,
-                    commentCount: (user as any).comment_count ?? 0,
-                }));
-            }
-            setUsers(fetchedUsers);
-            setTotalUsers(rsp.total);
+            // 刷新用户列表（重新拉取全量数据）
+            await fetchUsers();
             fetchStats();
         } catch (error: any) {
             message.error(error.message || (editingUser ? t("users.message.updateFailed") : t("users.message.createFailed")));
@@ -373,7 +423,6 @@ const UserManagement: React.FC = () => {
             await AuthService.deleteUserAdmin(userId);
             message.success(t("users.message.deleteSuccess"));
             setUsers((prev) => prev.filter((user) => user.id !== userId));
-            setTotalUsers((prev) => prev - 1);
             fetchStats();
         } catch (error: any) {
             message.error(error.message || t("users.message.deleteFailed"));
@@ -428,26 +477,23 @@ const UserManagement: React.FC = () => {
     if (loading && !initialLoaded) {
         return (
             <div className={styles.userManagement}>
-                <AdminListSkeleton stats={4} columns={7} />
+                <Loading size="large" />
             </div>
         );
     }
 
     return (
         <div className={styles.userManagement}>
-            {/* 页面头部 */}
-            <div className={styles.pageHeader}>
-                <div>
-                    <h1 className={styles.pageTitle}>{t("users.title")}</h1>
-                    <p className={styles.pageDescription}>{t("users.description")}</p>
-                </div>
-                <div className={styles.headerActions}>
-                    <button className={`${styles.btn} ${styles.btnPrimary}`} onClick={openCreateModal}>
+            <PageHeader
+                title={t("users.title")}
+                description={t("users.description")}
+                actions={
+                    <Button onClick={openCreateModal}>
                         <FaPlus />
                         {t("users.addUser")}
-                    </button>
-                </div>
-            </div>
+                    </Button>
+                }
+            />
 
             {/* 统计卡片 */}
             <div className={styles.statsContainer}>
@@ -550,164 +596,181 @@ const UserManagement: React.FC = () => {
                 <div className={styles.tableHeader}>
                     <h3 className={styles.tableTitle}>{t("users.table.title")}</h3>
                     <div className={styles.tableActions}>
-                        <span style={{ fontSize: "14px", color: "var(--text-secondary)" }}>
-                            {t("users.table.total", { total: totalUsers })}
-                        </span>
-                    </div>
-                </div>
-                <table className={styles.usersTable}>
-                    <thead>
-                        <tr>
-                            <th>{t("users.table.userInfo")}</th>
-                            <th>{t("users.table.role")}</th>
-                            <th>{t("users.table.status")}</th>
-                            <th>{t("users.table.registerTime")}</th>
-                            <th>{t("users.table.lastLogin")}</th>
-                            <th>{t("users.table.articleCount")}</th>
-                            <th>{t("users.table.commentCount")}</th>
-                            <th>{t("users.table.actions")}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {loading ? (
-                            <tr>
-                                <td colSpan={8} style={{ textAlign: "center", padding: "40px" }}>
-                                    <Loading size="small" />
-                                </td>
-                            </tr>
-                        ) : currentUsers.length > 0 ? (
-                            currentUsers.map((user) => (
-                                <tr key={user.id}>
-                                    <td>
-                                        <div className={styles.userInfo}>
-                                            <Avatar src={user.avatar} name={user.username} size={40} />
-                                            <div className={styles.userDetails}>
-                                                <div className={styles.userName}>{user.username}</div>
-                                                <div className={styles.userEmail}>{user.email}</div>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td>
-                                        <span
-                                            className={`${styles.roleBadge} ${styles[PlatformRoleCSS[user.role as keyof typeof PlatformRoleCSS] || "user"]}`}
-                                        >
-                                            {enums.platformRole[user.role as PlatformRole] || user.role}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <span className={`${styles.statusBadge} ${styles[user.status]}`}>
-                                            <span className={styles.statusIndicator}></span>
-                                            {user.status === "active"
-                                                ? t("users.status.active")
-                                                : user.status === "inactive"
-                                                  ? t("users.status.inactive")
-                                                  : t("users.status.pending")}
-                                        </span>
-                                    </td>
-                                    <td>{formatDate(user.createdAt)}</td>
-                                    <td>{formatDate(user.lastLogin)}</td>
-                                    <td>{user.articleCount}</td>
-                                    <td>{user.commentCount}</td>
-                                    <td>
-                                        <div className={styles.actionButtons}>
-                                            <button
-                                                className={`${styles.actionButton} ${styles.edit}`}
-                                                title={t("users.actions.edit")}
-                                                onClick={() => openEditModal(user)}
-                                            >
-                                                <FaEdit />
-                                            </button>
-                                            <button
-                                                className={`${styles.actionButton} ${styles.edit}`}
-                                                title={t("users.actions.view")}
-                                                onClick={() => openDetailModal(user)}
-                                            >
-                                                <FaEye />
-                                            </button>
-                                            <Button
-                                                color="error"
-                                                variant="ghost"
-                                                size="small"
-                                                onClick={() => deleteUser(user.id)}
-                                                className={styles.actionButton}
-                                                aria-label={t("users.actions.delete")}
-                                            >
-                                                <FaTrash />
-                                            </Button>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))
-                        ) : (
-                            <tr>
-                                <td
-                                    colSpan={8}
-                                    style={{
-                                        textAlign: "center",
-                                        padding: "40px",
-                                        color: "var(--text-secondary)",
-                                    }}
-                                >
-                                    {t("users.table.noData")}
-                                </td>
-                            </tr>
+                        {!loadError && (
+                            <span style={{ fontSize: "14px", color: "var(--text-secondary)" }}>
+                                {t("users.table.total", { total: filteredTotal })}
+                            </span>
                         )}
-                    </tbody>
-                </table>
-
-                {/* 分页 */}
-                <div className={styles.paginationContainer}>
-                    <div className={styles.paginationInfo}>
-                        {t("users.table.pagination", {
-                            start: totalUsers > 0 ? startIndex + 1 : 0,
-                            end: Math.min(endIndex, totalUsers),
-                            total: totalUsers,
-                        })}
-                    </div>
-                    <div className={styles.paginationControls}>
-                        <button className={styles.paginationButton} onClick={() => setCurrentPage(1)} disabled={currentPage === 1}>
-                            <FaAngleDoubleLeft />
-                        </button>
-                        <button
-                            className={styles.paginationButton}
-                            onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                            disabled={currentPage === 1}
-                        >
-                            <FaChevronLeft />
-                        </button>
-
-                        {getPageNumbers().map((page, index) => (
-                            <React.Fragment key={index}>
-                                {page === "..." ? (
-                                    <span className={styles.paginationEllipsis}>...</span>
-                                ) : (
-                                    <button
-                                        className={`${styles.paginationButton} ${currentPage === page ? styles.active : ""}`}
-                                        onClick={() => setCurrentPage(page as number)}
-                                        disabled={totalUsers === 0}
-                                    >
-                                        {page}
-                                    </button>
-                                )}
-                            </React.Fragment>
-                        ))}
-
-                        <button
-                            className={styles.paginationButton}
-                            onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                            disabled={currentPage === totalPages}
-                        >
-                            <FaChevronRight />
-                        </button>
-                        <button
-                            className={styles.paginationButton}
-                            onClick={() => setCurrentPage(totalPages)}
-                            disabled={currentPage === totalPages}
-                        >
-                            <FaAngleDoubleRight />
-                        </button>
                     </div>
                 </div>
+                {loadError ? (
+                    <ErrorState
+                        title={t("users.message.loadFailedTitle")}
+                        message={loadError}
+                        actionText={t("users.message.retry")}
+                        onAction={fetchUsers}
+                    />
+                ) : (
+                    <>
+                        <table className={styles.usersTable}>
+                            <thead>
+                                <tr>
+                                    <th>{t("users.table.userInfo")}</th>
+                                    <th>{t("users.table.role")}</th>
+                                    <th>{t("users.table.status")}</th>
+                                    <th>{t("users.table.registerTime")}</th>
+                                    <th>{t("users.table.lastLogin")}</th>
+                                    <th>{t("users.table.articleCount")}</th>
+                                    <th>{t("users.table.commentCount")}</th>
+                                    <th>{t("users.table.actions")}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {loading ? (
+                                    <tr>
+                                        <td colSpan={8} style={{ textAlign: "center", padding: "40px" }}>
+                                            <Loading size="small" />
+                                        </td>
+                                    </tr>
+                                ) : currentUsers.length > 0 ? (
+                                    currentUsers.map((user) => (
+                                        <tr key={user.id}>
+                                            <td>
+                                                <div className={styles.userInfo}>
+                                                    <Avatar src={user.avatar} name={user.username} size={40} />
+                                                    <div className={styles.userDetails}>
+                                                        <div className={styles.userName}>{user.username}</div>
+                                                        <div className={styles.userEmail}>{user.email}</div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span
+                                                    className={`${styles.roleBadge} ${styles[PlatformRoleCSS[user.role as keyof typeof PlatformRoleCSS] || "user"]}`}
+                                                >
+                                                    {enums.platformRole[user.role as PlatformRole] || user.role}
+                                                </span>
+                                            </td>
+                                            <td>
+                                                <span className={`${styles.statusBadge} ${styles[user.status]}`}>
+                                                    <span className={styles.statusIndicator}></span>
+                                                    {user.status === "active"
+                                                        ? t("users.status.active")
+                                                        : user.status === "inactive"
+                                                          ? t("users.status.inactive")
+                                                          : t("users.status.pending")}
+                                                </span>
+                                            </td>
+                                            <td>{formatDate(user.createdAt)}</td>
+                                            <td>{formatDate(user.lastLogin)}</td>
+                                            <td>{user.articleCount}</td>
+                                            <td>{user.commentCount}</td>
+                                            <td>
+                                                <div className={styles.actionButtons}>
+                                                    <button
+                                                        className={`${styles.actionButton} ${styles.edit}`}
+                                                        title={t("users.actions.edit")}
+                                                        onClick={() => openEditModal(user)}
+                                                    >
+                                                        <FaEdit />
+                                                    </button>
+                                                    <button
+                                                        className={`${styles.actionButton} ${styles.edit}`}
+                                                        title={t("users.actions.view")}
+                                                        onClick={() => openDetailModal(user)}
+                                                    >
+                                                        <FaEye />
+                                                    </button>
+                                                    <Button
+                                                        color="error"
+                                                        variant="ghost"
+                                                        size="small"
+                                                        onClick={() => deleteUser(user.id)}
+                                                        className={styles.actionButton}
+                                                        aria-label={t("users.actions.delete")}
+                                                    >
+                                                        <FaTrash />
+                                                    </Button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))
+                                ) : (
+                                    <tr>
+                                        <td
+                                            colSpan={8}
+                                            style={{
+                                                textAlign: "center",
+                                                padding: "40px",
+                                                color: "var(--text-secondary)",
+                                            }}
+                                        >
+                                            {t("users.table.noData")}
+                                        </td>
+                                    </tr>
+                                )}
+                            </tbody>
+                        </table>
+
+                        {/* 分页 */}
+                        <div className={styles.paginationContainer}>
+                            <div className={styles.paginationInfo}>
+                                {t("users.table.pagination", {
+                                    start: filteredTotal > 0 ? Math.min(startIndex + 1, filteredTotal) : 0,
+                                    end: Math.min(endIndex, filteredTotal),
+                                    total: filteredTotal,
+                                })}
+                            </div>
+                            <div className={styles.paginationControls}>
+                                <button
+                                    className={styles.paginationButton}
+                                    onClick={() => setCurrentPage(1)}
+                                    disabled={currentPage === 1}
+                                >
+                                    <FaAngleDoubleLeft />
+                                </button>
+                                <button
+                                    className={styles.paginationButton}
+                                    onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                                    disabled={currentPage === 1}
+                                >
+                                    <FaChevronLeft />
+                                </button>
+
+                                {getPageNumbers().map((page, index) => (
+                                    <React.Fragment key={index}>
+                                        {page === "..." ? (
+                                            <span className={styles.paginationEllipsis}>...</span>
+                                        ) : (
+                                            <button
+                                                className={`${styles.paginationButton} ${currentPage === page ? styles.active : ""}`}
+                                                onClick={() => setCurrentPage(page as number)}
+                                                disabled={filteredTotal === 0}
+                                            >
+                                                {page}
+                                            </button>
+                                        )}
+                                    </React.Fragment>
+                                ))}
+
+                                <button
+                                    className={styles.paginationButton}
+                                    onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                                    disabled={currentPage === totalPages}
+                                >
+                                    <FaChevronRight />
+                                </button>
+                                <button
+                                    className={styles.paginationButton}
+                                    onClick={() => setCurrentPage(totalPages)}
+                                    disabled={currentPage === totalPages}
+                                >
+                                    <FaAngleDoubleRight />
+                                </button>
+                            </div>
+                        </div>
+                    </>
+                )}
             </div>
 
             {/* 创建/编辑用户模态框 */}
