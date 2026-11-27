@@ -28,6 +28,7 @@ import { useTranslation } from "react-i18next";
 import Avatar from "../avatar/Avatar";
 import styles from "./Organization.module.css";
 import Modal from "../modal/Modal";
+import EmptyState from "../emptyState/EmptyState";
 import Input from "../input/Input";
 import message from "@/components/message/Message";
 // import DatePicker from '../datePicker/DatePicker';
@@ -388,11 +389,12 @@ const OrganizationTabs: React.FC<OrganizationTabsProps> = ({
                                 ) : (
                                     <tr>
                                         <td colSpan={5} style={{ padding: 0 }}>
-                                            <div className={styles.emptyState}>
-                                                <FaUser className={styles.emptyIcon} />
-                                                <h3 className={styles.emptyTitle}>{t("tabs.members.emptyTitle")}</h3>
-                                                <p className={styles.emptySubtext}>{t("tabs.members.emptySubtext")}</p>
-                                            </div>
+                                            <EmptyState
+                                                variant="inline"
+                                                icon={<FaUser />}
+                                                title={t("tabs.members.emptyTitle")}
+                                                description={t("tabs.members.emptySubtext")}
+                                            />
                                         </td>
                                     </tr>
                                 )}
@@ -400,7 +402,7 @@ const OrganizationTabs: React.FC<OrganizationTabsProps> = ({
                         </table>
                     )}
                     {/* 分页区块 */}
-                    <div className={styles.pagination}>
+                    <div className={styles.pagination} style={membersTotal === 0 ? { display: "none" } : undefined}>
                         <div className={styles.paginationInfo}>
                             {t("tabs.pagination.info", {
                                 start: membersTotal > 0 ? (page - 1) * PAGE_SIZE + 1 : 0,
@@ -492,11 +494,12 @@ const OrganizationTabs: React.FC<OrganizationTabsProps> = ({
                                 ) : (
                                     <tr>
                                         <td colSpan={3} style={{ padding: 0 }}>
-                                            <div className={styles.emptyState}>
-                                                <FaHourglassHalf className={styles.emptyIcon} />
-                                                <h3 className={styles.emptyTitle}>{t("tabs.pending.emptyTitle")}</h3>
-                                                <p className={styles.emptySubtext}>{t("tabs.pending.emptySubtext")}</p>
-                                            </div>
+                                            <EmptyState
+                                                variant="inline"
+                                                icon={<FaCheck />}
+                                                title={t("tabs.pending.emptyTitle")}
+                                                description={t("tabs.pending.emptySubtext")}
+                                            />
                                         </td>
                                     </tr>
                                 )}
@@ -504,7 +507,7 @@ const OrganizationTabs: React.FC<OrganizationTabsProps> = ({
                         </table>
                     )}
                     {/* 分页区块 - 待处理请求 */}
-                    <div className={styles.pagination}>
+                    <div className={styles.pagination} style={pendingRequestsTotal === 0 ? { display: "none" } : undefined}>
                         <div className={styles.paginationInfo}>
                             {t("tabs.pagination.info", {
                                 start: pendingRequestsTotal > 0 ? (pendingRequestsPage - 1) * PAGE_SIZE + 1 : 0,
@@ -550,15 +553,17 @@ const OrganizationTabs: React.FC<OrganizationTabsProps> = ({
                             <Loading />
                         </div>
                     ) : tasks.length === 0 ? (
-                        <div className={styles.emptyState}>
-                            <FaTasks className={styles.emptyIcon} />
-                            <h3 className={styles.emptyTitle}>{t("tabs.tasks.emptyTitle")}</h3>
-                            <p className={styles.emptySubtext}>
-                                {canManageOrg(userRole, currentUser?.role)
+                        <EmptyState
+                            icon={<FaTasks />}
+                            title={t("tabs.tasks.emptyTitle")}
+                            description={
+                                canManageOrg(userRole, currentUser?.role)
                                     ? t("tabs.tasks.emptyManageHint")
-                                    : t("tabs.tasks.emptySubtext")}
-                            </p>
-                        </div>
+                                    : t("tabs.tasks.emptySubtext")
+                            }
+                            actionText={canManageOrg(userRole, currentUser?.role) ? t("tabs.tasks.create") : undefined}
+                            onAction={canManageOrg(userRole, currentUser?.role) ? onCreateTask : undefined}
+                        />
                     ) : (
                         <table className={styles.usersTable}>
                             <thead>
@@ -697,10 +702,7 @@ const OrganizationTabs: React.FC<OrganizationTabsProps> = ({
                                 ) : (
                                     <tr>
                                         <td colSpan={5} style={{ padding: 0 }}>
-                                            <div className={styles.emptyState}>
-                                                <FaTasks className={styles.emptyIcon} />
-                                                <h3 className={styles.emptyTitle}>{t("tabs.tasks.emptyTitle")}</h3>
-                                            </div>
+                                            <EmptyState variant="inline" icon={<FaTasks />} title={t("tabs.tasks.emptyTitle")} />
                                         </td>
                                     </tr>
                                 )}
@@ -708,7 +710,7 @@ const OrganizationTabs: React.FC<OrganizationTabsProps> = ({
                         </table>
                     )}
                     {/* 分页区块 - 任务列表 */}
-                    <div className={styles.pagination}>
+                    <div className={styles.pagination} style={tasksTotal === 0 ? { display: "none" } : undefined}>
                         <div className={styles.paginationInfo}>
                             {t("tabs.pagination.info", {
                                 start: tasksTotal > 0 ? (tasksPage - 1) * TASKS_PAGE_SIZE + 1 : 0,
@@ -753,6 +755,7 @@ const OrganizationTabs: React.FC<OrganizationTabsProps> = ({
                     canManage={canManageOrg(userRole, currentUser?.role)}
                     refreshKey={reposRefreshKey}
                     onChange={onReposChange}
+                    onAdd={() => setRepoModalVisible(true)}
                 />
             )}
 

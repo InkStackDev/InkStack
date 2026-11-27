@@ -38,7 +38,7 @@ const section = {
         acceptTitle: "Accept",
         rejectTitle: "Reject",
         emptyTitle: "No pending requests",
-        emptySubtext: "All requests have been handled",
+        emptySubtext: "New join requests will appear here",
     },
     tasks: {
         refreshTitle: "Refresh task list",
