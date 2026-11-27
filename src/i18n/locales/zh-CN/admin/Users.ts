@@ -108,6 +108,9 @@ const section = {
         createFailed: "创建用户失败",
         deleteSuccess: "用户已删除",
         deleteFailed: "删除用户失败",
+        loadFailedTitle: "用户列表加载失败",
+        loadFailed: "加载用户列表失败，请稍后重试",
+        retry: "重试",
     },
     confirm: {
         deleteTitle: "确认删除",

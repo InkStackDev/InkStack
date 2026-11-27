@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { decodeId } from "@/utils/HashId.ts";
 import OrganizationDetailSkeleton from "@/components/organization/OrganizationDetailSkeleton";
+import ErrorState from "@/components/errorState/ErrorState";
 import AuthRequired from "@/components/auth/AuthRequired";
 import { useAuth } from "@/contexts/AuthContext";
 import styles from "./OrganizationDetail.module.css";
@@ -22,6 +23,7 @@ import { OrgRole, canManageOrgTask, canRemoveMember, canSetMemberRole, getAvaila
 import { AssignmentStatus, AssignmentPriority, OrgMembershipStatus } from "@/types/Enums.ts";
 import { useEnumLabels } from "@/i18n/UseEnumLabels";
 import { useTranslation } from "react-i18next";
+import i18n from "@/i18n";
 // import type { Assignment } from '../../types';
 
 const STATE_STR_MAP_NUMBER: Record<string, number> = {
@@ -64,6 +66,8 @@ const OrganizationDetail: React.FC = () => {
     const enums = useEnumLabels();
     const { t } = useTranslation("organization");
     const [loading, setLoading] = useState(true);
+    const [detailError, setDetailError] = useState(false);
+    const [reloadKey, setReloadKey] = useState(0);
     const [org, setOrg] = useState<OrganizationDetailType | null>(null);
     const [page, setPage] = useState(1);
     const [members, setMembers] = useState<Member[]>([]);
@@ -158,6 +162,7 @@ const OrganizationDetail: React.FC = () => {
                 return;
             }
             setLoading(true);
+            setDetailError(false);
             try {
                 if (!id) {
                     throw new Error("无效的组织ID");
@@ -183,13 +188,14 @@ const OrganizationDetail: React.FC = () => {
                 const role = checkUserRole(res.user_role);
                 setUserRole(role);
             } catch (e) {
+                setDetailError(true);
                 message.error(t("detail.message.fetchDetailFailed"));
             } finally {
                 setLoading(false);
             }
         };
         fetchDetail();
-    }, [id, currentUser, checkUserRole]);
+    }, [id, currentUser, checkUserRole, reloadKey]);
 
     // 获取组织成员统计（独立接口，不依赖当前 Tab）
     const fetchStats = useCallback(async () => {
@@ -913,8 +919,14 @@ const OrganizationDetail: React.FC = () => {
         <>
             <div className={styles.mainContent}>
                 <AuthRequired message={t("detail.page.authRequired")}>
-                    {loading || !org ? (
+                    {loading || (!org && !detailError) ? (
                         <OrganizationDetailSkeleton />
+                    ) : !org ? (
+                        <ErrorState
+                            title={t("detail.message.fetchDetailFailed")}
+                            actionText={i18n.t("common:actions.retry")}
+                            onAction={() => setReloadKey((value) => value + 1)}
+                        />
                     ) : (
                         <div className={styles.detailCard}>
                             {org && (

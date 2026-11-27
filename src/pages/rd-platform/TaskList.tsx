@@ -25,6 +25,7 @@ import DatePicker from "@/components/datePicker/DatePicker";
 import CustomSelect from "@/components/customSelect/CustomSelect";
 import Modal from "@/components/modal/Modal";
 import Loading from "@/components/loading/Loading";
+import ErrorState from "@/components/errorState/ErrorState";
 import { confirm } from "@/components/confirm/Confirm";
 import message from "@/components/message/Message";
 import { useAuth } from "@/contexts/AuthContext";
@@ -84,7 +85,9 @@ const TaskList: React.FC = () => {
         total,
         loading,
         initialLoaded,
+        error,
         refresh: fetchData,
+        reload,
     } = useRdList(RdAPI.getTasks, filters, currentPage, selectedOrgId, PAGE_SIZE);
 
     const handleFilterChange = (field: string, value: string) => {
@@ -289,102 +292,111 @@ const TaskList: React.FC = () => {
                 </div>
             </div>
 
-            <div className={styles.tableWrapper}>
-                <table className={styles.table}>
-                    <thead>
-                        <tr>
-                            <th>{t("tasks.table.title")}</th>
-                            <th>{t("tasks.table.status")}</th>
-                            <th>{t("tasks.table.priority")}</th>
-                            <th>{t("tasks.table.assignee")}</th>
-                            <th>{t("tasks.table.deadline")}</th>
-                            <th>{t("tasks.table.estimatedHours")}</th>
-                            <th>{t("tasks.table.actions")}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {loading && (
+            {error ? (
+                <ErrorState
+                    title={i18n.t("services:rdList.loadFailed")}
+                    message={error}
+                    actionText={i18n.t("common:actions.retry")}
+                    onAction={reload}
+                />
+            ) : (
+                <div className={styles.tableWrapper}>
+                    <table className={styles.table}>
+                        <thead>
                             <tr>
-                                <td colSpan={7} className={styles.emptyCell}>
-                                    <Loading size="small" />
-                                </td>
+                                <th>{t("tasks.table.title")}</th>
+                                <th>{t("tasks.table.status")}</th>
+                                <th>{t("tasks.table.priority")}</th>
+                                <th>{t("tasks.table.assignee")}</th>
+                                <th>{t("tasks.table.deadline")}</th>
+                                <th>{t("tasks.table.estimatedHours")}</th>
+                                <th>{t("tasks.table.actions")}</th>
                             </tr>
-                        )}
-                        {!loading &&
-                            tasks.map((task) => (
-                                <tr key={task.id}>
-                                    <td
-                                        className={styles.titleCell}
-                                        data-label={t("tasks.table.title")}
-                                        onClick={() => navigate(`/rd/tasks/${encodeId(task.id, "task")}`)}
-                                    >
-                                        {task.title}
-                                    </td>
-                                    <td data-label={t("tasks.table.status")}>
-                                        <span className={`${styles.badge} ${styles[`status_${task.status}`]}`}>
-                                            {enums.rdTaskStatus[task.status]}
-                                        </span>
-                                    </td>
-                                    <td data-label={t("tasks.table.priority")}>
-                                        <span className={`${styles.badge} ${styles[`priority_${task.priority}`]}`}>
-                                            {enums.rdPriority[task.priority]}
-                                        </span>
-                                    </td>
-                                    <td data-label={t("tasks.table.assignee")}>
-                                        <AssigneeDisplay name={task.assignee} avatar={task.assigneeAvatar} />
-                                    </td>
-                                    <td data-label={t("tasks.table.deadline")}>
-                                        {task.deadline ? formatDateTime(task.deadline) : "-"}
-                                    </td>
-                                    <td data-label={t("tasks.table.estimatedHours")}>
-                                        {task.estimatedHours ? `${task.estimatedHours}h` : "-"}
-                                    </td>
-                                    <td data-label={t("tasks.table.actions")}>
-                                        <div className={styles.actionButtons}>
-                                            <button
-                                                className={`${styles.actionBtn} ${styles.view}`}
-                                                title={t("tasks.actions.view")}
-                                                onClick={() => navigate(`/rd/tasks/${encodeId(task.id, "task")}`)}
-                                            >
-                                                <FaEye />
-                                            </button>
-                                            {OrgPermission.canEdit(maxOrgRole) && (
-                                                <button
-                                                    className={`${styles.actionBtn} ${styles.edit}`}
-                                                    title={t("tasks.actions.edit")}
-                                                    onClick={() => openEdit(task)}
-                                                >
-                                                    <FaEdit />
-                                                </button>
-                                            )}
-                                            {OrgPermission.canDelete(maxOrgRole) && (
-                                                <button
-                                                    className={`${styles.actionBtn} ${styles.delete}`}
-                                                    title={t("tasks.actions.delete")}
-                                                    onClick={() => handleDelete(task)}
-                                                >
-                                                    <FaTrash />
-                                                </button>
-                                            )}
-                                        </div>
+                        </thead>
+                        <tbody>
+                            {loading && (
+                                <tr>
+                                    <td colSpan={7} className={styles.emptyCell}>
+                                        <Loading size="small" />
                                     </td>
                                 </tr>
-                            ))}
-                        {!loading && tasks.length === 0 && (
-                            <tr>
-                                <td colSpan={7} className={styles.emptyCell}>
-                                    <div className={styles.emptyCellIcon}>
-                                        <FaTasks />
-                                    </div>
-                                    <div className={styles.emptyCellText}>{t("tasks.table.empty")}</div>
-                                </td>
-                            </tr>
-                        )}
-                    </tbody>
-                </table>
-            </div>
+                            )}
+                            {!loading &&
+                                tasks.map((task) => (
+                                    <tr key={task.id}>
+                                        <td
+                                            className={styles.titleCell}
+                                            data-label={t("tasks.table.title")}
+                                            onClick={() => navigate(`/rd/tasks/${encodeId(task.id, "task")}`)}
+                                        >
+                                            {task.title}
+                                        </td>
+                                        <td data-label={t("tasks.table.status")}>
+                                            <span className={`${styles.badge} ${styles[`status_${task.status}`]}`}>
+                                                {enums.rdTaskStatus[task.status]}
+                                            </span>
+                                        </td>
+                                        <td data-label={t("tasks.table.priority")}>
+                                            <span className={`${styles.badge} ${styles[`priority_${task.priority}`]}`}>
+                                                {enums.rdPriority[task.priority]}
+                                            </span>
+                                        </td>
+                                        <td data-label={t("tasks.table.assignee")}>
+                                            <AssigneeDisplay name={task.assignee} avatar={task.assigneeAvatar} />
+                                        </td>
+                                        <td data-label={t("tasks.table.deadline")}>
+                                            {task.deadline ? formatDateTime(task.deadline) : "-"}
+                                        </td>
+                                        <td data-label={t("tasks.table.estimatedHours")}>
+                                            {task.estimatedHours ? `${task.estimatedHours}h` : "-"}
+                                        </td>
+                                        <td data-label={t("tasks.table.actions")}>
+                                            <div className={styles.actionButtons}>
+                                                <button
+                                                    className={`${styles.actionBtn} ${styles.view}`}
+                                                    title={t("tasks.actions.view")}
+                                                    onClick={() => navigate(`/rd/tasks/${encodeId(task.id, "task")}`)}
+                                                >
+                                                    <FaEye />
+                                                </button>
+                                                {OrgPermission.canEdit(maxOrgRole) && (
+                                                    <button
+                                                        className={`${styles.actionBtn} ${styles.edit}`}
+                                                        title={t("tasks.actions.edit")}
+                                                        onClick={() => openEdit(task)}
+                                                    >
+                                                        <FaEdit />
+                                                    </button>
+                                                )}
+                                                {OrgPermission.canDelete(maxOrgRole) && (
+                                                    <button
+                                                        className={`${styles.actionBtn} ${styles.delete}`}
+                                                        title={t("tasks.actions.delete")}
+                                                        onClick={() => handleDelete(task)}
+                                                    >
+                                                        <FaTrash />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            {!loading && !error && tasks.length === 0 && (
+                                <tr>
+                                    <td colSpan={7} className={styles.emptyCell}>
+                                        <div className={styles.emptyCellIcon}>
+                                            <FaTasks />
+                                        </div>
+                                        <div className={styles.emptyCellText}>{t("tasks.table.empty")}</div>
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            )}
 
-            {
+            {!error && (
                 <div className={styles.pagination}>
                     <span className={styles.paginationInfo}>{t("tasks.pagination.total", { total })}</span>
                     <div className={styles.paginationControls}>
@@ -421,7 +433,7 @@ const TaskList: React.FC = () => {
                         </button>
                     </div>
                 </div>
-            }
+            )}
 
             {/* Create/Edit Modal */}
             <Modal

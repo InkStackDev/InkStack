@@ -67,6 +67,9 @@ const article = {
         loading: "加载评论中...",
         empty: "暂无评论，快来抢沙发吧~",
         closed: "评论功能已关闭",
+        loadFailed: "评论加载失败",
+        retry: "重试",
+        loadMore: "加载更多评论",
     },
     code: {
         copy: "复制",

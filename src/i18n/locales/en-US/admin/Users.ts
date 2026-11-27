@@ -108,6 +108,9 @@ const section = {
         createFailed: "Failed to create user",
         deleteSuccess: "User deleted",
         deleteFailed: "Failed to delete user",
+        loadFailedTitle: "Failed to load users",
+        loadFailed: "Failed to load the user list. Please try again later.",
+        retry: "Retry",
     },
     confirm: {
         deleteTitle: "Confirm Delete",

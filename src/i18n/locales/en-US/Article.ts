@@ -67,6 +67,9 @@ const article = {
         loading: "Loading comments...",
         empty: "No comments yet. Be the first!",
         closed: "Comments are disabled",
+        loadFailed: "Failed to load comments",
+        retry: "Retry",
+        loadMore: "Load more comments",
     },
     code: {
         copy: "Copy",

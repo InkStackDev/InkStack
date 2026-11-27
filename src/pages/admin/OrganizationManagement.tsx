@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
+import i18n from "@/i18n";
 import dayjs from "dayjs";
 import {
     FaPlus,
@@ -27,6 +28,7 @@ import styles from "./OrganizationManagement.module.css";
 import OrganizationService, { type OrganizationStatsResponse, type ApplyItem } from "@/services/OrganizationService.ts";
 import { useInitialLoaded } from "@/hooks/UseInitialLoaded";
 import Avatar from "@/components/avatar/Avatar";
+import ErrorState from "@/components/errorState/ErrorState";
 
 interface Organization {
     id: string;
@@ -46,7 +48,9 @@ const OrganizationManagement: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
     const [currentPage, setCurrentPage] = useState(1);
-    const [total, setTotal] = useState(0);
+    const [loadError, setLoadError] = useState(false);
+    const [reloadKey, setReloadKey] = useState(0);
+    const requestIdRef = useRef(0);
     const [isModalVisible, setIsModalVisible] = useState(false);
     const [currentOrg, setCurrentOrg] = useState<Organization | null>(null);
     const [formData, setFormData] = useState<Partial<Organization>>({
@@ -96,48 +100,74 @@ const OrganizationManagement: React.FC = () => {
         0: "inactive",
     };
     const pageSize = 10;
+    // 接口不支持关键字搜索：先按状态拉全量（分页循环），再在本地搜索/分页
+    const FETCH_PAGE_SIZE = 100;
 
     const fetchOrganizations = async () => {
+        const requestId = ++requestIdRef.current;
         setLoading(true);
+        setLoadError(false);
         try {
-            const params: any = {
-                page_num: currentPage,
-                page_size: pageSize,
-            };
-            if (statusFilter !== "all") {
-                params.status = STATUS_STR_MAP_NUMBER[statusFilter];
-            }
-            const res = await OrganizationService.getAdminOrganizations(params);
-            const mappedList: Organization[] = (res.list || []).map(
-                (item: {
-                    count: any;
-                    id: any;
-                    name: any;
-                    type: any;
-                    status: any;
-                    created_at?: number;
-                    create_time?: number;
-                    description: any;
-                }) => {
+            const status = statusFilter === "all" ? undefined : STATUS_STR_MAP_NUMBER[statusFilter];
+            const collected: Organization[] = [];
+            const seen = new Set<string>();
+            let page = 1;
+            let serverTotal = 0;
+            while (page <= 50) {
+                const res = await OrganizationService.getAdminOrganizations({
+                    page_num: page,
+                    page_size: FETCH_PAGE_SIZE,
+                    status,
+                });
+                if (requestId !== requestIdRef.current) {
+                    return;
+                }
+                const batch = res.list ?? [];
+                if (batch.length === 0) {
+                    break;
+                }
+                const sizeBeforeBatch = collected.length;
+                if (typeof res.total === "number") {
+                    serverTotal = res.total;
+                }
+                for (const item of batch) {
+                    const orgId = String(item.id);
+                    if (seen.has(orgId)) {
+                        continue;
+                    }
+                    seen.add(orgId);
                     const createdTs = item.created_at ?? item.create_time;
-                    return {
-                        id: String(item.id),
+                    collected.push({
+                        id: orgId,
                         name: item.name,
                         type: item.type,
-                        status: STATUS_NUMBER_MAP_STR[Number(item.status)] as "active" | "inactive",
+                        status: (STATUS_NUMBER_MAP_STR[Number(item.status)] ?? "inactive") as "active" | "inactive",
                         createdAt:
                             typeof createdTs === "number" && createdTs > 0 ? dayjs.unix(createdTs).format("YYYY-MM-DD HH:mm:ss") : "-",
                         description: item.description,
-                        memberCount: item.count, // 如有成员数字段可填
-                    };
-                },
-            );
-            setOrganizations(mappedList);
-            setTotal(res.total);
+                        memberCount: typeof item.count === "number" ? item.count : 0,
+                    });
+                }
+                if (collected.length >= serverTotal) {
+                    break;
+                }
+                // 服务端忽略 page_num 时（返回重复数据）避免无意义地翻满 50 页
+                if (collected.length === sizeBeforeBatch) {
+                    break;
+                }
+                page += 1;
+            }
+            setOrganizations(collected);
         } catch (e) {
+            if (requestId !== requestIdRef.current) {
+                return;
+            }
+            setLoadError(true);
             message.error(t("organizations.messages.fetchOrgsFailed"));
         } finally {
-            setLoading(false);
+            if (requestId === requestIdRef.current) {
+                setLoading(false);
+            }
         }
     };
 
@@ -187,7 +217,12 @@ const OrganizationManagement: React.FC = () => {
     useEffect(() => {
         fetchOrganizations();
         // eslint-disable-next-line
-    }, [currentPage, statusFilter]);
+    }, [statusFilter, reloadKey]);
+
+    // 搜索词变化时回到第一页
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [searchTerm]);
 
     useEffect(() => {
         fetchStats();
@@ -263,17 +298,20 @@ const OrganizationManagement: React.FC = () => {
         }
     };
 
-    // 筛选逻辑
-    const filteredOrgs = organizations.filter((item) => {
-        const matchesSearch = item.name.includes(searchTerm);
-        const matchesStatus = statusFilter === "all" || item.status === statusFilter;
-        return matchesSearch && matchesStatus;
-    });
+    // 筛选逻辑（状态已由服务端筛选，这里只按搜索词过滤全量数据）
+    const filteredOrgs = organizations.filter((item) => item.name.includes(searchTerm));
 
     // 分页逻辑
-    const totalPages = Math.max(1, Math.ceil(total / pageSize));
+    const totalPages = Math.max(1, Math.ceil(filteredOrgs.length / pageSize));
     const startIndex = (currentPage - 1) * pageSize;
     const currentData = filteredOrgs.slice(startIndex, startIndex + pageSize);
+
+    // 搜索/删除后当前页可能越界，收敛到最后一页
+    useEffect(() => {
+        if (currentPage > totalPages) {
+            setCurrentPage(totalPages);
+        }
+    }, [currentPage, totalPages]);
 
     // 生成页码数组
     const getPageNumbers = () => {
@@ -488,7 +526,7 @@ const OrganizationManagement: React.FC = () => {
                             <h3 className={styles.tableTitle}>{t("organizations.table.title")}</h3>
                             <div className={styles.tableActions}>
                                 <span style={{ fontSize: "14px", color: "var(--text-secondary)" }}>
-                                    {t("organizations.table.totalOrgs", { total })}
+                                    {t("organizations.table.totalOrgs", { total: filteredOrgs.length })}
                                 </span>
                             </div>
                         </div>
@@ -508,6 +546,16 @@ const OrganizationManagement: React.FC = () => {
                                     <tr>
                                         <td colSpan={6} style={{ textAlign: "center", padding: "40px" }}>
                                             <Loading size="small" />
+                                        </td>
+                                    </tr>
+                                ) : loadError ? (
+                                    <tr>
+                                        <td colSpan={6} style={{ padding: "24px" }}>
+                                            <ErrorState
+                                                title={t("organizations.messages.fetchOrgsFailed")}
+                                                actionText={i18n.t("common:actions.retry")}
+                                                onAction={() => setReloadKey((value) => value + 1)}
+                                            />
                                         </td>
                                     </tr>
                                 ) : currentData.length > 0 ? (
@@ -586,64 +634,66 @@ const OrganizationManagement: React.FC = () => {
                                                 color: "var(--text-secondary)",
                                             }}
                                         >
-                                            {t("organizations.table.empty")}
+                                            {searchTerm ? t("organizations.table.emptySearch") : t("organizations.table.empty")}
                                         </td>
                                     </tr>
                                 )}
                             </tbody>
                         </table>
-                        <div className={styles.pagination}>
-                            <span className={styles.pageInfo}>
-                                {t("organizations.pagination.showing", {
-                                    start: total > 0 ? startIndex + 1 : 0,
-                                    end: Math.min(startIndex + pageSize, total),
-                                    total,
-                                })}
-                            </span>
-                            <div className={styles.pageButtons}>
-                                <button className={styles.pageBtn} disabled={currentPage === 1} onClick={() => setCurrentPage(1)}>
-                                    <FaAngleDoubleLeft />
-                                </button>
-                                <button
-                                    className={styles.pageBtn}
-                                    disabled={currentPage === 1}
-                                    onClick={() => setCurrentPage((prev) => prev - 1)}
-                                >
-                                    <FaChevronLeft />
-                                </button>
+                        {!loadError && (
+                            <div className={styles.pagination}>
+                                <span className={styles.pageInfo}>
+                                    {t("organizations.pagination.showing", {
+                                        start: filteredOrgs.length > 0 ? startIndex + 1 : 0,
+                                        end: Math.min(startIndex + pageSize, filteredOrgs.length),
+                                        total: filteredOrgs.length,
+                                    })}
+                                </span>
+                                <div className={styles.pageButtons}>
+                                    <button className={styles.pageBtn} disabled={currentPage === 1} onClick={() => setCurrentPage(1)}>
+                                        <FaAngleDoubleLeft />
+                                    </button>
+                                    <button
+                                        className={styles.pageBtn}
+                                        disabled={currentPage === 1}
+                                        onClick={() => setCurrentPage((prev) => prev - 1)}
+                                    >
+                                        <FaChevronLeft />
+                                    </button>
 
-                                {getPageNumbers().map((page, index) => (
-                                    <React.Fragment key={index}>
-                                        {page === "..." ? (
-                                            <span className={styles.paginationEllipsis}>...</span>
-                                        ) : (
-                                            <button
-                                                className={`${styles.pageBtn} ${currentPage === page ? styles.active : ""}`}
-                                                onClick={() => setCurrentPage(page as number)}
-                                                disabled={total === 0}
-                                            >
-                                                {page}
-                                            </button>
-                                        )}
-                                    </React.Fragment>
-                                ))}
+                                    {getPageNumbers().map((page, index) => (
+                                        <React.Fragment key={index}>
+                                            {page === "..." ? (
+                                                <span className={styles.paginationEllipsis}>...</span>
+                                            ) : (
+                                                <button
+                                                    className={`${styles.pageBtn} ${currentPage === page ? styles.active : ""}`}
+                                                    onClick={() => setCurrentPage(page as number)}
+                                                    disabled={filteredOrgs.length === 0}
+                                                >
+                                                    {page}
+                                                </button>
+                                            )}
+                                        </React.Fragment>
+                                    ))}
 
-                                <button
-                                    className={styles.pageBtn}
-                                    disabled={currentPage === totalPages}
-                                    onClick={() => setCurrentPage((prev) => prev + 1)}
-                                >
-                                    <FaChevronRight />
-                                </button>
-                                <button
-                                    className={styles.pageBtn}
-                                    disabled={currentPage === totalPages}
-                                    onClick={() => setCurrentPage(totalPages)}
-                                >
-                                    <FaAngleDoubleRight />
-                                </button>
+                                    <button
+                                        className={styles.pageBtn}
+                                        disabled={currentPage === totalPages}
+                                        onClick={() => setCurrentPage((prev) => prev + 1)}
+                                    >
+                                        <FaChevronRight />
+                                    </button>
+                                    <button
+                                        className={styles.pageBtn}
+                                        disabled={currentPage === totalPages}
+                                        onClick={() => setCurrentPage(totalPages)}
+                                    >
+                                        <FaAngleDoubleRight />
+                                    </button>
+                                </div>
                             </div>
-                        </div>
+                        )}
                     </div>
 
                     {/* 创建/编辑模态框 */}

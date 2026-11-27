@@ -25,6 +25,7 @@ import Input from "@/components/input/Input";
 import CustomSelect from "@/components/customSelect/CustomSelect";
 import Modal from "@/components/modal/Modal";
 import Loading from "@/components/loading/Loading";
+import ErrorState from "@/components/errorState/ErrorState";
 import { confirm } from "@/components/confirm/Confirm";
 import message from "@/components/message/Message";
 import { useAuth } from "@/contexts/AuthContext";
@@ -136,7 +137,9 @@ const BugList: React.FC = () => {
         total,
         loading,
         initialLoaded,
+        error,
         refresh: fetchData,
+        reload,
     } = useRdList(RdAPI.getBugs, filters, currentPage, selectedOrgId, PAGE_SIZE);
 
     const handleFilterChange = (field: string, value: string) => {
@@ -352,108 +355,117 @@ const BugList: React.FC = () => {
                 </div>
             </div>
 
-            <div className={styles.tableWrapper}>
-                <table className={styles.table}>
-                    <thead>
-                        <tr>
-                            <th>{t("bugs.table.title")}</th>
-                            <th>{t("bugs.table.severity")}</th>
-                            <th>{t("bugs.table.priority")}</th>
-                            <th>{t("bugs.table.status")}</th>
-                            <th>{t("bugs.table.assignee")}</th>
-                            <th>{t("bugs.table.module")}</th>
-                            <th>{t("bugs.table.creator")}</th>
-                            <th>{t("bugs.table.createdAt")}</th>
-                            <th>{t("bugs.table.actions")}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {loading && (
+            {error ? (
+                <ErrorState
+                    title={i18n.t("services:rdList.loadFailed")}
+                    message={error}
+                    actionText={i18n.t("common:actions.retry")}
+                    onAction={reload}
+                />
+            ) : (
+                <div className={styles.tableWrapper}>
+                    <table className={styles.table}>
+                        <thead>
                             <tr>
-                                <td colSpan={9} className={styles.emptyCell}>
-                                    <Loading size="small" />
-                                </td>
+                                <th>{t("bugs.table.title")}</th>
+                                <th>{t("bugs.table.severity")}</th>
+                                <th>{t("bugs.table.priority")}</th>
+                                <th>{t("bugs.table.status")}</th>
+                                <th>{t("bugs.table.assignee")}</th>
+                                <th>{t("bugs.table.module")}</th>
+                                <th>{t("bugs.table.creator")}</th>
+                                <th>{t("bugs.table.createdAt")}</th>
+                                <th>{t("bugs.table.actions")}</th>
                             </tr>
-                        )}
-                        {!loading &&
-                            bugs.map((b) => (
-                                <tr key={b.id}>
-                                    <td
-                                        className={styles.titleCell}
-                                        data-label={t("bugs.table.title")}
-                                        onClick={() => navigate(`/rd/bugs/${encodeId(b.id, "bug")}`)}
-                                    >
-                                        {b.title}
-                                    </td>
-                                    <td data-label={t("bugs.table.severity")}>
-                                        <span className={`${styles.badge} ${styles[`severity_${b.severity}`]}`}>
-                                            {severityText[b.severity]}
-                                        </span>
-                                    </td>
-                                    <td data-label={t("bugs.table.priority")}>
-                                        <span className={`${styles.badge} ${styles[`priority_${b.priority}`]}`}>
-                                            {priorityText[b.priority]}
-                                        </span>
-                                    </td>
-                                    <td data-label={t("bugs.table.status")}>
-                                        <span className={`${styles.badge} ${styles[`status_${b.status}`]}`}>
-                                            {statusText[b.status]}
-                                        </span>
-                                    </td>
-                                    <td data-label={t("bugs.table.assignee")}>
-                                        <AssigneeDisplay name={b.assignee} avatar={b.assigneeAvatar} />
-                                    </td>
-                                    <td data-label={t("bugs.table.module")}>{b.module || "-"}</td>
-                                    <td data-label={t("bugs.table.creator")}>
-                                        <AssigneeDisplay name={b.creator} avatar={b.creatorAvatar} />
-                                    </td>
-                                    <td data-label={t("bugs.table.createdAt")}>{formatDateTime(b.createdAt)}</td>
-                                    <td data-label={t("bugs.table.actions")}>
-                                        <div className={styles.actionButtons}>
-                                            <button
-                                                className={`${styles.actionBtn} ${styles.view}`}
-                                                title={t("bugs.table.view")}
-                                                onClick={() => navigate(`/rd/bugs/${encodeId(b.id, "bug")}`)}
-                                            >
-                                                <FaEye />
-                                            </button>
-                                            {OrgPermission.canEdit(maxOrgRole) && (
-                                                <button
-                                                    className={`${styles.actionBtn} ${styles.edit}`}
-                                                    title={t("bugs.table.edit")}
-                                                    onClick={() => openEdit(b)}
-                                                >
-                                                    <FaEdit />
-                                                </button>
-                                            )}
-                                            {OrgPermission.canDelete(maxOrgRole) && (
-                                                <button
-                                                    className={`${styles.actionBtn} ${styles.delete}`}
-                                                    title={t("bugs.table.delete")}
-                                                    onClick={() => handleDelete(b)}
-                                                >
-                                                    <FaTrash />
-                                                </button>
-                                            )}
-                                        </div>
+                        </thead>
+                        <tbody>
+                            {loading && (
+                                <tr>
+                                    <td colSpan={9} className={styles.emptyCell}>
+                                        <Loading size="small" />
                                     </td>
                                 </tr>
-                            ))}
-                        {!loading && bugs.length === 0 && (
-                            <tr>
-                                <td colSpan={9} className={styles.emptyCell}>
-                                    <div className={styles.emptyCellIcon}>
-                                        <FaBug />
-                                    </div>
-                                    <div className={styles.emptyCellText}>{t("bugs.table.empty")}</div>
-                                </td>
-                            </tr>
-                        )}
-                    </tbody>
-                </table>
-            </div>
+                            )}
+                            {!loading &&
+                                bugs.map((b) => (
+                                    <tr key={b.id}>
+                                        <td
+                                            className={styles.titleCell}
+                                            data-label={t("bugs.table.title")}
+                                            onClick={() => navigate(`/rd/bugs/${encodeId(b.id, "bug")}`)}
+                                        >
+                                            {b.title}
+                                        </td>
+                                        <td data-label={t("bugs.table.severity")}>
+                                            <span className={`${styles.badge} ${styles[`severity_${b.severity}`]}`}>
+                                                {severityText[b.severity]}
+                                            </span>
+                                        </td>
+                                        <td data-label={t("bugs.table.priority")}>
+                                            <span className={`${styles.badge} ${styles[`priority_${b.priority}`]}`}>
+                                                {priorityText[b.priority]}
+                                            </span>
+                                        </td>
+                                        <td data-label={t("bugs.table.status")}>
+                                            <span className={`${styles.badge} ${styles[`status_${b.status}`]}`}>
+                                                {statusText[b.status]}
+                                            </span>
+                                        </td>
+                                        <td data-label={t("bugs.table.assignee")}>
+                                            <AssigneeDisplay name={b.assignee} avatar={b.assigneeAvatar} />
+                                        </td>
+                                        <td data-label={t("bugs.table.module")}>{b.module || "-"}</td>
+                                        <td data-label={t("bugs.table.creator")}>
+                                            <AssigneeDisplay name={b.creator} avatar={b.creatorAvatar} />
+                                        </td>
+                                        <td data-label={t("bugs.table.createdAt")}>{formatDateTime(b.createdAt)}</td>
+                                        <td data-label={t("bugs.table.actions")}>
+                                            <div className={styles.actionButtons}>
+                                                <button
+                                                    className={`${styles.actionBtn} ${styles.view}`}
+                                                    title={t("bugs.table.view")}
+                                                    onClick={() => navigate(`/rd/bugs/${encodeId(b.id, "bug")}`)}
+                                                >
+                                                    <FaEye />
+                                                </button>
+                                                {OrgPermission.canEdit(maxOrgRole) && (
+                                                    <button
+                                                        className={`${styles.actionBtn} ${styles.edit}`}
+                                                        title={t("bugs.table.edit")}
+                                                        onClick={() => openEdit(b)}
+                                                    >
+                                                        <FaEdit />
+                                                    </button>
+                                                )}
+                                                {OrgPermission.canDelete(maxOrgRole) && (
+                                                    <button
+                                                        className={`${styles.actionBtn} ${styles.delete}`}
+                                                        title={t("bugs.table.delete")}
+                                                        onClick={() => handleDelete(b)}
+                                                    >
+                                                        <FaTrash />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            {!loading && !error && bugs.length === 0 && (
+                                <tr>
+                                    <td colSpan={9} className={styles.emptyCell}>
+                                        <div className={styles.emptyCellIcon}>
+                                            <FaBug />
+                                        </div>
+                                        <div className={styles.emptyCellText}>{t("bugs.table.empty")}</div>
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            )}
 
-            {
+            {!error && (
                 <div className={styles.pagination}>
                     <span className={styles.paginationInfo}>{t("bugs.pagination.total", { total })}</span>
                     <div className={styles.paginationControls}>
@@ -490,7 +502,7 @@ const BugList: React.FC = () => {
                         </button>
                     </div>
                 </div>
-            }
+            )}
 
             {/* ============ MODAL ============ */}
             <Modal

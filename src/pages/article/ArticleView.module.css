@@ -808,6 +808,48 @@
     font-size: 0.9rem;
 }
 
+.commentError {
+    padding: 24px 0;
+}
+
+.commentLoadMore {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 20px 0 8px;
+}
+
+.commentLoadMoreButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-width: 140px;
+    padding: 8px 20px;
+    border: 1px solid var(--border-primary);
+    border-radius: 8px;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+.commentLoadMoreButton:hover:not(:disabled) {
+    border-color: var(--primary);
+    color: var(--primary);
+}
+
+.commentLoadMoreButton:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.commentLoadMoreError {
+    color: var(--error);
+    font-size: 0.8rem;
+}
+
 .commentItem {
     display: flex;
     gap: 12px;

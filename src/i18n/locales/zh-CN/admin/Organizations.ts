@@ -51,6 +51,7 @@ const section = {
             actions: "操作",
         },
         empty: "暂无数据",
+        emptySearch: "没有匹配的组织",
     },
     pagination: {
         showing: "显示 {{start}} - {{end}} 条， 共 {{total}} 条记录",

@@ -20,12 +20,14 @@ export function useRdList<T, F extends object>(
     const [data, setData] = useState<T[]>([]);
     const [total, setTotal] = useState(0);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
     const initialLoaded = useInitialLoaded(loading);
     const requestId = useRef(0);
 
     const refresh = useCallback(async () => {
         const id = ++requestId.current;
         setLoading(true);
+        setError(null);
         try {
             const result = await load({ ...filters, page, pageSize, organizationIds: orgId ? [orgId] : undefined });
             if (id !== requestId.current) {
@@ -33,9 +35,12 @@ export function useRdList<T, F extends object>(
             }
             setData(result.data);
             setTotal(result.total);
-        } catch (error) {
+            setError(null);
+        } catch (err) {
             if (id === requestId.current) {
-                message.error(error instanceof Error ? error.message : i18n.t("services:rdList.loadFailed"));
+                const errorText = err instanceof Error ? err.message : i18n.t("services:rdList.loadFailed");
+                setError(errorText);
+                message.error(errorText);
             }
         } finally {
             if (id === requestId.current) {
@@ -44,6 +49,10 @@ export function useRdList<T, F extends object>(
         }
     }, [load, filters, page, pageSize, orgId]);
 
+    const reload = useCallback(() => {
+        void refresh();
+    }, [refresh]);
+
     useEffect(() => {
         void refresh();
         return () => {
@@ -51,5 +60,5 @@ export function useRdList<T, F extends object>(
         };
     }, [refresh]);
 
-    return { data, total, loading, initialLoaded, refresh };
+    return { data, total, loading, initialLoaded, error, refresh, reload };
 }
