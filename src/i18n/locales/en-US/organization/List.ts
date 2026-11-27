@@ -20,7 +20,7 @@ const section = {
         active: "Active",
         inactive: "Inactive",
     },
-    memberCount: "{value} members",
+    memberCount: "{{value}} members",
     createdAt: "Created {{date}}",
     rd: "R&D",
     viewDetail: "View Details",

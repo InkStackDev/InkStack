@@ -20,7 +20,7 @@ const section = {
         active: "正常",
         inactive: "停用",
     },
-    memberCount: "{value} 成员",
+    memberCount: "{{value}} 成员",
     createdAt: "创建于 {{date}}",
     rd: "研发",
     viewDetail: "查看详情",
