@@ -95,6 +95,50 @@ html.theme-revealing *::after {
 :root {
     --page-max-width: 1560px;
 
+    /* ========== 设计令牌 ========== */
+    /* 字号阶梯：与现有视觉一致，供页面/组件统一引用 */
+    --text-2xs: 10px;
+    --text-xs: 12px;
+    --text-sm: 13px;
+    --text-base: 14px;
+    --text-md: 16px;
+    --text-lg: 18px;
+    --text-xl: 20px;
+    --text-2xl: 24px;
+    --text-3xl: 28px;
+
+    /* 间距阶梯 */
+    --space-1: 4px;
+    --space-2: 8px;
+    --space-3: 12px;
+    --space-4: 16px;
+    --space-5: 20px;
+    --space-6: 24px;
+    --space-7: 32px;
+    --space-8: 40px;
+
+    /* 圆角阶梯 */
+    --radius-xs: 4px;
+    --radius-sm: 6px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-xl: 16px;
+    --radius-pill: 999px;
+
+    /* 状态语义色：基于当前主题色派生，切皮肤/暗色自动跟随 */
+    --color-success: var(--success);
+    --color-success-bg: color-mix(in srgb, var(--success) 10%, transparent);
+    --color-success-border: color-mix(in srgb, var(--success) 35%, transparent);
+    --color-warning: var(--warning);
+    --color-warning-bg: color-mix(in srgb, var(--warning) 12%, transparent);
+    --color-warning-border: color-mix(in srgb, var(--warning) 38%, transparent);
+    --color-error: var(--error);
+    --color-error-bg: color-mix(in srgb, var(--error) 10%, transparent);
+    --color-error-border: color-mix(in srgb, var(--error) 35%, transparent);
+    --color-info: var(--info);
+    --color-info-bg: color-mix(in srgb, var(--info) 10%, transparent);
+    --color-info-border: color-mix(in srgb, var(--info) 35%, transparent);
+
     /* 中文字体回退栈（按平台优先级） */
     --font-cjk-sans:
         "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", "Noto Sans SC", "Source Han Sans SC",

@@ -1,4 +1,5 @@
 import React from "react";
+import Button from "@/components/button/Button";
 import styles from "./ErrorState.module.css";
 
 interface ErrorStateProps {
@@ -17,9 +18,9 @@ const ErrorState: React.FC<ErrorStateProps> = ({ title, message, icon, actionTex
             <h2 className={styles.title}>{title}</h2>
             {message && <p className={styles.message}>{message}</p>}
             {actionText && (
-                <button type="button" className={styles.actionBtn} onClick={onAction}>
+                <Button className={styles.actionBtn} onClick={onAction}>
                     {actionText}
-                </button>
+                </Button>
             )}
         </div>
     );

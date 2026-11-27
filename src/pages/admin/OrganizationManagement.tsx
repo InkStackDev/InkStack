@@ -29,6 +29,9 @@ import OrganizationService, { type OrganizationStatsResponse, type ApplyItem } f
 import { useInitialLoaded } from "@/hooks/UseInitialLoaded";
 import Avatar from "@/components/avatar/Avatar";
 import ErrorState from "@/components/errorState/ErrorState";
+import EmptyState from "@/components/emptyState/EmptyState";
+import PageHeader from "@/components/pageHeader/PageHeader";
+import Button from "@/components/button/Button";
 
 interface Organization {
     id: string;
@@ -411,23 +414,19 @@ const OrganizationManagement: React.FC = () => {
 
     return (
         <div className={styles.container}>
-            <div className={styles.pageHeader}>
-                <div>
-                    <h1 className={styles.pageTitle}>{t("organizations.page.title")}</h1>
-                    <p className={styles.pageDescription}>{t("organizations.page.description")}</p>
-                </div>
-                <div className={styles.headerActions}>
-                    {activeTab === "orgs" ? (
-                        <button className={`${styles.btn} ${styles.btnPrimary}`} onClick={openCreateModal}>
+            <PageHeader
+                title={t("organizations.page.title")}
+                description={t("organizations.page.description")}
+                actions={
+                    activeTab === "orgs" ? (
+                        <Button onClick={openCreateModal}>
                             <FaPlus /> {t("organizations.actions.create")}
-                        </button>
+                        </Button>
                     ) : (
-                        <span style={{ fontSize: "13px", color: "var(--text-secondary)" }}>
-                            {t("organizations.applies.total", { total: appliesTotal })}
-                        </span>
-                    )}
-                </div>
-            </div>
+                        <span className={styles.appliesTotal}>{t("organizations.applies.total", { total: appliesTotal })}</span>
+                    )
+                }
+            />
 
             <div className={styles.statsContainer}>
                 <div className={styles.statCard}>
@@ -626,15 +625,20 @@ const OrganizationManagement: React.FC = () => {
                                     ))
                                 ) : (
                                     <tr>
-                                        <td
-                                            colSpan={6}
-                                            style={{
-                                                textAlign: "center",
-                                                padding: "40px",
-                                                color: "var(--text-secondary)",
-                                            }}
-                                        >
-                                            {searchTerm ? t("organizations.table.emptySearch") : t("organizations.table.empty")}
+                                        <td colSpan={6} style={{ padding: 0 }}>
+                                            <EmptyState
+                                                variant="inline"
+                                                icon={searchTerm ? undefined : <FaBuilding />}
+                                                title={
+                                                    searchTerm ? t("organizations.table.emptySearch") : t("organizations.table.empty")
+                                                }
+                                                actionText={
+                                                    !searchTerm && statusFilter === "all"
+                                                        ? t("organizations.actions.create")
+                                                        : undefined
+                                                }
+                                                onAction={!searchTerm && statusFilter === "all" ? openCreateModal : undefined}
+                                            />
                                         </td>
                                     </tr>
                                 )}
