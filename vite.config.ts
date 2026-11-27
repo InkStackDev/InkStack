@@ -160,7 +160,7 @@ export default defineConfig(({ mode }) => {
             proxy: {
                 ...agentProxy,
                 // SSE 流式端点 — 必须放在通用 /api/v1 规则之前
-                "^/api/v1/article/ai-summary": {
+                "^/api/v1/articles/[^/]+/ai-summary": {
                     target: apiTarget,
                     changeOrigin: true,
                     secure: false,

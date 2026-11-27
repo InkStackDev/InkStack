@@ -38,6 +38,14 @@ npm run format  # Prettier 格式化
   }
   ```
 
+## HTTP JSON 字段规范
+
+- 与后端交互的所有 HTTP 请求/响应 JSON 字段统一使用 `snake_case`。
+- 前端在 `src/services/` 层负责 `snake_case -> camelCase` 映射；组件、状态和内部类型继续使用 camelCase。
+- 禁止在 `URLSearchParams.append`、Axios `params`、请求 body 中直接发送 camelCase 字段。
+- 例外：WebAuthn 标准字段（如 `clientDataJSON`、`attestationObject`、`rawId`）按协议规范保留 camelCase。
+- 外部服务（如 `/upload/*` 分块上传、Agent Gateway）若不在本仓库维护，按其实际接口约定处理。
+
 ## 项目架构要点
 
 - **Provider 嵌套顺序**：BrowserRouter → Theme → Auth → LayoutWidth → SiteSettings → Message → Confirm

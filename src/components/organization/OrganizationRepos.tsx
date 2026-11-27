@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
-import { FaGithub, FaStar, FaExternalLinkAlt, FaTrash, FaKey, FaSync } from "react-icons/fa";
+import { FaGithub, FaStar, FaExternalLinkAlt, FaTrash, FaSync, FaEdit } from "react-icons/fa";
 import Modal from "../modal/Modal";
 import Input from "../input/Input";
 import message from "../message/Message";
@@ -33,6 +33,7 @@ export interface Repo {
     language: string;
     languageColor: string;
     stars: number;
+    sortOrder: number;
     updatedAt: string | number;
     organizationId: string;
     hasToken: boolean;
@@ -80,11 +81,14 @@ const OrganizationRepos: React.FC<Props> = ({ orgId, canManage, refreshKey = 0, 
         failed: t("repos.syncStatus.failed"),
     };
 
-    // 配置 Token modal
-    const [tokenModalVisible, setTokenModalVisible] = useState(false);
-    const [tokenRepo, setTokenRepo] = useState<Repo | null>(null);
-    const [tokenValue, setTokenValue] = useState("");
-    const [tokenSaving, setTokenSaving] = useState(false);
+    // 编辑仓库 modal
+    const [editModalVisible, setEditModalVisible] = useState(false);
+    const [editingRepo, setEditingRepo] = useState<Repo | null>(null);
+    const [editForm, setEditForm] = useState({
+        url: "",
+        token: "",
+    });
+    const [editSaving, setEditSaving] = useState(false);
 
     // polling ref
     const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -110,6 +114,7 @@ const OrganizationRepos: React.FC<Props> = ({ orgId, canManage, refreshKey = 0, 
                     language: cleanLang(item.language),
                     languageColor: languageColors[cleanLang(item.language)] || "#6c757d",
                     stars: item.stars_count ?? 0,
+                    sortOrder: item.sort_order ?? 0,
                     updatedAt:
                         item.updated_at == null || (typeof item.updated_at === "number" && item.updated_at > 9999999999999)
                             ? ""
@@ -205,34 +210,46 @@ const OrganizationRepos: React.FC<Props> = ({ orgId, canManage, refreshKey = 0, 
         });
     };
 
-    // ---- 配置 Token ----
-    const openTokenModal = (e: React.MouseEvent, repo: Repo) => {
+    // ---- 编辑仓库 ----
+    const openEditModal = (e: React.MouseEvent, repo: Repo) => {
         e.preventDefault();
         e.stopPropagation();
-        setTokenRepo(repo);
-        setTokenValue("");
-        setTokenModalVisible(true);
+        setEditingRepo(repo);
+        setEditForm({
+            url: repo.url,
+            token: "",
+        });
+        setEditModalVisible(true);
     };
 
-    const handleSaveToken = async () => {
-        if (!tokenValue.trim()) {
-            message.warn(t("repos.tokenRequired"));
+    const handleSaveEdit = async () => {
+        const url = editForm.url.trim();
+        if (!url) {
+            message.warn(t("repos.editModal.urlRequired"));
             return;
         }
-        if (!tokenRepo) {
+        if (!url.startsWith("https://github.com/")) {
+            message.warn(t("repos.editModal.githubOnly"));
             return;
         }
-        setTokenSaving(true);
+        if (!editingRepo) {
+            return;
+        }
+        setEditSaving(true);
         try {
-            await OrganizationService.saveRepoToken({ repo_id: tokenRepo.id, token: tokenValue.trim() });
-            setRepos((prev) => prev.map((r) => (r.id === tokenRepo.id ? { ...r, hasToken: true } : r)));
-            setTokenValue("");
-            setTokenModalVisible(false);
-            message.success(t("repos.tokenSaved"));
-        } catch {
-            message.error(t("repos.saveFailed"));
+            await OrganizationService.updateRepo({
+                id: editingRepo.id,
+                url,
+                token: editForm.token.trim() || undefined,
+            });
+            setEditModalVisible(false);
+            setEditingRepo(null);
+            message.success(t("repos.editSuccess"));
+            await fetchRepos();
+        } catch (err: any) {
+            message.error(err?.message || t("repos.editFailed"));
         } finally {
-            setTokenSaving(false);
+            setEditSaving(false);
         }
     };
 
@@ -306,18 +323,18 @@ const OrganizationRepos: React.FC<Props> = ({ orgId, canManage, refreshKey = 0, 
                                 {canManage && (
                                     <>
                                         <span
-                                            className={repo.hasToken ? styles.repoTokenBadge : styles.repoTokenBadgeNone}
-                                            title={repo.hasToken ? t("repos.tokenConfigured") : t("repos.tokenNotConfigured")}
-                                            onClick={(e) => openTokenModal(e, repo)}
-                                        >
-                                            <FaKey size={10} />
-                                        </span>
-                                        <span
                                             className={`${styles.repoSyncBtn} ${repo.syncStatus === "syncing" ? styles.repoSyncSpinning : ""}`}
                                             title={syncStatusText[repo.syncStatus]}
                                             onClick={(e) => handleSyncRepo(e, repo)}
                                         >
                                             <FaSync size={10} />
+                                        </span>
+                                        <span
+                                            className={styles.repoEditBtn}
+                                            title={t("repos.editTitle")}
+                                            onClick={(e) => openEditModal(e, repo)}
+                                        >
+                                            <FaEdit size={11} />
                                         </span>
                                         <button
                                             className={styles.repoDeleteBtn}
@@ -359,36 +376,47 @@ const OrganizationRepos: React.FC<Props> = ({ orgId, canManage, refreshKey = 0, 
                 </div>
             )}
 
-            {/* 配置 Token Modal */}
+            {/* 编辑仓库 Modal */}
             <Modal
-                visible={tokenModalVisible}
-                title={tokenRepo ? t("repos.tokenModal.titleWithRepo", { name: tokenRepo.name }) : t("repos.tokenModal.title")}
-                onClose={() => setTokenModalVisible(false)}
-                width={480}
+                visible={editModalVisible}
+                title={editingRepo ? t("repos.editModal.titleWithRepo", { name: editingRepo.name }) : t("repos.editModal.title")}
+                onClose={() => setEditModalVisible(false)}
+                width={520}
                 footer={
                     <div style={{ display: "flex", gap: "12px", justifyContent: "flex-end" }}>
-                        <button className={styles.cancelButton} onClick={() => setTokenModalVisible(false)}>
-                            {t("repos.tokenModal.cancel")}
+                        <button className={styles.cancelButton} onClick={() => setEditModalVisible(false)}>
+                            {t("repos.editModal.cancel")}
                         </button>
-                        <button className={styles.confirmButton} onClick={handleSaveToken} disabled={tokenSaving}>
-                            {tokenSaving ? t("repos.tokenModal.saving") : t("repos.tokenModal.save")}
+                        <button className={styles.confirmButton} onClick={handleSaveEdit} disabled={editSaving}>
+                            {editSaving ? t("repos.editModal.saving") : t("repos.editModal.save")}
                         </button>
                     </div>
                 }
             >
                 <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                    <p style={{ fontSize: "13px", color: "var(--text-secondary)", margin: 0 }}>
-                        {tokenRepo?.hasToken ? t("repos.tokenModal.overwriteHint") : t("repos.tokenModal.hint")}
-                    </p>
                     <div>
-                        <label className={styles.formLabel}>GitHub Token</label>
+                        <label className={styles.formLabel}>{t("repos.editModal.urlLabel")}</label>
                         <Input
-                            type="password"
-                            value={tokenValue}
-                            onChange={(v) => setTokenValue(v)}
-                            placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+                            value={editForm.url}
+                            onChange={(v) => setEditForm((prev) => ({ ...prev, url: v }))}
+                            placeholder={t("repos.editModal.urlPlaceholder")}
+                            maxLength={512}
                             size="large"
                         />
+                    </div>
+                    <div>
+                        <label className={styles.formLabel}>{t("repos.editModal.tokenLabel")}</label>
+                        <Input
+                            type="password"
+                            value={editForm.token}
+                            onChange={(v) => setEditForm((prev) => ({ ...prev, token: v }))}
+                            placeholder={t("repos.editModal.tokenPlaceholder")}
+                            maxLength={512}
+                            size="large"
+                        />
+                        <p style={{ fontSize: "12px", color: "var(--text-secondary)", margin: "6px 0 0" }}>
+                            {editingRepo?.hasToken ? t("repos.editModal.tokenKeepHint") : t("repos.editModal.tokenHint")}
+                        </p>
                     </div>
                 </div>
             </Modal>

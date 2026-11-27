@@ -137,6 +137,11 @@
     white-space: nowrap;
 }
 
+.metaTime {
+    order: 1;
+    margin-left: auto;
+}
+
 .metaText {
     overflow: hidden;
     text-overflow: ellipsis;

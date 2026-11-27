@@ -6,7 +6,7 @@ export interface ChatMsg {
     /** 消息 ID */
     id: number | string;
     /** 是否为当前用户发送 */
-    fromMe: boolean;
+    from_me: boolean;
     /** 消息内容 */
     text: string;
     /** 消息时间（Unix 秒） */
@@ -20,6 +20,8 @@ export interface Conversation {
     peer_id: number | string;
     /** 对端用户昵称 */
     name: string;
+    /** 对端用户头像 */
+    avatar?: string;
     /** 对端是否在线 */
     online: boolean;
     /** 最近消息时间（Unix 秒） */

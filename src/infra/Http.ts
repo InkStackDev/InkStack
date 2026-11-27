@@ -1,6 +1,6 @@
 import axios, { type AxiosInstance, type AxiosRequestConfig, type AxiosResponse, AxiosError } from "axios";
 import i18n from "@/i18n";
-import { getErrorMsg } from "../utils/ErrorCodes.ts";
+import { getErrorMsg } from "../utils/AppConfig.ts";
 
 /**
  * HTTP 请求响应接口

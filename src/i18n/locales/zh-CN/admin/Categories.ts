@@ -76,6 +76,9 @@ const section = {
         enable: "启用",
         delete: "删除分类",
     },
+    pagination: {
+        info: "显示 {{start}} - {{end}} 条， 共 {{total}} 条记录",
+    },
     modal: {
         createTitle: "新增分类",
         editTitle: "编辑分类",

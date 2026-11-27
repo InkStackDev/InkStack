@@ -19,7 +19,7 @@ import ThemeBackground from "./components/themeBackground";
 import RouteProgress from "./components/routeProgress/RouteProgress";
 import { finishNavigation, installNavigationTracking } from "./components/routeProgress/NavigationState";
 import SessionNotifier from "./components/auth/SessionNotifier";
-import { initErrorCodes } from "./utils/ErrorCodes.ts";
+import { initAppConfig } from "./utils/AppConfig.ts";
 import "./utils/ErrorHandlers.ts"; // 注册业务 errno 处理器（1101 等）
 import "./services/PresenceService.ts"; // 启动即注册在线人数监听：WS 仅登录后建立，监听必须早于握手
 
@@ -34,9 +34,9 @@ function NavigationWatcher() {
 function AppContent() {
     useLanguageSync();
 
-    // 启动时立即加载错误码（不依赖 settings）
+    // 启动时立即加载语言配置（errors + messages）
     useEffect(() => {
-        initErrorCodes();
+        initAppConfig();
         installNavigationTracking();
     }, []);
 

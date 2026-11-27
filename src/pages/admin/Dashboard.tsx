@@ -28,27 +28,8 @@ import type { PlatformRole } from "@/types/Roles.ts";
 import { useEnumLabels } from "@/i18n/UseEnumLabels";
 import { useTheme } from "@/contexts/ThemeContext";
 import { getThemeFontFamily } from "@/utils/ThemeFont";
+import { resolveBackendMessage } from "@/utils/AppConfig.ts";
 import styles from "./Dashboard.module.css";
-
-/** 后端趋势接口返回的中文星期标签 → 星期索引（0=周日） */
-const WEEKDAY_INDEX: Record<string, number> = {
-    周日: 0,
-    周天: 0,
-    周一: 1,
-    周二: 2,
-    周三: 3,
-    周四: 4,
-    周五: 5,
-    周六: 6,
-    星期日: 0,
-    星期天: 0,
-    星期一: 1,
-    星期二: 2,
-    星期三: 3,
-    星期四: 4,
-    星期五: 5,
-    星期六: 6,
-};
 
 const Dashboard: React.FC = () => {
     const { t } = useTranslation("admin");
@@ -290,8 +271,10 @@ const Dashboard: React.FC = () => {
             tCal("weekdays.sat"),
         ];
         const axisLabels = data.map((item) => {
-            const index = WEEKDAY_INDEX[item.label?.trim()];
-            return index === undefined ? item.label : localizedWeekdays[index];
+            if (typeof item.weekday === "number") {
+                return localizedWeekdays[item.weekday] ?? item.label;
+            }
+            return resolveBackendMessage(item.label_id, item.label_params, item.label);
         });
 
         // ECharts配置
@@ -594,8 +577,12 @@ const Dashboard: React.FC = () => {
                                     {getActivityIcon(activity.type)}
                                 </div>
                                 <div className={styles.activityContent}>
-                                    <div className={styles.activityTitle}>{activity.title}</div>
-                                    <div className={styles.activityTime}>{activity.time}</div>
+                                    <div className={styles.activityTitle}>
+                                        {resolveBackendMessage(activity.title_id, activity.params, activity.title)}
+                                    </div>
+                                    <div className={styles.activityTime}>
+                                        {resolveBackendMessage(activity.time_id, activity.time_params, activity.time)}
+                                    </div>
                                 </div>
                             </div>
                         ))}

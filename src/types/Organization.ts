@@ -40,6 +40,10 @@ export interface OrganizationDetail {
     user_role?: number;
     /** 组织所有者用户 ID */
     owner_id?: string;
+    /** 组织所有者用户名 */
+    owner_name?: string;
+    /** 组织所有者头像 */
+    owner_avatar?: string;
     /** 当前用户是否为组织所有者 */
     is_owner?: boolean;
 }

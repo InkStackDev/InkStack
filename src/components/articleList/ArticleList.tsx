@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { FaChevronLeft, FaChevronRight, FaAngleDoubleLeft, FaAngleDoubleRight, FaCalendarAlt, FaUser, FaEye } from "react-icons/fa";
+import { FaChevronLeft, FaChevronRight, FaAngleDoubleLeft, FaAngleDoubleRight, FaCalendarAlt, FaEye } from "react-icons/fa";
+import Avatar from "@/components/avatar/Avatar";
 import ArticleService from "@/services/ArticleService.ts";
 import styles from "./ArticleList.module.css";
 import { encodeId } from "@/utils/HashId.ts";
@@ -88,6 +89,7 @@ const ArticleList: React.FC<ArticleListProps> = ({
                         id: string | number;
                         title: string;
                         author: string;
+                        author_avatar?: string;
                         summary: string;
                         state: number;
                         type: number;
@@ -134,6 +136,7 @@ const ArticleList: React.FC<ArticleListProps> = ({
                                 id: item.id,
                                 title: item.title,
                                 author: item.author,
+                                author_avatar: item.author_avatar,
                                 summary: item.summary,
                                 state: STATE_MAP[item.state],
                                 type: item.type === 1 ? t("type.original") : t("type.repost"),
@@ -248,11 +251,12 @@ const ArticleList: React.FC<ArticleListProps> = ({
                                         <span>
                                             <div className={styles.typeBadge}>{article.type}</div>
                                         </span>
-                                        <span>
+                                        <span className={styles.metaTime}>
                                             <FaCalendarAlt /> <span className={styles.metaText}>{article.publish_time}</span>
                                         </span>
                                         <span>
-                                            <FaUser /> <span className={styles.metaText}>{article.author}</span>
+                                            <Avatar src={article.author_avatar} name={article.author} size={20} />{" "}
+                                            <span className={styles.metaText}>{article.author}</span>
                                         </span>
                                         <span>
                                             <FaEye /> {article.views ?? 0}

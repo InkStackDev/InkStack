@@ -191,7 +191,7 @@ export class AssignmentService {
         formData.append("file_type", params.file_type);
         formData.append("description", params.description);
 
-        const response = await http.postForm<CreateAssignmentResponse>("/assignment/create", formData);
+        const response = await http.postForm<CreateAssignmentResponse>("/assignments", formData);
         return response.data;
     }
 
@@ -199,7 +199,7 @@ export class AssignmentService {
      * 分页获取作业列表 (Admin)
      */
     static async getAdminAssignments(params: GetAdminAssignmentsParams): Promise<GetAdminAssignmentsResponse> {
-        let url = `/assignment/admin/lists?page_num=${params.page_num}&page_size=${params.page_size}`;
+        let url = `/admin/assignments?page_num=${params.page_num}&page_size=${params.page_size}`;
         if (params.state != -1 && params.state !== undefined) {
             url += `&state=${params.state}`;
         }
@@ -212,10 +212,9 @@ export class AssignmentService {
      * 删除作业 (Admin)
      */
     static async deleteAssignments(params: DeleteAssignmentParams): Promise<DeleteAssignmentResponse> {
-        const formData = new URLSearchParams();
-        formData.append("ids", params.ids);
-
-        const response = await http.postForm<DeleteAssignmentResponse>("/assignment/delete", formData);
+        const response = await http.delete<DeleteAssignmentResponse>(
+            `/assignments?ids=${encodeURIComponent(params.ids)}`,
+        );
         return response.data;
     }
 
@@ -229,7 +228,6 @@ export class AssignmentService {
         if (params.assign_id !== undefined && params.assign_id !== null && params.assign_id !== "") {
             formData.append("assign_id", String(params.assign_id));
         }
-        formData.append("org_id", String(params.org_id));
         formData.append("name", params.name);
         formData.append("subject_name", params.subject_name);
         formData.append("end_time", String(params.end_time));
@@ -239,12 +237,15 @@ export class AssignmentService {
         formData.append("file_type", params.file_type);
         formData.append("description", params.description);
 
-        const response = await http.postForm<CreateOrganizationAssignmentResponse>("/organization/assignment_create", formData);
+        const response = await http.postForm<CreateOrganizationAssignmentResponse>(
+            `/organizations/${params.org_id}/assignments`,
+            formData,
+        );
         return response.data;
     }
 
     static async getOrganizationAssignments(params: OrganizationAssignmentListItem): Promise<OrganizationAssignmentListResponse> {
-        let url = `/organization/assignment_list?org_id=${params.org_id}&page_num=${params.page_num}&page_size=${params.page_size}`;
+        let url = `/organizations/${params.org_id}/assignments?page_num=${params.page_num}&page_size=${params.page_size}`;
         if (params.status != -1) {
             url += `&status=${params.status}`;
         }
@@ -254,14 +255,14 @@ export class AssignmentService {
     }
 
     static async getUserAssignments(): Promise<GetUserAssignmentsResponse> {
-        let url = `/user/assignment/list`;
+        let url = `/users/me/assignments`;
 
         const response = await http.get<GetUserAssignmentsResponse>(url);
         return response.data;
     }
 
     static async getAssignmentDetail(params: GetAssignmentDetailParams): Promise<GetAssignmentDetailResponse> {
-        let url = `/assignment/detail?id=${params.id}`;
+        let url = `/assignments/${params.id}`;
 
         const response = await http.get<GetAssignmentDetailResponse>(url);
         return response.data;
@@ -271,12 +272,12 @@ export class AssignmentService {
      * 获取管理端任务统计数据
      */
     static async getAdminAssignmentStats(): Promise<AssignmentStatsResponse> {
-        const response = await http.get<AssignmentStatsResponse>("/assignment/admin/stats", { cacheTtl: 15_000 });
+        const response = await http.get<AssignmentStatsResponse>("/admin/assignments/stats", { cacheTtl: 15_000 });
         return response.data;
     }
 
     static async getAssignmentSubmissions(params: GetAssignmentDetailParams): Promise<GetAssignmentSubmissionsResponse> {
-        let url = `/assignment/submission/list?assign_id=${params.id}`;
+        let url = `/assignments/${params.id}/submissions`;
 
         const response = await http.get<GetAssignmentSubmissionsResponse>(url);
         return response.data;

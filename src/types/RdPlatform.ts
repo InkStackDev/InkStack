@@ -10,6 +10,7 @@ export interface Requirement {
     priority: "high" | "medium" | "low";
     status: "new" | "developing" | "testing" | "done" | "closed";
     creator: string;
+    creatorAvatar?: string;
     assignee: string;
     assigneeAvatar?: string;
     organizationId: string;
@@ -29,6 +30,7 @@ export interface Bug {
     priority: "urgent" | "high" | "medium" | "low";
     status: "new" | "accepted" | "processing" | "verified" | "closed" | "reopened";
     creator: string;
+    creatorAvatar?: string;
     assignee: string;
     assigneeAvatar?: string;
     organizationId: string;
@@ -50,6 +52,7 @@ export interface Task {
     assignee: string;
     assigneeAvatar?: string;
     creator: string;
+    creatorAvatar?: string;
     organizationId: string;
     requirementId: string;
     deadline: string;

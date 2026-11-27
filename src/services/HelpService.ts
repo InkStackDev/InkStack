@@ -14,6 +14,9 @@ export interface FeedbackItem {
     type: FeedbackType;
     content: string;
     contact?: string;
+    user_id?: string | number;
+    user_name?: string;
+    user_avatar?: string;
     created_at: number;
 }
 
@@ -41,11 +44,11 @@ export class HelpService {
     // ----- 管理员接口 -----
 
     static async getFeedbacks(params?: FeedbackListParams) {
-        return http.get<FeedbackListResponse>("/admin/feedback/list", { params, cacheTtl: 15_000 });
+        return http.get<FeedbackListResponse>("/admin/feedback", { params, cacheTtl: 15_000 });
     }
 
     static async deleteFeedback(id: string) {
-        return http.post("/admin/feedback/delete", { id });
+        return http.delete(`/admin/feedback/${id}`);
     }
 
     static async convertFeedback(
@@ -53,14 +56,14 @@ export class HelpService {
         target: "faq" | "requirement" | "bug",
         data: { title: string; content: string; cat?: string; org_id?: string },
     ) {
-        return http.post("/admin/feedback/convert", { id, target, ...data });
+        return http.post(`/admin/feedback/${id}/conversions`, { target, ...data });
     }
 
     static async deleteFaq(id: string) {
-        return http.post("/admin/faq/delete", { id });
+        return http.delete(`/admin/faqs/${id}`);
     }
 
     static async updateFaq(id: string, data: { q: string; a: string; cat: string }) {
-        return http.post("/admin/faq/edit", { id, ...data });
+        return http.put(`/admin/faqs/${id}`, data);
     }
 }

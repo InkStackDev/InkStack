@@ -18,6 +18,7 @@ import {
     FaChevronDown,
 } from "react-icons/fa";
 import Button from "@/components/button/Button";
+import Avatar from "@/components/avatar/Avatar";
 import type { OrganizationDetail, MemberStats } from "@/types/Organization.ts";
 import { OrgMembershipStatus } from "@/types/Enums.ts";
 import { useEnumLabels } from "@/i18n/UseEnumLabels";
@@ -33,15 +34,7 @@ interface OrganizationInfoProps {
     onDelete: () => Promise<void>;
 }
 
-const OrganizationInfo: React.FC<OrganizationInfoProps> = ({
-    org,
-    stats,
-    repoCount,
-    onJoin,
-    onLeave,
-    onToggleStatus,
-    onDelete,
-}) => {
+const OrganizationInfo: React.FC<OrganizationInfoProps> = ({ org, stats, repoCount, onJoin, onLeave, onToggleStatus, onDelete }) => {
     const navigate = useNavigate();
     const enums = useEnumLabels();
     const { t } = useTranslation("organization");
@@ -126,9 +119,7 @@ const OrganizationInfo: React.FC<OrganizationInfoProps> = ({
                                                     type="button"
                                                     role="menuitem"
                                                     className={
-                                                        org.status === "active"
-                                                            ? styles.moreMenuWarning
-                                                            : styles.moreMenuSuccess
+                                                        org.status === "active" ? styles.moreMenuWarning : styles.moreMenuSuccess
                                                     }
                                                     disabled={busy !== null}
                                                     onClick={() => {
@@ -203,6 +194,14 @@ const OrganizationInfo: React.FC<OrganizationInfoProps> = ({
                 </div>
             </div>
             <div className={styles.description}>{org.description}</div>
+
+            {org.owner_name && (
+                <div className={styles.ownerRow}>
+                    <span className={styles.ownerLabel}>{t("info.owner")}</span>
+                    <Avatar src={org.owner_avatar} name={org.owner_name} size={28} />
+                    <span>{org.owner_name}</span>
+                </div>
+            )}
 
             {/* 统计卡片 */}
             <div className={styles.statsContainer}>

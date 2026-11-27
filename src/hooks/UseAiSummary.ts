@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import i18n from "@/i18n";
+import { resolveBackendMessage } from "@/utils/AppConfig.ts";
 
 /**
  * 时间戳工具函数，格式: [HH:MM:SS.mmm]
@@ -12,7 +13,7 @@ const ts = () => {
 /**
  * AI 总结 Hook（SSE 流式版）
  *
- * POST /api/v1/article/ai-summary，后端使用 DoRequestStreaming + SSEServlet
+ * GET /api/v1/articles/:id/ai-summary，后端使用 DoRequestStreaming + SSEServlet
  * 流式返回 AI 生成的总结文本。前端通过 fetch + ReadableStream 逐块读取，
  * 按 SSE 协议解析后实时推送到 UI。
  */
@@ -51,15 +52,12 @@ function useAiSummary(articleId?: string | number) {
         const useProxy = import.meta.env.VITE_USE_PROXY === "true";
 
         // SSE stream via Vite proxy in dev (no CORS), direct via nginx in prod.
-        // A dedicated proxy rule in vite.config.ts handles /api/v1/article/ai-summary
+        // A dedicated proxy rule in vite.config.ts handles /api/v1/articles/:id/ai-summary
         // to avoid any buffering of chunked transfer-encoding.
-        const url = useProxy ? "/api/v1/article/ai-summary" : `${import.meta.env.VITE_API_BASE_URL as string}/article/ai-summary`;
-
-        const formData = new URLSearchParams();
-        formData.append("article_id", String(articleId));
+        const path = `/articles/${articleId}/ai-summary`;
+        const url = useProxy ? `/api/v1${path}` : `${import.meta.env.VITE_API_BASE_URL as string}${path}`;
 
         const headers: Record<string, string> = {
-            "Content-Type": "application/x-www-form-urlencoded",
             Accept: "text/event-stream",
         };
 
@@ -85,9 +83,8 @@ function useAiSummary(articleId?: string | number) {
         const startTs = Date.now();
 
         fetch(url, {
-            method: "POST",
+            method: "GET",
             headers,
-            body: formData.toString(),
             credentials: "include",
             signal: controller.signal,
         })
@@ -223,10 +220,12 @@ function useAiSummary(articleId?: string | number) {
                             // type: "chunk"  → 追加 content 到 UI
                             // type: "done"   → 标记完成，不追加到 UI
                             if (parsed.type === "start") {
-                                console.log(`${ts()} [AI-SSE] │    🟢 start 事件: ${parsed.message || ""}`);
+                                const message = resolveBackendMessage(parsed.message_id, undefined, parsed.message);
+                                console.log(`${ts()} [AI-SSE] │    🟢 start 事件: ${message || ""}`);
                                 // start 事件不追加文本
                             } else if (parsed.type === "done") {
-                                console.log(`${ts()} [AI-SSE] │    🏁 done 事件: ${parsed.message || ""}`);
+                                const message = resolveBackendMessage(parsed.message_id, undefined, parsed.message);
+                                console.log(`${ts()} [AI-SSE] │    🏁 done 事件: ${message || ""}`);
                                 // done 事件不追加文本，流自然结束
                             } else if (parsed.type === "chunk" || parsed.content !== undefined) {
                                 const chunkText = parsed.content ?? "";
@@ -237,8 +236,9 @@ function useAiSummary(articleId?: string | number) {
                                 setText((prev) => prev + parsed.text);
                                 eventCount++;
                                 console.log(`${ts()} [AI-SSE] │    ➕ text: "${String(parsed.text).substring(0, 80)}"`);
-                            } else if (parsed.message !== undefined) {
-                                console.log(`${ts()} [AI-SSE] │    💬 message: ${parsed.message}`);
+                            } else if (parsed.message !== undefined || parsed.message_id !== undefined) {
+                                const message = resolveBackendMessage(parsed.message_id, undefined, parsed.message);
+                                console.log(`${ts()} [AI-SSE] │    💬 message: ${message}`);
                             } else if (typeof parsed === "object" && Object.keys(parsed).length > 0) {
                                 const fallback = JSON.stringify(parsed);
                                 setText((prev) => prev + fallback);

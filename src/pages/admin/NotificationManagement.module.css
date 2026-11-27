@@ -209,6 +209,15 @@
     white-space: nowrap;
 }
 
+.broadcastSender {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 6px;
+    color: var(--text-tertiary);
+    font-size: 12px;
+}
+
 .broadcastCloseButton {
     display: inline-flex;
     flex-shrink: 0;

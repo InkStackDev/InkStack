@@ -28,6 +28,7 @@ import type { SelectOption } from "@/types";
 import { formatDateTime } from "@/utils/Utils.ts";
 import { HelpService, type FeedbackItem, type HelpFaq } from "@/services/HelpService.ts";
 import { OrganizationService } from "@/services/OrganizationService.ts";
+import Avatar from "@/components/avatar/Avatar";
 
 const PAGE_SIZE = 10;
 
@@ -201,7 +202,12 @@ const FeedbackManagement: React.FC = () => {
             return feedbacks;
         }
         const kw = search.toLowerCase();
-        return feedbacks.filter((f) => f.content.toLowerCase().includes(kw) || f.contact?.toLowerCase().includes(kw));
+        return feedbacks.filter(
+            (f) =>
+                f.content.toLowerCase().includes(kw) ||
+                f.contact?.toLowerCase().includes(kw) ||
+                f.user_name?.toLowerCase().includes(kw),
+        );
     }, [feedbacks, search]);
 
     const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
@@ -404,6 +410,7 @@ const FeedbackManagement: React.FC = () => {
                             <thead>
                                 <tr>
                                     <th>{t("feedbacks.list.columns.content")}</th>
+                                    <th>{t("feedbacks.list.columns.user")}</th>
                                     <th>{t("feedbacks.types.label")}</th>
                                     <th>{t("feedbacks.list.columns.contact")}</th>
                                     <th>{t("feedbacks.list.columns.time")}</th>
@@ -415,6 +422,20 @@ const FeedbackManagement: React.FC = () => {
                                     <tr key={fb.id}>
                                         <td className={styles.contentCell} data-label={t("feedbacks.list.columns.content")}>
                                             {fb.content}
+                                        </td>
+                                        <td data-label={t("feedbacks.list.columns.user")}>
+                                            {fb.user_name || fb.user_id ? (
+                                                <span className={styles.userCell}>
+                                                    <Avatar
+                                                        src={fb.user_avatar}
+                                                        name={fb.user_name || String(fb.user_id ?? "")}
+                                                        size={24}
+                                                    />
+                                                    <span>{fb.user_name || fb.user_id}</span>
+                                                </span>
+                                            ) : (
+                                                "-"
+                                            )}
                                         </td>
                                         <td data-label={t("feedbacks.types.label")}>
                                             <span

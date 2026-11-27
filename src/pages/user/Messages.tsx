@@ -161,7 +161,7 @@ const Messages: React.FC = () => {
                               ...c,
                               last_time: msg.create_time,
                               messages: [msg],
-                              unread: isActive ? c.unread : c.unread + (msg.fromMe ? 0 : 1),
+                              unread: isActive ? c.unread : c.unread + (msg.from_me ? 0 : 1),
                           }
                         : c,
                 );
@@ -281,7 +281,7 @@ const Messages: React.FC = () => {
         }
         const now = Math.floor(Date.now() / 1000);
         const clientId = `tmp-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-        const tempMsg: ChatMsg = { id: clientId, fromMe: true, text, create_time: now };
+        const tempMsg: ChatMsg = { id: clientId, from_me: true, text, create_time: now };
         const convId = String(active.id);
 
         // 乐观更新
@@ -390,7 +390,7 @@ const Messages: React.FC = () => {
                                         onClick={() => selectConv(String(c.id))}
                                     >
                                         <div className={msgStyles.convAvatar}>
-                                            <Avatar name={c.name} size={44} />
+                                            <Avatar src={c.avatar} name={c.name} size={44} />
                                             {c.online && <FaCircle className={msgStyles.onlineDot} />}
                                         </div>
                                         <div className={msgStyles.convInfo}>
@@ -430,7 +430,7 @@ const Messages: React.FC = () => {
                                     <button className={msgStyles.backBtn} onClick={() => setMobileChatOpen(false)}>
                                         <FaArrowLeft />
                                     </button>
-                                    <Avatar name={active.name} size={36} />
+                                    <Avatar src={active.avatar} name={active.name} size={36} />
                                     <div>
                                         <div className={msgStyles.chatName}>{active.name}</div>
                                         <div className={msgStyles.chatStatus}>
@@ -444,10 +444,10 @@ const Messages: React.FC = () => {
                                         <div className={msgStyles.convEmpty}>{t("messages.chat.empty")}</div>
                                     ) : (
                                         messages.map((m) => (
-                                            <div key={m.id} className={`${msgStyles.msgRow} ${m.fromMe ? msgStyles.msgMine : ""}`}>
-                                                {!m.fromMe && <Avatar name={active.name} size={32} />}
+                                            <div key={m.id} className={`${msgStyles.msgRow} ${m.from_me ? msgStyles.msgMine : ""}`}>
+                                                {!m.from_me && <Avatar src={active.avatar} name={active.name} size={32} />}
                                                 <div className={msgStyles.bubbleWrap}>
-                                                    <div className={`${msgStyles.bubble} ${m.fromMe ? msgStyles.bubbleMine : ""}`}>
+                                                    <div className={`${msgStyles.bubble} ${m.from_me ? msgStyles.bubbleMine : ""}`}>
                                                         {m.text}
                                                     </div>
                                                     <span className={msgStyles.bubbleTime}>

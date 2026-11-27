@@ -7,6 +7,7 @@ import Button from "@/components/button/Button";
 import DatePicker from "@/components/datePicker/DatePicker";
 import Switch from "@/components/switch/Switch";
 import message from "@/components/message/Message";
+import Avatar from "@/components/avatar/Avatar";
 import NotificationService from "@/services/NotificationService.ts";
 import type { SelectOption } from "@/types";
 import styles from "./NotificationManagement.module.css";
@@ -23,7 +24,17 @@ const NotificationManagement: React.FC = () => {
     const [startTime, setStartTime] = useState<Date | null>(null);
     const [endTime, setEndTime] = useState<Date | null>(null);
     const [sending, setSending] = useState(false);
-    const [activeBroadcasts, setActiveBroadcasts] = useState<{ id: number; title: string; content: string; level: string }[]>([]);
+    const [activeBroadcasts, setActiveBroadcasts] = useState<
+        {
+            id: number;
+            title: string;
+            content: string;
+            level: string;
+            sender_id?: number;
+            sender_name?: string;
+            sender_avatar?: string;
+        }[]
+    >([]);
 
     const fetchBroadcasts = async () => {
         try {
@@ -289,6 +300,12 @@ const NotificationManagement: React.FC = () => {
                                         <strong style={{ fontSize: 14 }}>{bc.title}</strong>
                                     </div>
                                     <div className={styles.broadcastText}>{bc.content}</div>
+                                    {bc.sender_name && (
+                                        <div className={styles.broadcastSender}>
+                                            <Avatar src={bc.sender_avatar} name={bc.sender_name} size={20} />
+                                            <span>{bc.sender_name}</span>
+                                        </div>
+                                    )}
                                 </div>
                                 <button
                                     onClick={() => handleCloseBroadcast(bc.id)}

@@ -27,6 +27,7 @@ const section = {
         empty: "No feedback",
         columns: {
             content: "Feedback",
+            user: "User",
             contact: "Contact",
             time: "Time",
             actions: "Actions",

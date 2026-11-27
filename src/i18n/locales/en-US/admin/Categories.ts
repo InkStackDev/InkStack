@@ -76,6 +76,9 @@ const section = {
         enable: "Enable",
         delete: "Delete Category",
     },
+    pagination: {
+        info: "Showing {{start}} - {{end}} of {{total}} records",
+    },
     modal: {
         createTitle: "New Category",
         editTitle: "Edit Category",

@@ -19,6 +19,7 @@ export interface ListArticlesResponse {
         id: string | number;
         title: string;
         author: string;
+        author_avatar?: string;
         summary: string;
         state: number;
         type: number;
@@ -51,6 +52,7 @@ export interface ListAdminArticlesResponse {
         id: string | number;
         title: string;
         author: string;
+        author_avatar?: string;
         email: string;
         state: number;
         summary: string;
@@ -206,7 +208,7 @@ export class ArticleService {
      * 分页获取文章列表
      */
     static async listArticlesByUserIdPages(params: ListArticlesParams, config?: HttpRequestConfig): Promise<ListArticlesResponse> {
-        let url = `/article/query?page_from=${params.page_from}`;
+        let url = `/articles?page_from=${params.page_from}`;
         if (params.page_size) {
             url += `&page_size=${params.page_size}`;
         }
@@ -229,7 +231,7 @@ export class ArticleService {
         page_from: number;
         page_size?: number;
     }): Promise<ListArticlesResponse> {
-        let url = `/article/list_by_label?label_id=${params.label_id}&page_from=${params.page_from}`;
+        let url = `/labels/${params.label_id}/articles?page_from=${params.page_from}`;
         if (params.page_size) {
             url += `&page_size=${params.page_size}`;
         }
@@ -246,7 +248,7 @@ export class ArticleService {
         page_from: number;
         page_size?: number;
     }): Promise<ListArticlesResponse> {
-        let url = `/article/list_by_category?category_id=${params.category_id}&page_from=${params.page_from}`;
+        let url = `/categories/${params.category_id}/articles?page_from=${params.page_from}`;
         if (params.page_size) {
             url += `&page_size=${params.page_size}`;
         }
@@ -300,13 +302,13 @@ export class ArticleService {
         if (params.page_size) {
             q.push(`page_size=${params.page_size}`);
         }
-        const url = `/article/search${q.length > 0 ? "?" + q.join("&") : ""}`;
+        const url = `/articles/search${q.length > 0 ? "?" + q.join("&") : ""}`;
         const response = await http.get<ListArticlesResponse>(url, config);
         return response.data;
     }
 
     static async listAdminArticlesByPages(params: ListAdminArticlesParams): Promise<ListAdminArticlesResponse> {
-        let url = `/article/admin/lists?page_num=${params.page_num}`;
+        let url = `/admin/articles?page_num=${params.page_num}`;
         url += `&page_size=${params.page_size}`;
         if (params.state !== undefined) {
             url += `&state=${params.state}`;
@@ -335,7 +337,8 @@ export class ArticleService {
         const formData = new URLSearchParams();
         formData.append("id", String(params.id));
         formData.append("publish_time", String(params.publish_time));
-        const response = await http.postForm<PublishArticleResponse>("/article/publish", formData);
+        formData.delete("id");
+        const response = await http.postForm<PublishArticleResponse>(`/articles/${params.id}/publications`, formData);
         return {
             errno: response.errno ?? -1,
             msg: response.message ?? response.msg ?? "",
@@ -346,7 +349,7 @@ export class ArticleService {
      * 获取文章详情
      */
     static async getArticleDetails(params: ArticleDetailsParams): Promise<ArticleDetailsResponse> {
-        const response = await http.get<ArticleDetailsResponse>(`/article/detail?id=${params.id}&type=${params.type}`);
+        const response = await http.get<ArticleDetailsResponse>(`/articles/${params.id}?type=${params.type}`);
         return response.data;
     }
 
@@ -354,9 +357,7 @@ export class ArticleService {
      * 文章阅读计数（10分钟内同一用户不重复计数）
      */
     static async viewArticle(articleId: string | number): Promise<{ views: number }> {
-        const formData = new URLSearchParams();
-        formData.append("article_id", String(articleId));
-        const response = await http.postForm<{ views: number }>("/article/view", formData);
+        const response = await http.post<{ views: number }>(`/articles/${articleId}/views`);
         return response.data;
     }
 
@@ -375,7 +376,7 @@ export class ArticleService {
             formData.append("category", params.category);
         }
 
-        const response = await http.postForm<CreateArticleResponse>("/article/create", formData);
+        const response = await http.postForm<CreateArticleResponse>("/articles", formData);
         return response.data;
     }
 
@@ -383,9 +384,7 @@ export class ArticleService {
      * 删除文章
      */
     static async deleteArticle(params: DeleteArticleParams): Promise<DeleteArticleResponse> {
-        const formData = new URLSearchParams();
-        formData.append("ids", params.ids);
-        const response = await http.postForm<DeleteArticleResponse>("/article/delete", formData);
+        const response = await http.delete<DeleteArticleResponse>(`/articles?ids=${encodeURIComponent(params.ids)}`);
         return response.data;
     }
 
@@ -395,9 +394,10 @@ export class ArticleService {
     static async verifyArticle(params: VerifyArticleParams) {
         const formData = new URLSearchParams();
         formData.append("id", String(params.id));
+        formData.delete("id");
         formData.append("state", String(params.state));
 
-        return http.postForm("/article/verify", formData);
+        return http.postForm(`/articles/${params.id}/verifications`, formData);
     }
 
     /**
@@ -418,7 +418,10 @@ export class ArticleService {
             formData.append("category", params.category);
         }
 
-        return http.postForm("/article/update", formData);
+        formData.delete("id");
+        return http.put(`/articles/${params.id}`, formData.toString(), {
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        });
     }
 
     /**
@@ -430,27 +433,33 @@ export class ArticleService {
         formData.append("add_category_ids", params.add_category_ids);
         formData.append("del_category_ids", params.del_category_ids);
 
-        const response = await http.postForm<UpdateArticleCategoryResponse>("/article/update_category", formData);
+        formData.delete("id");
+        const response = await http.patch<UpdateArticleCategoryResponse>(`/articles/${params.id}/categories`, formData.toString(), {
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        });
         return response.data;
     }
 
     static async switchArticleState(params: SwitchArticleStateParams) {
         const formData = new URLSearchParams();
         formData.append("id", String(params.id));
+        formData.delete("id");
         formData.append("new_state", String(params.state));
 
-        return http.postForm("/article/switch_state", formData);
+        return http.patch(`/articles/${params.id}/state`, formData.toString(), {
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        });
     }
 
     /**
      * 站点日历 - 获取指定月份有文章的日期列表
      */
     static async getCalendarDays(year: number, month: number): Promise<number[]> {
-        const response = await http.get<{ year: number; month: number; articleDays: number[] }>(
-            `/article/calendar?year=${year}&month=${month}`,
+        const response = await http.get<{ year: number; month: number; article_days: number[] }>(
+            `/articles/calendar?year=${year}&month=${month}`,
         );
         console.log("Calendar response:", response);
-        return response.data.articleDays ?? [];
+        return response.data.article_days ?? [];
     }
 
     /**
@@ -462,7 +471,7 @@ export class ArticleService {
         days?: number;
         keyword?: string;
     }): Promise<ArticleStatsResponse> {
-        let url = `/article/admin/stats`;
+        let url = `/admin/articles/stats`;
         const queryParts: string[] = [];
         if (params?.category_id !== undefined && params?.category_id !== "") {
             queryParts.push(`category_id=${params.category_id}`);

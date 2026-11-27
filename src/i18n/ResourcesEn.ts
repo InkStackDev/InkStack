@@ -42,6 +42,7 @@ export const enResources = {
     blog,
     services,
     sample,
+    backend: {},
 } as const;
 
 export default enResources;

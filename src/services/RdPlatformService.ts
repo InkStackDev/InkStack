@@ -50,6 +50,7 @@ function mapRequirement(raw: any): Requirement {
         priority: raw.priority || "medium",
         status: raw.status || "new",
         creator: raw.creator || "",
+        creatorAvatar: raw.creator_avatar || "",
         assignee: raw.assignee || "",
         assigneeAvatar: raw.assignee_avatar || "",
         organizationId: String(raw.org_id ?? ""),
@@ -71,6 +72,7 @@ function mapBug(raw: any): Bug {
         priority: raw.priority || "high",
         status: raw.status || "new",
         creator: raw.creator || "",
+        creatorAvatar: raw.creator_avatar || "",
         assignee: raw.assignee || "",
         assigneeAvatar: raw.assignee_avatar || "",
         organizationId: String(raw.org_id ?? ""),
@@ -94,6 +96,7 @@ function mapTask(raw: any): Task {
         assignee: raw.assignee || "",
         assigneeAvatar: raw.assignee_avatar || "",
         creator: raw.creator || "",
+        creatorAvatar: raw.creator_avatar || "",
         organizationId: String(raw.org_id ?? ""),
         requirementId: String(raw.requirement_id ?? ""),
         deadline: raw.deadline
@@ -351,7 +354,7 @@ export class RdPlatformService {
             status: filters.status,
             priority: filters.priority,
         });
-        const res = await http.get<any>(`${BASE}/requirements${q}`);
+        const res = await http.get<any>(`/requirements${q}`);
         return {
             data: (res.data.list || []).map(mapRequirement),
             total: res.data.total ?? 0,
@@ -359,7 +362,7 @@ export class RdPlatformService {
     }
 
     static async getRequirementById(id: string): Promise<Requirement | null> {
-        const res = await http.get<any>(`${BASE}/requirements/detail?id=${id}`);
+        const res = await http.get<any>(`/requirements/${id}`);
         if (!res.data) {
             return null;
         }
@@ -380,7 +383,7 @@ export class RdPlatformService {
             category: params.category,
             source: params.source,
         };
-        const res = await http.post<any>(`${BASE}/requirements/edit`, body);
+        const res = await http.post<any>("/requirements", body);
         return mapRequirement(res.data);
     }
 
@@ -418,7 +421,7 @@ export class RdPlatformService {
             body.source = params.source;
         }
 
-        const res = await http.post<any>(`${BASE}/requirements/edit`, body);
+        const res = await http.put<any>(`/requirements/${id}`, body);
         if (!res.data) {
             return null;
         }
@@ -426,7 +429,7 @@ export class RdPlatformService {
     }
 
     static async deleteRequirement(id: string, orgId?: string): Promise<boolean> {
-        const res = await http.post<any>(`${BASE}/requirements/delete`, { id: Number(id), org_id: Number(orgId) || 0 });
+        const res = await http.delete<any>(`/requirements/${id}?org_id=${Number(orgId) || 0}`);
         return res.errno === 0 || (res as any).success;
     }
 
@@ -442,7 +445,7 @@ export class RdPlatformService {
             severity: filters.severity,
             priority: filters.priority,
         });
-        const res = await http.get<any>(`${BASE}/bugs${q}`);
+        const res = await http.get<any>(`/bugs${q}`);
         return {
             data: (res.data.list || []).map(mapBug),
             total: res.data.total ?? 0,
@@ -450,7 +453,7 @@ export class RdPlatformService {
     }
 
     static async getBugById(id: string): Promise<Bug | null> {
-        const res = await http.get<any>(`${BASE}/bugs/detail?id=${id}`);
+        const res = await http.get<any>(`/bugs/${id}`);
         if (!res.data) {
             return null;
         }
@@ -473,7 +476,7 @@ export class RdPlatformService {
             steps_to_reproduce: params.stepsToReproduce,
             environment: params.environment,
         };
-        const res = await http.post<any>(`${BASE}/bugs/edit`, body);
+        const res = await http.post<any>("/bugs", body);
         return mapBug(res.data);
     }
 
@@ -514,7 +517,7 @@ export class RdPlatformService {
             body.environment = params.environment;
         }
 
-        const res = await http.post<any>(`${BASE}/bugs/edit`, body);
+        const res = await http.put<any>(`/bugs/${id}`, body);
         if (!res.data) {
             return null;
         }
@@ -522,7 +525,7 @@ export class RdPlatformService {
     }
 
     static async deleteBug(id: string, orgId?: string): Promise<boolean> {
-        const res = await http.post<any>(`${BASE}/bugs/delete`, { id: Number(id), org_id: Number(orgId) || 0 });
+        const res = await http.delete<any>(`/bugs/${id}?org_id=${Number(orgId) || 0}`);
         return res.errno === 0 || (res as any).success;
     }
 
@@ -538,7 +541,7 @@ export class RdPlatformService {
             priority: filters.priority,
             assignee_id: filters.assignee || undefined,
         });
-        const res = await http.get<any>(`${BASE}/tasks${q}`);
+        const res = await http.get<any>(`/tasks${q}`);
         return {
             data: (res.data.list || []).map(mapTask),
             total: res.data.total ?? 0,
@@ -546,7 +549,7 @@ export class RdPlatformService {
     }
 
     static async getTaskById(id: string): Promise<Task | null> {
-        const res = await http.get<any>(`${BASE}/tasks/detail?id=${id}`);
+        const res = await http.get<any>(`/tasks/${id}`);
         if (!res.data) {
             return null;
         }
@@ -567,7 +570,7 @@ export class RdPlatformService {
             deadline: dateToUnix(params.deadline || ""),
             estimated_hours: params.estimatedHours,
         };
-        const res = await http.post<any>(`${BASE}/tasks/edit`, body);
+        const res = await http.post<any>("/tasks", body);
         return mapTask(res.data);
     }
 
@@ -602,7 +605,7 @@ export class RdPlatformService {
             body.estimated_hours = params.estimatedHours;
         }
 
-        const res = await http.post<any>(`${BASE}/tasks/edit`, body);
+        const res = await http.put<any>(`/tasks/${id}`, body);
         if (!res.data) {
             return null;
         }
@@ -610,14 +613,14 @@ export class RdPlatformService {
     }
 
     static async deleteTask(id: string, orgId?: string): Promise<boolean> {
-        const res = await http.post<any>(`${BASE}/tasks/delete`, { id: Number(id), org_id: Number(orgId) || 0 });
+        const res = await http.delete<any>(`/tasks/${id}?org_id=${Number(orgId) || 0}`);
         return res.errno === 0 || (res as any).success;
     }
 
     // -- Organizations (R&D platform) ----------------------------------------
 
     static async getOrgMembers(orgId: string): Promise<{ userId: string; name: string; role: number; avatar?: string }[]> {
-        const res = await http.get<any>(`${BASE}/organizations/members?org_id=${orgId}`);
+        const res = await http.get<any>(`/rd/organizations/${orgId}/members`);
         const list = res.data?.list || [];
         if (!Array.isArray(list)) {
             return [];
@@ -661,7 +664,7 @@ export class RdPlatformService {
             status: params.status,
             org_id: params.orgId,
         });
-        const res = await http.get<any>(`${BASE}/my-tickets${q}`);
+        const res = await http.get<any>(`/users/me/tickets${q}`);
         const d = res.data || {};
         const list =
             params.type === "requirement"
@@ -676,7 +679,7 @@ export class RdPlatformService {
 
     static async checkAccess(): Promise<{ canAccess: boolean; reason?: string }> {
         // 研发入口检查可能先于 /user/info 完成，匿名时不要触发全局会话失效跳转
-        const res = await http.get<any>(`${BASE}/check_access`, { skipSessionInvalidation: true });
+        const res = await http.get<any>("/rd/access", { skipSessionInvalidation: true });
         const d = res.data;
         return {
             canAccess: d?.can_access === "1",

@@ -680,7 +680,9 @@ const MyTickets: React.FC = () => {
                                                 <td data-label={t("myTickets.columns.assignee")}>
                                                     <AssigneeDisplay name={r.assignee} avatar={r.assigneeAvatar} />
                                                 </td>
-                                                <td data-label={t("myTickets.columns.creator")}>{r.creator}</td>
+                                                <td data-label={t("myTickets.columns.creator")}>
+                                                    <AssigneeDisplay name={r.creator} avatar={r.creatorAvatar} />
+                                                </td>
                                                 <td data-label={t("myTickets.columns.createdAt")}>{formatDateTime(r.createdAt)}</td>
                                                 <td data-label={t("myTickets.columns.actions")}>
                                                     <div className={styles.actionButtons}>
@@ -763,7 +765,9 @@ const MyTickets: React.FC = () => {
                                                 <td data-label={t("myTickets.columns.assignee")}>
                                                     <AssigneeDisplay name={b.assignee} avatar={b.assigneeAvatar} />
                                                 </td>
-                                                <td data-label={t("myTickets.columns.creator")}>{b.creator}</td>
+                                                <td data-label={t("myTickets.columns.creator")}>
+                                                    <AssigneeDisplay name={b.creator} avatar={b.creatorAvatar} />
+                                                </td>
                                                 <td data-label={t("myTickets.columns.createdAt")}>{formatDateTime(b.createdAt)}</td>
                                                 <td data-label={t("myTickets.columns.actions")}>
                                                     <div className={styles.actionButtons}>
@@ -842,7 +846,9 @@ const MyTickets: React.FC = () => {
                                                 <td data-label={t("myTickets.columns.assignee")}>
                                                     <AssigneeDisplay name={task.assignee} avatar={task.assigneeAvatar} />
                                                 </td>
-                                                <td data-label={t("myTickets.columns.creator")}>{task.creator}</td>
+                                                <td data-label={t("myTickets.columns.creator")}>
+                                                    <AssigneeDisplay name={task.creator} avatar={task.creatorAvatar} />
+                                                </td>
                                                 <td data-label={t("myTickets.columns.deadline")}>
                                                     {task.deadline ? formatDateTime(task.deadline) : "-"}
                                                 </td>
@@ -936,7 +942,10 @@ const MyTickets: React.FC = () => {
                                                 t("myTickets.detail.assignee"),
                                                 <AssigneeDisplay name={r.assignee} avatar={r.assigneeAvatar} />,
                                             )}
-                                            {renderField_(t("myTickets.detail.creator"), r.creator)}
+                                            {renderField_(
+                                                t("myTickets.detail.creator"),
+                                                <AssigneeDisplay name={r.creator} avatar={r.creatorAvatar} />,
+                                            )}
                                             {renderField_(
                                                 t("myTickets.detail.organization"),
                                                 orgNameMap[r.organizationId] || r.organizationId,
@@ -980,7 +989,10 @@ const MyTickets: React.FC = () => {
                                                 t("myTickets.detail.assignee"),
                                                 <AssigneeDisplay name={b.assignee} avatar={b.assigneeAvatar} />,
                                             )}
-                                            {renderField_(t("myTickets.detail.creator"), b.creator)}
+                                            {renderField_(
+                                                t("myTickets.detail.creator"),
+                                                <AssigneeDisplay name={b.creator} avatar={b.creatorAvatar} />,
+                                            )}
                                             {renderField_(
                                                 t("myTickets.detail.organization"),
                                                 orgNameMap[b.organizationId] || b.organizationId,
@@ -1029,7 +1041,10 @@ const MyTickets: React.FC = () => {
                                                 t("myTickets.detail.assignee"),
                                                 <AssigneeDisplay name={task.assignee} avatar={task.assigneeAvatar} />,
                                             )}
-                                            {renderField_(t("myTickets.detail.creator"), task.creator)}
+                                            {renderField_(
+                                                t("myTickets.detail.creator"),
+                                                <AssigneeDisplay name={task.creator} avatar={task.creatorAvatar} />,
+                                            )}
                                             {renderField_(
                                                 t("myTickets.detail.organization"),
                                                 orgNameMap[task.organizationId] || task.organizationId,

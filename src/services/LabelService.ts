@@ -66,9 +66,7 @@ export class LabelService {
      * @returns 删除结果
      */
     static async deleteLabel(params: DeleteLabelParams): Promise<DeleteLabelResponse> {
-        const formData = new URLSearchParams();
-        formData.append("ids", params.ids);
-        const response = await http.postForm<DeleteLabelResponse>("/label/delete", formData);
+        const response = await http.delete<DeleteLabelResponse>(`/labels?ids=${encodeURIComponent(params.ids)}`);
         return response.data;
     }
 
@@ -79,15 +77,19 @@ export class LabelService {
      */
     static async createLabel(params: CreateLabelParams): Promise<CreateLabelResponse> {
         const formData = new URLSearchParams();
-        if (params.id !== undefined && params.id !== null && params.id !== "") {
-            formData.append("id", params.id.toString());
-        }
+        const labelId = params.id !== undefined && params.id !== null && params.id !== "" ? params.id.toString() : "";
         formData.append("name", params.name);
         formData.append("color", params.color);
         if (params.description) {
             formData.append("desc", params.description);
         }
-        const response = await http.postForm<CreateLabelResponse>("/label/create", formData);
+        if (labelId) {
+            const response = await http.put<CreateLabelResponse>(`/labels/${labelId}`, formData.toString(), {
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            });
+            return response.data;
+        }
+        const response = await http.postForm<CreateLabelResponse>("/labels", formData);
         return response.data;
     }
 
@@ -97,7 +99,7 @@ export class LabelService {
      * @returns 标签详情列表
      */
     static async queryLabel(params: QueryLabelParams): Promise<LabelInfo[]> {
-        let url = "/label/query?";
+        let url = "/labels?";
         if (params.ids) {
             url += `ids=${params.ids}&`;
         }

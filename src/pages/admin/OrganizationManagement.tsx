@@ -26,6 +26,7 @@ import CustomSelect from "@/components/customSelect/CustomSelect";
 import styles from "./OrganizationManagement.module.css";
 import OrganizationService, { type OrganizationStatsResponse, type ApplyItem } from "@/services/OrganizationService.ts";
 import { useInitialLoaded } from "@/hooks/UseInitialLoaded";
+import Avatar from "@/components/avatar/Avatar";
 
 interface Organization {
     id: string;
@@ -108,15 +109,28 @@ const OrganizationManagement: React.FC = () => {
             }
             const res = await OrganizationService.getAdminOrganizations(params);
             const mappedList: Organization[] = (res.list || []).map(
-                (item: { count: any; id: any; name: any; type: any; status: any; create_time: number; description: any }) => ({
-                    id: String(item.id),
-                    name: item.name,
-                    type: item.type,
-                    status: STATUS_NUMBER_MAP_STR[Number(item.status)] as "active" | "inactive",
-                    createdAt: dayjs.unix(item.create_time).format("YYYY-MM-DD HH:mm:ss"),
-                    description: item.description,
-                    memberCount: item.count, // 如有成员数字段可填
-                }),
+                (item: {
+                    count: any;
+                    id: any;
+                    name: any;
+                    type: any;
+                    status: any;
+                    created_at?: number;
+                    create_time?: number;
+                    description: any;
+                }) => {
+                    const createdTs = item.created_at ?? item.create_time;
+                    return {
+                        id: String(item.id),
+                        name: item.name,
+                        type: item.type,
+                        status: STATUS_NUMBER_MAP_STR[Number(item.status)] as "active" | "inactive",
+                        createdAt:
+                            typeof createdTs === "number" && createdTs > 0 ? dayjs.unix(createdTs).format("YYYY-MM-DD HH:mm:ss") : "-",
+                        description: item.description,
+                        memberCount: item.count, // 如有成员数字段可填
+                    };
+                },
             );
             setOrganizations(mappedList);
             setTotal(res.total);
@@ -850,7 +864,16 @@ const OrganizationManagement: React.FC = () => {
                                         {applies.length > 0 ? (
                                             applies.map((item) => (
                                                 <tr key={item.id}>
-                                                    <td>{item.user_name || item.user_id}</td>
+                                                    <td>
+                                                        <span className={styles.applyUserCell}>
+                                                            <Avatar
+                                                                src={item.user_avatar}
+                                                                name={item.user_name || item.user_id}
+                                                                size={28}
+                                                            />
+                                                            <span>{item.user_name || item.user_id}</span>
+                                                        </span>
+                                                    </td>
                                                     <td>{item.org_name}</td>
                                                     <td>{item.org_type}</td>
                                                     <td>

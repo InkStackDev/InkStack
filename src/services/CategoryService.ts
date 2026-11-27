@@ -14,10 +14,34 @@ export interface CategoryItem {
     status: number;
     user_id?: string | number;
     author?: string;
+    author_avatar?: string;
     article_count: number;
     view_count: number;
     create_time: number;
     update_time: number;
+}
+
+/**
+ * 管理端分类统计
+ */
+export interface CategoryStats {
+    total_categories: number;
+    active_categories: number;
+    total_articles: number;
+    total_views: number;
+}
+
+/**
+ * 管理端分类查询参数（传 page_num/page_size 时后端分页返回）
+ */
+export interface QueryCategoryParams {
+    page_num?: number;
+    page_size?: number;
+    user_id?: string | number;
+    status?: number;
+    keyword?: string;
+    sort_by?: "name" | "created_at" | "article_count" | "views";
+    sort_order?: "asc" | "desc";
 }
 
 /**
@@ -29,6 +53,7 @@ export interface CategoryInfo {
     color: string;
     total: number;
     list: CategoryItem[];
+    stats?: CategoryStats;
 }
 
 /**
@@ -82,7 +107,7 @@ export class CategoryService {
      * 查询当前登录用户的分类（用户端）
      */
     static async queryMyCategory(config?: HttpRequestConfig): Promise<CategoryInfo> {
-        const response = await http.get<CategoryInfo>("/category/query", config);
+        const response = await http.get<CategoryInfo>("/categories", config);
         return response.data;
     }
 
@@ -90,7 +115,7 @@ export class CategoryService {
      * 查询指定用户的分类（用户端，只读）
      */
     static async queryCategoriesByUser(userId: string | number, config?: HttpRequestConfig): Promise<CategoryInfo> {
-        const response = await http.get<CategoryInfo>("/category/query", {
+        const response = await http.get<CategoryInfo>("/categories", {
             ...config,
             params: {
                 ...(config?.params ?? {}),
@@ -101,10 +126,17 @@ export class CategoryService {
     }
 
     /**
-     * 查询分类详情（管理端，默认返回全部用户分类）
+     * 查询分类详情（管理端）
+     * 不传 page_num/page_size 时返回全部，供下拉选项等场景使用。
      */
-    static async queryCategory(config?: HttpRequestConfig): Promise<CategoryInfo> {
-        const response = await http.get<CategoryInfo>("/category/admin/query", { cacheTtl: 15_000, ...config });
+    static async queryCategory(params?: QueryCategoryParams, config?: HttpRequestConfig): Promise<CategoryInfo> {
+        const response = await http.get<CategoryInfo>("/admin/categories", {
+            ...config,
+            params: {
+                ...(config?.params ?? {}),
+                ...(params ?? {}),
+            },
+        });
         return response.data;
     }
 
@@ -112,45 +144,42 @@ export class CategoryService {
      * 删除当前用户的分类（用户端）
      */
     static async deleteMyCategory(params: DeleteCategoryParams): Promise<DeleteCategoryResponse> {
-        return CategoryService.deleteCategoryRequest("/category/delete", params);
+        return CategoryService.deleteCategoryRequest("/categories", params);
     }
 
     /**
      * 删除分类（管理端，可删除任意用户分类）
      */
     static async deleteCategory(params: DeleteCategoryParams): Promise<DeleteCategoryResponse> {
-        return CategoryService.deleteCategoryRequest("/category/admin/delete", params);
+        return CategoryService.deleteCategoryRequest("/admin/categories", params);
     }
 
     /**
      * 创建/编辑当前用户的分类（用户端）
      */
     static async createMyCategory(params: CreateCategoryParams): Promise<CreateCategoryResponse> {
-        return CategoryService.createCategoryRequest("/category/create", params);
+        return CategoryService.createCategoryRequest("/categories", params);
     }
 
     /**
      * 创建/编辑分类（管理端，可通过 user_id 指定归属用户）
      */
     static async createCategory(params: CreateCategoryParams): Promise<CreateCategoryResponse> {
-        return CategoryService.createCategoryRequest("/category/admin/create", params);
+        return CategoryService.createCategoryRequest("/admin/categories", params);
     }
 
     private static async deleteCategoryRequest(url: string, params: DeleteCategoryParams): Promise<DeleteCategoryResponse> {
-        const formData = new URLSearchParams();
-        formData.append("ids", params.ids);
+        const query = new URLSearchParams({ ids: params.ids });
         if (params.user_id !== undefined && params.user_id !== null && params.user_id !== "") {
-            formData.append("user_id", String(params.user_id));
+            query.append("user_id", String(params.user_id));
         }
-        const response = await http.postForm<DeleteCategoryResponse>(url, formData);
+        const response = await http.delete<DeleteCategoryResponse>(`${url}?${query.toString()}`);
         return response.data;
     }
 
     private static async createCategoryRequest(url: string, params: CreateCategoryParams): Promise<CreateCategoryResponse> {
         const formData = new URLSearchParams();
-        if (params.id !== undefined && params.id !== null && params.id !== "") {
-            formData.append("id", String(params.id));
-        }
+        const categoryId = params.id !== undefined && params.id !== null && params.id !== "" ? String(params.id) : "";
         if (params.user_id !== undefined && params.user_id !== null && params.user_id !== "") {
             formData.append("user_id", String(params.user_id));
         }
@@ -166,6 +195,12 @@ export class CategoryService {
         }
         if (params.parent_id !== undefined && params.parent_id !== null && params.parent_id !== "") {
             formData.append("parent_id", String(params.parent_id));
+        }
+        if (categoryId) {
+            const response = await http.put<CreateCategoryResponse>(`${url}/${categoryId}`, formData.toString(), {
+                headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            });
+            return response.data;
         }
         const response = await http.postForm<CreateCategoryResponse>(url, formData);
         return response.data;

@@ -30,12 +30,12 @@ export class PasskeyService {
     }
 
     static async list(): Promise<PasskeyListResponse> {
-        const response = await http.post<PasskeyListResponse>("/auth/passkey/list");
+        const response = await http.get<PasskeyListResponse>("/users/me/passkeys");
         return response.data ?? { total: 0, list: [] };
     }
 
     static async remove(id: number | string) {
-        return http.postForm("/auth/passkey/delete", { id });
+        return http.delete(`/users/me/passkeys/${id}`);
     }
 
     static async register(name?: string) {
@@ -48,7 +48,7 @@ export class PasskeyService {
             beginData.append("name", name.trim());
         }
 
-        const begin = await http.postForm<any>("/auth/passkey/register/begin", beginData);
+        const begin = await http.postForm<any>("/users/me/passkeys/options", beginData);
         if (!begin.data) {
             throw new Error(i18n.t("auth:message.passkeyRegisterFailed"));
         }
@@ -59,7 +59,7 @@ export class PasskeyService {
             throw new Error(i18n.t("auth:message.passkeyRegisterFailed"));
         }
 
-        return http.post("/auth/passkey/register/finish", {
+        return http.post("/users/me/passkeys", {
             ...credentialToJSON(credential),
             name: name?.trim() || begin.data.name || "Passkey",
         });
@@ -75,7 +75,7 @@ export class PasskeyService {
             beginData.append("auth_id", authId.trim());
         }
 
-        const begin = await http.postForm<any>("/auth/passkey/login/begin", beginData);
+        const begin = await http.postForm<any>("/auth/passkeys/login-options", beginData);
         if (!begin.data) {
             throw new Error(i18n.t("auth:message.passkeyLoginFailed"));
         }
@@ -86,7 +86,7 @@ export class PasskeyService {
             throw new Error(i18n.t("auth:message.passkeyLoginFailed"));
         }
 
-        return http.post("/auth/passkey/login/finish", credentialToJSON(credential));
+        return http.post("/auth/passkey-assertions", credentialToJSON(credential));
     }
 }
 

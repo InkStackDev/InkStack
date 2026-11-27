@@ -9,7 +9,7 @@ export class MessageService {
      * 获取会话列表
      */
     static async getConversations(): Promise<ConversationListResponse> {
-        const response = await http.get<ConversationListResponse>("/messages/conversations");
+        const response = await http.get<ConversationListResponse>("/conversations");
         return response.data;
     }
 
@@ -20,7 +20,7 @@ export class MessageService {
         conversationId: number | string,
         params?: { offset?: number; size?: number },
     ): Promise<MessageListResponse> {
-        const response = await http.get<MessageListResponse>(`/messages/conversations/${conversationId}`, {
+        const response = await http.get<MessageListResponse>(`/conversations/${conversationId}/messages`, {
             params: { offset: params?.offset ?? 0, size: params?.size ?? 50 },
         });
         return response.data;
@@ -30,7 +30,7 @@ export class MessageService {
      * 发送一条消息
      */
     static async send(conversationId: number | string, text: string): Promise<ChatMsg> {
-        const response = await http.postForm<ChatMsg>(`/messages/conversations/${conversationId}`, { text: text });
+        const response = await http.postForm<ChatMsg>(`/conversations/${conversationId}/messages`, { text: text });
         return response.data;
     }
 
@@ -38,7 +38,7 @@ export class MessageService {
      * 将某会话标记为已读
      */
     static async markRead(conversationId: number | string): Promise<{ unread: number }> {
-        const response = await http.post<{ unread: number }>(`/messages/conversations/${conversationId}/read`);
+        const response = await http.patch<{ unread: number }>(`/conversations/${conversationId}`);
         return response.data;
     }
 
@@ -46,7 +46,7 @@ export class MessageService {
      * 在本端删除/隐藏会话（对端与消息不受影响）
      */
     static async deleteConversation(conversationId: number | string): Promise<{ deleted: boolean }> {
-        const response = await http.post<{ deleted: boolean }>(`/messages/conversations/${conversationId}/delete`);
+        const response = await http.delete<{ deleted: boolean }>(`/conversations/${conversationId}`);
         return response.data;
     }
 
@@ -54,7 +54,7 @@ export class MessageService {
      * 发起/获取与某用户的会话（已存在则返回原会话）
      */
     static async createConversation(peerId: number | string): Promise<Conversation> {
-        const response = await http.postForm<Conversation>("/messages/conversations", { peer_id: peerId });
+        const response = await http.postForm<Conversation>("/conversations", { peer_id: peerId });
         return response.data;
     }
 }
