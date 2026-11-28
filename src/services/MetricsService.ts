@@ -5,7 +5,8 @@ import http from "../infra/Http.ts";
  */
 export interface MetricSample {
     name: string;
-    help: string;
+    /** 后端已不再逐条下发 help，改由 MetricsPayload.helps 按指标名提供 */
+    help?: string;
     type: "counter" | "gauge" | "histogram";
     labels: Record<string, string>;
     /** counter / gauge 的值 */
@@ -20,6 +21,8 @@ export interface MetricSample {
 
 export interface MetricsPayload {
     metrics?: MetricSample[];
+    /** 指标名 -> 说明文本（后端按名去重，避免每条 series 重复携带） */
+    helps?: Record<string, string>;
     /** 参与聚合的存活实例数 */
     instance_count?: number;
     /** Redis 聚合失败/不完整时为 true，此时只保证本实例数据 */
@@ -27,12 +30,16 @@ export interface MetricsPayload {
 }
 
 export interface RouteMetricsRow {
+    /** 行唯一标识：`METHOD route`（缺少 method 标签时退化为 route） */
+    key: string;
     route: string;
+    /** HTTP 方法；滚动重启期间旧实例快照没有 method 标签时为空串 */
+    method: string;
     requests: number;
     errors: number;
     /** 错误率，百分比 */
     errorRate: number;
-    /** 当前 QPS（最近一个采样窗口） */
+    /** 当前 QPS（与上一次采样的增量换算） */
     recentQps: number;
     /** 启动以来平均 QPS */
     avgQps: number;
@@ -83,6 +90,16 @@ export interface MetricsTotals {
     avgQps: number;
 }
 
+/**
+ * 一次采样：行 key -> 累计请求数，用于换算 QPS 增量
+ */
+export interface RouteRateState {
+    /** 采样时间戳（毫秒） */
+    at: number;
+    /** 行 key -> 累计请求数 */
+    requests: Map<string, number>;
+}
+
 export interface MetricsSnapshot {
     service: ServiceInfo | null;
     process: ProcessMetrics;
@@ -93,21 +110,29 @@ export interface MetricsSnapshot {
     instanceCount: number;
     /** 后端聚合降级（Redis 不可用/部分快照缺失） */
     degraded: boolean;
+    /** 本次采样的 QPS 基线，下一次构建快照时回传 */
+    rateState: RouteRateState;
 }
 
 interface RouteAccumulator {
+    route: string;
+    method: string;
     requests: number;
     errors: number;
-    avgQpsMilli: number;
-    recentQpsMilli: number;
     histogram: MetricSample | null;
 }
 
 const ROUTE_REQUESTS = "blog_http_requests_total";
 const ROUTE_ERRORS = "blog_http_errors_total";
 const ROUTE_DURATION = "blog_http_request_duration_seconds";
-const ROUTE_AVG_QPS = "blog_http_route_avg_qps_milli";
-const ROUTE_RECENT_QPS = "blog_http_route_recent_qps_milli";
+
+/**
+ * 路由指标的行 key：方法与路径组合。
+ * 后端以 route + method 两个标签区分 series，同一路径的不同方法必须分开统计。
+ */
+export function routeRowKey(method: string, route: string): string {
+    return method ? `${method} ${route}` : route;
+}
 
 /**
  * 从累计分桶估算分位数。
@@ -168,8 +193,16 @@ export class MetricsService {
      * @param samples 原始指标
      * @param instanceCount 参与聚合的实例数
      * @param degraded 后端聚合是否降级
+     * @param previous 上一次采样的基线，用于换算当前 QPS
+     * @param now 本次采样时间戳（毫秒）
      */
-    static buildSnapshot(samples: MetricSample[], instanceCount = 1, degraded = false): MetricsSnapshot {
+    static buildSnapshot(
+        samples: MetricSample[],
+        instanceCount = 1,
+        degraded = false,
+        previous: RouteRateState | null = null,
+        now: number = Date.now(),
+    ): MetricsSnapshot {
         const routes = new Map<string, RouteAccumulator>();
         const sumByName = new Map<string, number>();
         const maxByName = new Map<string, number>();
@@ -195,16 +228,12 @@ export class MetricsService {
         for (const sample of samples) {
             const route = sample.labels?.route;
             if (route) {
-                let accumulator = routes.get(route);
+                const method = sample.labels?.method ?? "";
+                const key = routeRowKey(method, route);
+                let accumulator = routes.get(key);
                 if (!accumulator) {
-                    accumulator = {
-                        requests: 0,
-                        errors: 0,
-                        avgQpsMilli: 0,
-                        recentQpsMilli: 0,
-                        histogram: null,
-                    };
-                    routes.set(route, accumulator);
+                    accumulator = { route, method, requests: 0, errors: 0, histogram: null };
+                    routes.set(key, accumulator);
                 }
 
                 switch (sample.name) {
@@ -213,12 +242,6 @@ export class MetricsService {
                         break;
                     case ROUTE_ERRORS:
                         accumulator.errors += sample.value ?? 0;
-                        break;
-                    case ROUTE_AVG_QPS:
-                        accumulator.avgQpsMilli += sample.value ?? 0;
-                        break;
-                    case ROUTE_RECENT_QPS:
-                        accumulator.recentQpsMilli += sample.value ?? 0;
                         break;
                     case ROUTE_DURATION:
                         accumulator.histogram = mergeHistogram(accumulator.histogram, sample);
@@ -248,19 +271,45 @@ export class MetricsService {
             }
         }
 
-        const routeRows: RouteMetricsRow[] = Array.from(routes.entries()).map(([route, accumulator]) => {
+        const sumValue = (name: string): number => sumByName.get(name) ?? 0;
+        const maxValue = (name: string): number => maxByName.get(name) ?? 0;
+        const minValue = (name: string): number => minByName.get(name) ?? 0;
+
+        const info = firstByName.get("blog_info");
+        const uptimeSeconds = minValue("blog_process_uptime_seconds");
+
+        /**
+         * 路由 QPS 由前端派生（后端只下发累计量）：
+         * - 平均 QPS = requests / (运行时长 × 实例数)。聚合时 counter 求和、运行时长取最小值，
+         *   不除以实例数会放大 N 倍。
+         * - 当前 QPS = 相邻两次采样的 requests 增量 / 间隔；首次采样没有基线，退回平均 QPS。
+         */
+        const elapsedSeconds = previous && now > previous.at ? (now - previous.at) / 1000 : 0;
+        const avgDenominator = uptimeSeconds * Math.max(1, instanceCount);
+
+        const routeRows: RouteMetricsRow[] = Array.from(routes.entries()).map(([key, accumulator]) => {
             const histogram = accumulator.histogram;
             const buckets = histogram?.buckets ?? [];
             const count = histogram?.count ?? 0;
             const sum = histogram?.sum ?? 0;
+            const avgQps = avgDenominator > 0 ? accumulator.requests / avgDenominator : 0;
+
+            let recentQps = avgQps;
+            const previousRequests = previous?.requests.get(key);
+            if (elapsedSeconds > 0 && previousRequests !== undefined) {
+                const delta = accumulator.requests - previousRequests;
+                recentQps = delta > 0 ? delta / elapsedSeconds : 0;
+            }
 
             return {
-                route,
+                key,
+                route: accumulator.route,
+                method: accumulator.method,
                 requests: accumulator.requests,
                 errors: accumulator.errors,
                 errorRate: accumulator.requests > 0 ? (accumulator.errors / accumulator.requests) * 100 : 0,
-                recentQps: accumulator.recentQpsMilli / 1000,
-                avgQps: accumulator.avgQpsMilli / 1000,
+                recentQps,
+                avgQps,
                 avgLatencyMs: count > 0 ? (sum / count) * 1000 : 0,
                 p95Ms: estimatePercentileMs(buckets, count, 0.95),
                 p99Ms: estimatePercentileMs(buckets, count, 0.99),
@@ -273,11 +322,6 @@ export class MetricsService {
 
         routeRows.sort((a, b) => b.requests - a.requests);
 
-        const sumValue = (name: string): number => sumByName.get(name) ?? 0;
-        const maxValue = (name: string): number => maxByName.get(name) ?? 0;
-        const minValue = (name: string): number => minByName.get(name) ?? 0;
-
-        const info = firstByName.get("blog_info");
         const totalRequests = routeRows.reduce((total, row) => total + row.requests, 0);
         const totalErrors = routeRows.reduce((total, row) => total + row.errors, 0);
 
@@ -290,7 +334,7 @@ export class MetricsService {
                   }
                 : null,
             process: {
-                uptimeSeconds: minValue("blog_process_uptime_seconds"),
+                uptimeSeconds,
                 rssKb: sumValue("blog_process_resident_memory_kb"),
                 vmKb: sumValue("blog_process_virtual_memory_kb"),
                 threads: sumValue("blog_process_threads"),
@@ -309,11 +353,15 @@ export class MetricsService {
                 errors: totalErrors,
                 errorRate: totalRequests > 0 ? (totalErrors / totalRequests) * 100 : 0,
                 recentQps: routeRows.reduce((total, row) => total + row.recentQps, 0),
-                avgQps: routeRows.reduce((total, row) => total + row.avgQps, 0),
+                avgQps: avgDenominator > 0 ? totalRequests / avgDenominator : 0,
             },
             routes: routeRows,
             instanceCount,
             degraded,
+            rateState: {
+                at: now,
+                requests: new Map(routeRows.map((row) => [row.key, row.requests])),
+            },
         };
     }
 }

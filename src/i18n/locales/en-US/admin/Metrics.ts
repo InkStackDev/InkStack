@@ -58,7 +58,7 @@ const section = {
     },
     table: {
         title: "API Metrics",
-        count: "{{count}} endpoints",
+        count: "{{count}} endpoints with traffic",
         searchPlaceholder: "Search routes...",
         sort: "Sort",
         sortOptions: {

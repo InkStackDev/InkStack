@@ -57,7 +57,7 @@ const section = {
     },
     table: {
         title: "API 指标",
-        count: "共 {{count}} 个接口",
+        count: "共 {{count}} 个接口（仅显示有流量的）",
         searchPlaceholder: "搜索路由...",
         sort: "排序",
         sortOptions: {
