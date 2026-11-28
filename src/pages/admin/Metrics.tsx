@@ -28,7 +28,12 @@ import Selector from "@/components/selector/Selector";
 import Switch from "@/components/switch/Switch";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useAsyncResource } from "@/hooks/UseAsyncResource";
-import MetricsService, { type MetricsPayload, type RouteMetricsRow } from "@/services/MetricsService.ts";
+import MetricsService, {
+    type MetricsPayload,
+    type MetricsSnapshot,
+    type RouteMetricsRow,
+    type RouteRateState,
+} from "@/services/MetricsService.ts";
 import { getThemeFontFamily } from "@/utils/ThemeFont";
 import styles from "./Metrics.module.css";
 
@@ -109,13 +114,28 @@ const Metrics: FC = () => {
     const fetcher = useCallback((signal: AbortSignal) => MetricsService.getMetrics(signal), []);
     const { data: payload, loading, error, reload } = useAsyncResource<MetricsPayload>(fetcher, [], { timeoutMs: 15000 });
 
-    const snapshot = useMemo(
-        () =>
-            payload
-                ? MetricsService.buildSnapshot(payload.metrics ?? [], payload.instance_count ?? 1, payload.degraded ?? false)
-                : null,
-        [payload],
-    );
+    // 路由 QPS 由前端按相邻两次采样的 requests 增量换算，基线随 payload 更新
+    const rateStateRef = useRef<RouteRateState | null>(null);
+    const snapshotCacheRef = useRef<{ payload: MetricsPayload; snapshot: MetricsSnapshot } | null>(null);
+
+    const snapshot = useMemo(() => {
+        if (!payload) {
+            return null;
+        }
+        // StrictMode 下 useMemo 可能对同一份 payload 重复求值：命中缓存，避免差分基线被刷新两次
+        if (snapshotCacheRef.current?.payload === payload) {
+            return snapshotCacheRef.current.snapshot;
+        }
+        const built = MetricsService.buildSnapshot(
+            payload.metrics ?? [],
+            payload.instance_count ?? 1,
+            payload.degraded ?? false,
+            rateStateRef.current,
+        );
+        rateStateRef.current = built.rateState;
+        snapshotCacheRef.current = { payload, snapshot: built };
+        return built;
+    }, [payload]);
 
     useEffect(() => {
         if (payload) {
@@ -139,7 +159,7 @@ const Metrics: FC = () => {
         if (!selectedRoute) {
             return;
         }
-        const next = snapshot?.routes.find((row) => row.route === selectedRoute.route) ?? null;
+        const next = snapshot?.routes.find((row) => row.key === selectedRoute.key) ?? null;
         if (next !== selectedRoute) {
             setSelectedRoute(next);
         }
@@ -237,7 +257,7 @@ const Metrics: FC = () => {
                     }
                     return `
                         <div style="padding: 4px 0; max-width: 360px;">
-                            <div style="font-weight: 600; margin-bottom: 4px; color: #333; word-break: break-all;">${row.route}</div>
+                            <div style="font-weight: 600; margin-bottom: 4px; color: #333; word-break: break-all;">${row.method ? `${row.method} ${row.route}` : row.route}</div>
                             <div style="color: #4361ee; font-weight: 500;">${t("metrics.chart.seriesName")}: ${Number(point.value).toFixed(2)}</div>
                         </div>
                     `;
@@ -275,7 +295,7 @@ const Metrics: FC = () => {
             yAxis: {
                 type: "category",
                 inverse: true,
-                data: rows.map((row) => row.route),
+                data: rows.map((row) => (row.method ? `${row.method} ${row.route}` : row.route)),
                 axisLine: {
                     show: false,
                 },
@@ -589,7 +609,9 @@ const Metrics: FC = () => {
     ];
 
     const keyword = search.trim().toLowerCase();
-    const matchedRoutes = keyword ? snapshot.routes.filter((row) => row.route.toLowerCase().includes(keyword)) : snapshot.routes;
+    const matchedRoutes = keyword
+        ? snapshot.routes.filter((row) => row.route.toLowerCase().includes(keyword) || row.method.toLowerCase().includes(keyword))
+        : snapshot.routes;
     const sortedRoutes = [...matchedRoutes].sort((a, b) => {
         switch (sortKey) {
             case "recentQps":
@@ -818,11 +840,14 @@ const Metrics: FC = () => {
                                 </thead>
                                 <tbody>
                                     {pageRoutes.map((row) => (
-                                        <tr key={row.route}>
+                                        <tr key={row.key}>
                                             <td>
-                                                <span className={styles.route} title={row.route}>
-                                                    {row.route}
-                                                </span>
+                                                <div className={styles.routeCell}>
+                                                    {row.method ? <span className={styles.method}>{row.method}</span> : null}
+                                                    <span className={styles.route} title={row.key}>
+                                                        {row.route}
+                                                    </span>
+                                                </div>
                                             </td>
                                             <td>{formatNumber(row.requests)}</td>
                                             <td>{formatNumber(row.errors)}</td>
@@ -880,7 +905,7 @@ const Metrics: FC = () => {
             {selectedRoute ? (
                 <Modal
                     visible
-                    title={`${t("metrics.detail.title")} · ${selectedRoute.route}`}
+                    title={`${t("metrics.detail.title")} · ${selectedRoute.key}`}
                     onClose={() => setSelectedRoute(null)}
                     size="large"
                     footer={

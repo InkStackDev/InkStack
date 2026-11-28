@@ -7,6 +7,7 @@ import CategoryPanel from "@/components/categoryPanel/CategoryPanel";
 import TagPanel from "@/components/tagPanel/TagPanel";
 import SearchBox from "@/components/searchBox/SearchBox";
 import DailyQuote from "@/components/dailyQuote/DailyQuote";
+import DailyRecommend from "@/components/dailyRecommend/DailyRecommend";
 import StatsPanel from "@/components/statsPanel/StatsPanel";
 import Calendar from "@/components/calendar/Calendar";
 import BackToTop from "@/components/backToTop/BackToTop";
@@ -140,6 +141,9 @@ const IndexPage: React.FC = () => {
                                 <DailyQuote />
                             </div>
                             <div className={classicStyles.panelSlot}>
+                                <DailyRecommend />
+                            </div>
+                            <div className={classicStyles.panelSlot}>
                                 <TagPanel
                                     tags={tags}
                                     loading={tagsLoading}
@@ -199,6 +203,10 @@ const IndexPage: React.FC = () => {
                         {/* 每日名言 */}
                         <div className={`${styles.panelSlot} ${styles.wide} ${styles.staticPanel}`}>
                             <DailyQuote />
+                        </div>
+                        {/* 每日推荐 */}
+                        <div className={`${styles.panelSlot} ${styles.wide}`}>
+                            <DailyRecommend />
                         </div>
                         {/* 访问统计 */}
                         <div className={`${styles.panelSlot} ${styles.wide}`}>

@@ -421,6 +421,26 @@
     white-space: normal;
 }
 
+.routeCell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.method {
+    flex: none;
+    padding: 1px 6px;
+    border: 1px solid var(--border-primary);
+    border-radius: 4px;
+    background-color: var(--bg-secondary);
+    color: var(--text-secondary);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1.5;
+    letter-spacing: 0.02em;
+}
+
 .route {
     font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
     font-size: 12.5px;

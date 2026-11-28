@@ -4,6 +4,7 @@ import applyCreateOrg from "./components/ApplyCreateOrg";
 import commentNode from "./components/CommentNode";
 import message from "./components/Message";
 import dailyQuote from "./components/DailyQuote";
+import dailyRecommend from "./components/DailyRecommend";
 import addButton from "./components/AddButton";
 import statsPanel from "./components/StatsPanel";
 import subscribeBox from "./components/SubscribeBox";
@@ -30,6 +31,7 @@ const components = {
     commentNode,
     message,
     dailyQuote,
+    dailyRecommend,
     addButton,
     statsPanel,
     subscribeBox,

@@ -11,6 +11,7 @@
 | 我的收藏 | 个人中心 → 我的收藏 | [bookmarks.md](./bookmarks.md) |
 | 私信 | 顶栏头像 → 私信 | [messages.md](./messages.md) |
 | 帮助中心 | 顶栏 → 帮助 | [help-center.md](./help-center.md) |
+| 管理仪表盘 | 管理后台 → 仪表盘 | [admin-dashboard-workbench-api.md](./admin-dashboard-workbench-api.md) |
 
 ## 通用约定
 
