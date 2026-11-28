@@ -53,6 +53,79 @@ const section = {
     recentUsers: {
         title: "最近用户",
     },
+    workbench: {
+        title: "内容工作台",
+        description: "本周已发布 {{published}} 篇，{{pending}} 篇待审核。",
+        descriptionClear: "本周已发布 {{published}} 篇，暂无待审核内容。",
+        actions: {
+            articles: "文章管理",
+            create: "新建文章",
+        },
+        states: {
+            reviewing: "待审核",
+            reviewingFoot: "等待处理",
+            published: "已发布",
+            publishedFoot: "全站累计",
+            weekly: "本周发布",
+            weeklyFoot: "较上周 {{value}}",
+            weeklyFlat: "与上周持平",
+            rejected: "未通过",
+            unit: "篇",
+            rejectedFoot: "需要复核",
+        },
+        heatmap: {
+            title: "发布热力图",
+            subtitle: "近 5 周每日发布篇数",
+            weekdays: {
+                mon: "一",
+                tue: "二",
+                wed: "三",
+                thu: "四",
+                fri: "五",
+                sat: "六",
+                sun: "日",
+            },
+            less: "少",
+            more: "多",
+            month: "近 5 周已发布 {{value}} 篇",
+            streak: "近 5 周最长连续 {{value}} 天",
+            cell: "{{date}} · {{value}} 篇",
+        },
+        recent: {
+            title: "最近发布",
+            empty: "近 35 天还没有发布文章",
+        },
+        comments: {
+            title: "待审核评论",
+            all: "全部",
+            approve: "通过",
+            reject: "拒绝",
+            empty: "暂无待审核评论",
+            anonymous: "匿名用户",
+            approved: "评论已通过",
+            rejected: "评论已拒绝",
+        },
+        feedback: {
+            title: "最新反馈",
+            all: "全部",
+            empty: "暂无新反馈",
+            type: {
+                bug: "功能异常",
+                feature: "功能建议",
+                other: "其他",
+            },
+        },
+        kpi: {
+            users: "总用户",
+            articles: "文章总数",
+            comments: "评论总数",
+            activity: "今日访问",
+        },
+        error: {
+            title: "仪表盘加载失败",
+            retry: "重新加载",
+        },
+    },
 } as const;
 
 export default section;

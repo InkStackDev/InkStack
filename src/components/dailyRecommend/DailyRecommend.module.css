@@ -1,0 +1,147 @@
+.panel {
+    background-color: var(--card-bg);
+    border-radius: 8px;
+    padding: 1.2rem;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-primary);
+    margin-bottom: 0.5rem;
+}
+
+.panelTitle {
+    display: flex;
+    align-items: center;
+    gap: 0.45rem;
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.8rem;
+    border-bottom: 1px solid var(--border-primary);
+    padding-bottom: 0.7rem;
+}
+
+.titleIcon {
+    font-size: 0.9rem;
+    color: var(--primary);
+    opacity: 0.75;
+}
+
+.list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.skeletonItem {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 0.5rem 0;
+}
+
+.item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 0.5rem 0.4rem;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.item:hover {
+    background-color: var(--bg-secondary);
+}
+
+.itemHead {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.45rem;
+}
+
+.rank {
+    flex: 0 0 auto;
+    min-width: 18px;
+    height: 18px;
+    line-height: 18px;
+    text-align: center;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-tertiary);
+    background-color: var(--bg-secondary);
+}
+
+.rankTop {
+    color: #ffffff;
+    background-color: var(--primary);
+}
+
+.itemTitle {
+    flex: 1;
+    font-size: 0.86rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    line-height: 1.45;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.itemMeta {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding-left: 24px;
+    font-size: 0.72rem;
+    color: var(--text-tertiary);
+}
+
+.author {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 50%;
+}
+
+.badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    padding-left: 24px;
+}
+
+.badge,
+.badgeFollow,
+.badgeInterest {
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 10px;
+    line-height: 1.5;
+    border: 1px solid var(--border-primary);
+    color: var(--text-secondary);
+    background-color: var(--bg-secondary);
+}
+
+.badgeFollow {
+    color: var(--primary);
+    border-color: var(--primary);
+    background-color: var(--primary-light);
+}
+
+.badgeInterest {
+    color: #8b5cf6;
+    border-color: #8b5cf6;
+    background-color: rgba(139, 92, 246, 0.1);
+}
+
+.empty {
+    padding: 1.2rem 0;
+    text-align: center;
+    font-size: 0.82rem;
+    color: var(--text-tertiary);
+}

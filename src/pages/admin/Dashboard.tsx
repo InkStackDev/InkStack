@@ -1,613 +1,513 @@
-import React, { useRef, useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import type { ECharts } from "@/utils/Echarts";
-import {
-    FaUsers,
-    FaFileAlt,
-    FaComments,
-    FaEye,
-    FaArrowUp,
-    FaArrowDown,
-    FaMinus,
-    FaEdit,
-    FaChartBar,
-    FaCog,
-    FaUserPlus,
-    FaChevronRight,
-} from "react-icons/fa";
-import Loading from "@/components/loading/Loading";
-import PageHeader from "@/components/pageHeader/PageHeader";
+import { FaArrowDown, FaArrowUp, FaBug, FaLightbulb, FaMinus, FaPenNib, FaPlus } from "react-icons/fa";
 import Avatar from "@/components/avatar/Avatar";
-import DashboardService, {
-    type DashboardStats,
-    type DashboardTrend,
-    type DashboardActivity,
-    type DashboardRecentUser,
-} from "@/services/DashboardService.ts";
-import type { PlatformRole } from "@/types/Roles.ts";
-import { useEnumLabels } from "@/i18n/UseEnumLabels";
-import { useTheme } from "@/contexts/ThemeContext";
-import { getThemeFontFamily } from "@/utils/ThemeFont";
-import { resolveBackendMessage } from "@/utils/AppConfig.ts";
+import Button from "@/components/button/Button";
+import EmptyState from "@/components/emptyState/EmptyState";
+import message from "@/components/message/Message";
+import PageHeader from "@/components/pageHeader/PageHeader";
+import Skeleton from "@/components/skeleton/Skeleton";
+import CommentService from "@/services/CommentService";
+import DashboardService, { type WorkbenchData } from "@/services/DashboardService";
+import { formatRelativeTime } from "@/utils/Utils";
 import styles from "./Dashboard.module.css";
+
+interface HeatCell {
+    key: string;
+    count: number;
+    future: boolean;
+    today: boolean;
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+function pad2(value: number): string {
+    return String(value).padStart(2, "0");
+}
+
+function shiftDateKey(key: string, days: number): string {
+    const [year, month, day] = key.split("-").map(Number);
+    const shifted = new Date(Date.UTC(year, month - 1, day) + days * DAY_MS);
+    return `${shifted.getUTCFullYear()}-${pad2(shifted.getUTCMonth() + 1)}-${pad2(shifted.getUTCDate())}`;
+}
+
+/** 周一起算的星期序号：周一 0，周日 6 */
+function mondayWeekday(key: string): number {
+    const [year, month, day] = key.split("-").map(Number);
+    return (new Date(Date.UTC(year, month - 1, day)).getUTCDay() + 6) % 7;
+}
+
+function heatLevel(count: number, maxCount: number): number {
+    if (count <= 0 || maxCount <= 0) {
+        return 0;
+    }
+    return Math.min(3, Math.ceil((count / maxCount) * 3));
+}
+
+function formatChange(value: number): string {
+    const sign = value > 0 ? "+" : "";
+    return `${sign}${value}%`;
+}
 
 const Dashboard: React.FC = () => {
     const { t } = useTranslation("admin");
-    const { t: tCal } = useTranslation("calendar");
-    const enums = useEnumLabels();
-    const { preset } = useTheme();
-    const [selectedPeriod, setSelectedPeriod] = React.useState("7天");
-    const chartRef = useRef<HTMLDivElement>(null);
-    const chartInstance = useRef<ECharts | null>(null);
-    const [echartsModule, setEchartsModule] = useState<typeof import("@/utils/Echarts") | null>(null);
-
-    // 图表库延迟加载：先渲染统计卡片，再加载 ECharts
-    useEffect(() => {
-        let cancelled = false;
-        void import("@/utils/Echarts").then((module) => {
-            if (!cancelled) {
-                setEchartsModule(module);
-            }
-        });
-        return () => {
-            cancelled = true;
-        };
-    }, []);
+    const navigate = useNavigate();
 
     const [loading, setLoading] = useState(true);
-    const [stats, setStats] = useState<DashboardStats | null>(null);
-    const [trendData, setTrendData] = useState<DashboardTrend | null>(null);
-    const [activities, setActivities] = useState<DashboardActivity[]>([]);
-    const [recentUsers, setRecentUsers] = useState<DashboardRecentUser[]>([]);
+    const [reloadKey, setReloadKey] = useState(0);
+    const [workbench, setWorkbench] = useState<WorkbenchData | null>(null);
+    const [actionId, setActionId] = useState<string | null>(null);
 
-    // 首次加载：stats + activities + recent-users（趋势数据由下方周期 effect 负责）
-    useEffect(() => {
-        const fetchOnce = async () => {
+    const loadWorkbench = useCallback(async (showLoading: boolean = true) => {
+        if (showLoading) {
             setLoading(true);
-            try {
-                const [statsRes, activitiesRes, usersRes] = await Promise.all([
-                    DashboardService.getStats(),
-                    DashboardService.getActivities(5),
-                    DashboardService.getRecentUsers(5),
-                ]);
-                setStats(statsRes);
-                setActivities(activitiesRes.list || []);
-                setRecentUsers(usersRes.list || []);
-            } catch {
-                // error handled by interceptor
-            } finally {
+        }
+        try {
+            const data = await DashboardService.getWorkbench();
+            setWorkbench(data);
+        } catch {
+            // 错误提示由 HTTP 拦截器统一处理；首次失败时保留 workbench 为 null 展示错误态
+        } finally {
+            if (showLoading) {
                 setLoading(false);
             }
-        };
-        fetchOnce();
+        }
     }, []);
 
-    // 切换周期时仅重新请求趋势数据
     useEffect(() => {
-        const fetchTrend = async () => {
-            try {
-                const trendRes = await DashboardService.getTrend(selectedPeriod === "7天" ? 7 : selectedPeriod === "30天" ? 30 : 90);
-                setTrendData(trendRes);
-            } catch {
-                // error handled by interceptor
-            }
-        };
-        void fetchTrend();
-    }, [selectedPeriod]);
+        void loadWorkbench();
+    }, [loadWorkbench, reloadKey]);
 
-    // 快速操作数据
-    const quickActions = [
+    const handleCommentAction = async (id: string, action: "approve" | "reject") => {
+        setActionId(id);
+        try {
+            if (action === "approve") {
+                await CommentService.approve([id]);
+                message.success(t("dashboard.workbench.comments.approved"));
+            } else {
+                await CommentService.reject([id]);
+                message.success(t("dashboard.workbench.comments.rejected"));
+            }
+            await loadWorkbench(false);
+        } catch {
+            // 错误提示由 HTTP 拦截器统一处理
+        } finally {
+            setActionId(null);
+        }
+    };
+
+    const heatData = useMemo(() => {
+        if (!workbench) {
+            return null;
+        }
+
+        const { start_date: startKey, end_date: endKey, weeks } = workbench.window;
+        const counts = new Map(workbench.heatmap.days.map((day) => [day.date, day.count]));
+        const cells: HeatCell[] = Array.from({ length: weeks * 7 }, (_, index) => {
+            const key = shiftDateKey(startKey, index);
+            return {
+                key,
+                count: counts.get(key) ?? 0,
+                future: key > endKey,
+                today: key === endKey,
+            };
+        });
+        const heatWeeks: HeatCell[][] = Array.from({ length: weeks }, (_, index) => cells.slice(index * 7, index * 7 + 7));
+
+        const sumRange = (fromKey: string, length: number) => {
+            let total = 0;
+            for (let index = 0; index < length; index += 1) {
+                total += counts.get(shiftDateKey(fromKey, index)) ?? 0;
+            }
+            return total;
+        };
+
+        const endWeekday = mondayWeekday(endKey);
+        const weekStart = shiftDateKey(endKey, -endWeekday);
+        const weekly = workbench.states.published_this_week;
+        const previousWeek = sumRange(shiftDateKey(weekStart, -7), endWeekday + 1);
+
+        return {
+            weeks: heatWeeks,
+            weekly,
+            weeklyDelta: weekly - previousWeek,
+            heatTotal: workbench.heatmap.total,
+            longestStreak: workbench.heatmap.longest_streak,
+            maxCount: workbench.heatmap.max_count,
+        };
+    }, [workbench]);
+
+    const weekdayLabels = useMemo(
+        () => [
+            t("dashboard.workbench.heatmap.weekdays.mon"),
+            t("dashboard.workbench.heatmap.weekdays.tue"),
+            t("dashboard.workbench.heatmap.weekdays.wed"),
+            t("dashboard.workbench.heatmap.weekdays.thu"),
+            t("dashboard.workbench.heatmap.weekdays.fri"),
+            t("dashboard.workbench.heatmap.weekdays.sat"),
+            t("dashboard.workbench.heatmap.weekdays.sun"),
+        ],
+        [t],
+    );
+
+    const pendingCount = workbench?.states.pending_review ?? 0;
+    const weeklyPublished = workbench?.states.published_this_week ?? 0;
+    const weeklyDelta = heatData?.weeklyDelta ?? 0;
+    const headerDescription =
+        loading || !workbench
+            ? undefined
+            : pendingCount > 0
+              ? t("dashboard.workbench.description", { published: weeklyPublished, pending: pendingCount })
+              : t("dashboard.workbench.descriptionClear", { published: weeklyPublished });
+
+    const stateCards = [
         {
-            title: t("dashboard.quickActions.createArticle.title"),
-            description: t("dashboard.quickActions.createArticle.description"),
-            icon: <FaEdit />,
-            path: "/article/create",
+            key: "reviewing",
+            tone: "warning",
+            label: t("dashboard.workbench.states.reviewing"),
+            value: workbench?.states.pending_review ?? 0,
+            foot: t("dashboard.workbench.states.reviewingFoot"),
         },
         {
-            title: t("dashboard.quickActions.addUser.title"),
-            description: t("dashboard.quickActions.addUser.description"),
-            icon: <FaUserPlus />,
-            path: "/admin/users",
+            key: "published",
+            tone: "success",
+            label: t("dashboard.workbench.states.published"),
+            value: workbench?.states.published ?? 0,
+            foot: t("dashboard.workbench.states.publishedFoot"),
         },
         {
-            title: t("dashboard.quickActions.systemSettings.title"),
-            description: t("dashboard.quickActions.systemSettings.description"),
-            icon: <FaCog />,
-            path: "/admin/settings",
+            key: "weekly",
+            tone: "primary",
+            label: t("dashboard.workbench.states.weekly"),
+            value: weeklyPublished,
+            foot:
+                weeklyDelta === 0
+                    ? t("dashboard.workbench.states.weeklyFlat")
+                    : t("dashboard.workbench.states.weeklyFoot", {
+                          value: `${weeklyDelta > 0 ? "+" : ""}${weeklyDelta}`,
+                      }),
         },
         {
-            title: t("dashboard.quickActions.viewMetrics.title"),
-            description: t("dashboard.quickActions.viewMetrics.description"),
-            icon: <FaChartBar />,
-            path: "/admin/metrics",
+            key: "rejected",
+            tone: "error",
+            label: t("dashboard.workbench.states.rejected"),
+            value: workbench?.states.rejected ?? 0,
+            foot: t("dashboard.workbench.states.rejectedFoot"),
         },
     ];
 
-    const getChangeType = (change: number): "positive" | "negative" | "neutral" => {
-        if (change > 0) {
-            return "positive";
-        }
-        if (change < 0) {
-            return "negative";
-        }
-        return "neutral";
-    };
+    const kpiItems = [
+        {
+            key: "users",
+            label: t("dashboard.workbench.kpi.users"),
+            value: workbench?.kpis.total_users ?? 0,
+            change: workbench?.kpis.total_users_change ?? 0,
+            to: "/admin/users",
+        },
+        {
+            key: "articles",
+            label: t("dashboard.workbench.kpi.articles"),
+            value: workbench?.kpis.total_articles ?? 0,
+            change: workbench?.kpis.total_articles_change ?? 0,
+            to: "/admin/articles",
+        },
+        {
+            key: "comments",
+            label: t("dashboard.workbench.kpi.comments"),
+            value: workbench?.kpis.total_comments ?? 0,
+            change: workbench?.kpis.total_comments_change ?? 0,
+            to: "/admin/comments",
+        },
+        {
+            key: "activity",
+            label: t("dashboard.workbench.kpi.activity"),
+            value: workbench?.kpis.today_visits ?? 0,
+            change: workbench?.kpis.today_visits_change ?? 0,
+            to: null,
+        },
+    ];
 
-    const formatChange = (change: number) => (change > 0 ? "+" : "") + change + "%";
-
-    // 统计卡片数据（从 API 数据派生）
-    const statCards = stats
-        ? [
-              {
-                  title: t("dashboard.stats.totalUsers"),
-                  value: stats.total_users.toLocaleString(),
-                  change: formatChange(stats.total_users_change),
-                  changeType: getChangeType(stats.total_users_change),
-                  icon: <FaUsers />,
-                  iconColor: "blue" as const,
-              },
-              {
-                  title: t("dashboard.stats.totalArticles"),
-                  value: stats.total_articles.toLocaleString(),
-                  change: formatChange(stats.total_articles_change),
-                  changeType: getChangeType(stats.total_articles_change),
-                  icon: <FaFileAlt />,
-                  iconColor: "green" as const,
-              },
-              {
-                  title: t("dashboard.stats.totalComments"),
-                  value: stats.total_comments.toLocaleString(),
-                  change: formatChange(stats.total_comments_change),
-                  changeType: getChangeType(stats.total_comments_change),
-                  icon: <FaComments />,
-                  iconColor: "orange" as const,
-              },
-              {
-                  title: t("dashboard.stats.todayActivity"),
-                  value: stats.today_visits.toLocaleString(),
-                  change: formatChange(stats.today_visits_change),
-                  changeType: getChangeType(stats.today_visits_change),
-                  icon: <FaEye />,
-                  iconColor: "purple" as const,
-                  hint: t("dashboard.stats.activityHint"),
-              },
-              {
-                  title: t("dashboard.stats.newUsers"),
-                  value: stats.new_users_today.toLocaleString(),
-                  change: formatChange(stats.new_users_today_change),
-                  changeType: getChangeType(stats.new_users_today_change),
-                  icon: <FaUserPlus />,
-                  iconColor: "blue" as const,
-              },
-          ]
-        : [];
-
-    // 活动图标映射
-    const getActivityIcon = (type: DashboardActivity["type"]) => {
-        switch (type) {
-            case "user_register":
-            case "profile_update":
-                return <FaUsers />;
-            case "article_publish":
-                return <FaFileAlt />;
-            case "comment_create":
-                return <FaComments />;
-            case "system_backup":
-                return <FaCog />;
-            default:
-                return <FaUsers />;
-        }
-    };
-
-    // 活动类型 -> CSS class
-    const getActivityTypeClass = (type: DashboardActivity["type"]): string => {
-        if (type === "user_register" || type === "profile_update") {
-            return "user";
-        }
-        if (type === "article_publish") {
-            return "article";
-        }
-        if (type === "comment_create") {
-            return "comment";
-        }
-        return "system";
-    };
-
-    // 角色名称映射
-    const getRoleName = (role: number) => {
-        return enums.platformRole[role as PlatformRole] || String(role);
-    };
-
-    // 获取变化指示器
-    const getChangeIndicator = (change: string, type: "positive" | "negative" | "neutral") => {
-        const getIcon = () => {
-            if (type === "positive") {
-                return <FaArrowUp />;
-            }
-            if (type === "negative") {
-                return <FaArrowDown />;
-            }
-            return <FaMinus />;
-        };
-
+    const renderDelta = (change: number) => {
+        const tone = change > 0 ? styles.up : change < 0 ? styles.down : styles.flat;
         return (
-            <span className={`${styles.statChange} ${styles[type]}`}>
-                {getIcon()}
-                {change}
+            <span className={`${styles.delta} ${tone}`}>
+                {change > 0 ? <FaArrowUp /> : change < 0 ? <FaArrowDown /> : <FaMinus />}
+                {change === 0 ? "0%" : formatChange(change)}
             </span>
         );
     };
 
-    // 获取活动图标样式
-    const getActivityIconClass = (type: string) => {
-        return `${styles.activityIcon} ${styles[type]}`;
-    };
-
-    // 初始化和更新ECharts图表
-    useEffect(() => {
-        if (!echartsModule || !chartRef.current) {
-            return;
-        }
-        const echarts = echartsModule;
-
-        // 初始化图表
-        if (!chartInstance.current) {
-            chartInstance.current = echarts.init(chartRef.current, "light", {
-                renderer: "canvas",
-            });
-        }
-
-        const chart = chartInstance.current;
-        const data = trendData?.list || [];
-
-        // 将后端返回的中文星期标签（如“周一”）本地化
-        const localizedWeekdays = [
-            tCal("weekdays.sun"),
-            tCal("weekdays.mon"),
-            tCal("weekdays.tue"),
-            tCal("weekdays.wed"),
-            tCal("weekdays.thu"),
-            tCal("weekdays.fri"),
-            tCal("weekdays.sat"),
-        ];
-        const axisLabels = data.map((item) => {
-            if (typeof item.weekday === "number") {
-                return localizedWeekdays[item.weekday] ?? item.label;
-            }
-            return resolveBackendMessage(item.label_id, item.label_params, item.label);
-        });
-
-        // ECharts配置
-        const themeFont = getThemeFontFamily();
-        const option = {
-            textStyle: {
-                fontFamily: themeFont,
-            },
-            tooltip: {
-                trigger: "axis",
-                backgroundColor: "#ffffff",
-                borderColor: "#e1e5e9",
-                borderWidth: 1,
-                borderRadius: 6,
-                padding: [8, 12],
-                textStyle: {
-                    color: "#333333",
-                    fontSize: 12,
-                    fontFamily: themeFont,
-                },
-                formatter: (params: any) => {
-                    const point = params[0];
-                    const dataIndex = point.dataIndex;
-                    const item = data[dataIndex];
-                    return `
-                        <div style="padding: 4px 0;">
-                            <div style="font-weight: 600; margin-bottom: 4px; color: #333;">${point.name}</div>
-                            <div style="color: #4361ee; font-weight: 500;">${t("dashboard.chart.seriesName")}: ${point.value.toLocaleString()}</div>
-                            <div style="font-size: 11px; color: #999999; margin-top: 4px;">${t("dashboard.chart.tooltipNote")}</div>
-                            <div style="font-size: 11px; color: #666666; margin-top: 2px;">${item.date}</div>
-                        </div>
-                    `;
-                },
-            },
-            grid: {
-                left: "2%",
-                right: "3%",
-                bottom: 0,
-                top: "8%",
-                containLabel: true,
-            },
-            xAxis: {
-                type: "category",
-                data: axisLabels,
-                axisLine: {
-                    lineStyle: {
-                        color: "#e1e5e9",
-                        width: 1,
-                    },
-                },
-                axisTick: {
-                    show: false,
-                },
-                axisLabel: {
-                    color: "#666666",
-                    fontSize: 11,
-                    interval: 0,
-                    rotate: data.length > 4 ? 30 : 0,
-                    margin: 8,
-                    overflow: "truncate",
-                    width: 60,
-                },
-            },
-            yAxis: {
-                type: "value",
-                axisLine: {
-                    show: false,
-                },
-                axisTick: {
-                    show: false,
-                },
-                axisLabel: {
-                    color: "#999999",
-                    fontSize: 10,
-                    margin: 4,
-                    formatter: (value: number) => {
-                        if (value >= 1000) {
-                            return (value / 1000).toFixed(1) + "k";
-                        }
-                        return value.toString();
-                    },
-                },
-                splitLine: {
-                    lineStyle: {
-                        color: "#f0f0f0",
-                        type: "dashed",
-                        width: 1,
-                        opacity: 0.6,
-                    },
-                },
-            },
-            series: [
-                {
-                    name: t("dashboard.chart.seriesName"),
-                    type: "line",
-                    data: data.map((item) => item.visits),
-                    smooth: true,
-                    symbol: "circle",
-                    symbolSize: 5,
-                    sampling: "average",
-                    lineStyle: {
-                        width: 2.5,
-                        color: "#4361ee",
-                        shadowColor: "rgba(67, 97, 238, 0.3)",
-                        shadowBlur: 8,
-                        shadowOffsetY: 3,
-                    },
-                    itemStyle: {
-                        color: "#4361ee",
-                        borderColor: "#ffffff",
-                        borderWidth: 2,
-                        shadowColor: "rgba(67, 97, 238, 0.5)",
-                        shadowBlur: 6,
-                    },
-                    areaStyle: {
-                        color: {
-                            type: "linear",
-                            x: 0,
-                            y: 0,
-                            x2: 0,
-                            y2: 1,
-                            colorStops: [
-                                {
-                                    offset: 0,
-                                    color: "#4361ee",
-                                    opacity: 0.25,
-                                },
-                                {
-                                    offset: 0.6,
-                                    color: "#4361ee",
-                                    opacity: 0.08,
-                                },
-                                {
-                                    offset: 1,
-                                    color: "#4361ee",
-                                    opacity: 0.01,
-                                },
-                            ],
-                        },
-                    },
-                    emphasis: {
-                        itemStyle: {
-                            color: "#4361ee",
-                            borderColor: "#ffffff",
-                            borderWidth: 3,
-                            shadowColor: "rgba(67, 97, 238, 0.8)",
-                            shadowBlur: 10,
-                        },
-                        lineStyle: {
-                            width: 3,
-                            shadowBlur: 12,
-                        },
-                    },
-                },
-            ],
-        };
-
-        chart.setOption(option);
-
-        // 响应式处理
-        const handleResize = () => {
-            chart.resize();
-        };
-
-        window.addEventListener("resize", handleResize);
-
-        return () => {
-            window.removeEventListener("resize", handleResize);
-        };
-    }, [echartsModule, selectedPeriod, trendData, t, tCal, preset]);
-
-    // 渲染活动趋势图表
-    const renderVisitTrendChart = () => {
-        const totalVisits = trendData?.total_visits ?? 0;
-        const avgVisits = trendData?.avg_visits ?? 0;
-        const maxVisits = trendData?.max_visits ?? 0;
-
-        return (
-            <div className={styles.visitTrendChart}>
-                <div className={styles.echartContainer} ref={chartRef} />
-                <div className={styles.chartSummary}>
-                    <div className={styles.summaryItem}>
-                        <span className={styles.summaryLabel} title={t("dashboard.chart.activityHint")}>
-                            {t("dashboard.chart.summary.total")}
-                        </span>
-                        <span className={styles.summaryValue}>{totalVisits.toLocaleString()}</span>
-                    </div>
-                    <div className={styles.summaryItem}>
-                        <span className={styles.summaryLabel} title={t("dashboard.chart.activityHint")}>
-                            {t("dashboard.chart.summary.avg")}
-                        </span>
-                        <span className={styles.summaryValue}>{avgVisits.toLocaleString()}</span>
-                    </div>
-                    <div className={styles.summaryItem}>
-                        <span className={styles.summaryLabel} title={t("dashboard.chart.summary.peakHint")}>
-                            {t("dashboard.chart.summary.peak")}
-                        </span>
-                        <span className={styles.summaryValue}>{maxVisits.toLocaleString()}</span>
-                    </div>
-                </div>
-            </div>
-        );
-    };
-
-    if (loading) {
-        return (
-            <div className={styles.dashboard}>
-                <Loading size="large" />
-            </div>
-        );
-    }
-
     return (
-        <div className={styles.dashboard}>
-            <PageHeader title={t("dashboard.title")} description={t("dashboard.description")} />
+        <div className={styles.workbench}>
+            <PageHeader
+                className={styles.pageHeader}
+                title={t("dashboard.workbench.title")}
+                description={headerDescription}
+                actions={
+                    <>
+                        <Button variant="outline" onClick={() => navigate("/admin/articles")}>
+                            <FaPenNib />
+                            {t("dashboard.workbench.actions.articles")}
+                        </Button>
+                        <Button onClick={() => navigate("/article/create")}>
+                            <FaPlus />
+                            {t("dashboard.workbench.actions.create")}
+                        </Button>
+                    </>
+                }
+            />
 
-            {/* 统计卡片 */}
-            <div className={styles.statsGrid}>
-                {statCards.map((stat, index) => (
-                    <div key={index} className={styles.statCard}>
-                        <div className={styles.statHeader}>
-                            <div className={`${styles.statIcon} ${styles[stat.iconColor]}`}>{stat.icon}</div>
-                            {getChangeIndicator(stat.change, stat.changeType)}
-                        </div>
-                        <div className={styles.statValue}>{stat.value}</div>
-                        <div className={styles.statLabel} title={stat.hint}>
-                            {stat.title}
-                            {stat.hint ? <span style={{ color: "var(--text-tertiary)", cursor: "help" }}> *</span> : null}
-                        </div>
-                    </div>
-                ))}
-            </div>
-
-            {/* 主要内容区域 */}
-            <div className={styles.contentGrid}>
-                {/* 图表区域 */}
-                <div className={styles.chartCard}>
-                    <div className={styles.chartHeader}>
-                        <h3 className={styles.chartTitle}>
-                            {t("dashboard.chart.title")}
-                            <span style={{ fontSize: "12px", color: "var(--text-tertiary)", fontWeight: 400, marginLeft: "8px" }}>
-                                {t("dashboard.chart.subtitle")}
-                            </span>
-                        </h3>
-                        <div className={styles.chartActions}>
-                            <button
-                                className={`${styles.btn} ${styles.btnOutline} ${styles.btnSm} ${selectedPeriod === "7天" ? styles.active : ""}`}
-                                onClick={() => setSelectedPeriod("7天")}
-                            >
-                                {t("dashboard.range.days7")}
-                            </button>
-                            <button
-                                className={`${styles.btn} ${styles.btnOutline} ${styles.btnSm} ${selectedPeriod === "30天" ? styles.active : ""}`}
-                                onClick={() => setSelectedPeriod("30天")}
-                            >
-                                {t("dashboard.range.days30")}
-                            </button>
-                            <button
-                                className={`${styles.btn} ${styles.btnOutline} ${styles.btnSm} ${selectedPeriod === "90天" ? styles.active : ""}`}
-                                onClick={() => setSelectedPeriod("90天")}
-                            >
-                                {t("dashboard.range.days90")}
-                            </button>
-                        </div>
-                    </div>
-                    <div className={styles.chartContainer}>{renderVisitTrendChart()}</div>
-                </div>
-
-                {/* 快速操作 */}
-                <div className={styles.quickActionsCard}>
-                    <h3 className={styles.quickActionsTitle}>{t("dashboard.quickActions.title")}</h3>
-                    <div className={styles.quickActionsList}>
-                        {quickActions.map((action, index) => (
-                            <Link key={index} to={action.path} className={styles.quickActionItem}>
-                                <div className={styles.quickActionIcon}>{action.icon}</div>
-                                <div className={styles.quickActionContent}>
-                                    <div className={styles.quickActionTitle}>{action.title}</div>
-                                    <div className={styles.quickActionDescription}>{action.description}</div>
-                                </div>
-                                <FaChevronRight className={styles.quickActionArrow} />
-                            </Link>
+            {loading ? (
+                <div className={styles.skeletonBody}>
+                    <div className={styles.pipeline}>
+                        {Array.from({ length: 4 }, (_, index) => (
+                            <Skeleton key={index} variant="rounded" height={96} />
                         ))}
                     </div>
+                    <div className={styles.mainGrid}>
+                        <Skeleton variant="rounded" height={560} />
+                        <div className={styles.rightColumn}>
+                            <Skeleton variant="rounded" height={340} />
+                            <Skeleton variant="rounded" height={196} />
+                        </div>
+                    </div>
+                    <Skeleton variant="rounded" height={72} />
                 </div>
-            </div>
-
-            {/* 底部内容 */}
-            <div className={styles.bottomGrid}>
-                {/* 最近活动 */}
-                <div className={styles.recentActivityCard}>
-                    <h3 className={styles.cardTitle}>{t("dashboard.recentActivity.title")}</h3>
-                    <div className={styles.activityList}>
-                        {activities.map((activity, index) => (
-                            <div key={index} className={styles.activityItem}>
-                                <div className={getActivityIconClass(getActivityTypeClass(activity.type))}>
-                                    {getActivityIcon(activity.type)}
-                                </div>
-                                <div className={styles.activityContent}>
-                                    <div className={styles.activityTitle}>
-                                        {resolveBackendMessage(activity.title_id, activity.params, activity.title)}
-                                    </div>
-                                    <div className={styles.activityTime}>
-                                        {resolveBackendMessage(activity.time_id, activity.time_params, activity.time)}
-                                    </div>
-                                </div>
+            ) : !workbench ? (
+                <EmptyState
+                    title={t("dashboard.workbench.error.title")}
+                    actionText={t("dashboard.workbench.error.retry")}
+                    onAction={() => setReloadKey((key) => key + 1)}
+                />
+            ) : (
+                <>
+                    <div className={styles.pipeline}>
+                        {stateCards.map((card) => (
+                            <div key={card.key} className={`${styles.stageCard} ${styles[card.tone]}`}>
+                                <span className={styles.stageLabel}>{card.label}</span>
+                                <span className={styles.stageValue}>
+                                    {card.value.toLocaleString()}
+                                    <small>{t("dashboard.workbench.states.unit")}</small>
+                                </span>
+                                <span className={styles.stageFoot}>{card.foot}</span>
                             </div>
                         ))}
                     </div>
-                </div>
 
-                {/* 最近用户 */}
-                <div className={styles.recentUsersCard}>
-                    <h3 className={styles.cardTitle}>{t("dashboard.recentUsers.title")}</h3>
-                    <div className={styles.userList}>
-                        {recentUsers.map((user, index) => (
-                            <div key={index} className={styles.userItem}>
-                                <Avatar src={user.avatar} name={user.name} size={40} />
-                                <div className={styles.userInfo}>
-                                    <div className={styles.userName}>{user.name}</div>
-                                    <div className={styles.userRole}>{getRoleName(user.role)}</div>
+                    <div className={styles.mainGrid}>
+                        <section className={styles.card}>
+                            <div className={styles.cardHead}>
+                                <div>
+                                    <h2 className={styles.cardTitle}>{t("dashboard.workbench.heatmap.title")}</h2>
+                                    <p className={styles.cardSubtitle}>{t("dashboard.workbench.heatmap.subtitle")}</p>
                                 </div>
-                                <div
-                                    className={styles.userStatus}
-                                    style={{
-                                        backgroundColor: user.status === "active" ? "var(--success)" : "var(--text-tertiary)",
-                                    }}
-                                />
+                                <div className={styles.legend}>
+                                    <span>{t("dashboard.workbench.heatmap.less")}</span>
+                                    <i className={styles.legendCell} />
+                                    <i className={`${styles.legendCell} ${styles.lv1}`} />
+                                    <i className={`${styles.legendCell} ${styles.lv2}`} />
+                                    <i className={`${styles.legendCell} ${styles.lv3}`} />
+                                    <span>{t("dashboard.workbench.heatmap.more")}</span>
+                                </div>
                             </div>
-                        ))}
+
+                            <div className={styles.heatmap}>
+                                <div className={styles.heatmapHead}>
+                                    <span />
+                                    {weekdayLabels.map((label) => (
+                                        <span key={label} className={styles.heatmapWeekday}>
+                                            {label}
+                                        </span>
+                                    ))}
+                                </div>
+                                {heatData?.weeks.map((week) => (
+                                    <div key={week[0].key} className={styles.heatmapRow}>
+                                        <span className={styles.heatmapWeekNo}>{week[0].key.slice(5).replace("-", "/")}</span>
+                                        {week.map((cell) => (
+                                            <div
+                                                key={cell.key}
+                                                className={[
+                                                    styles.heatCell,
+                                                    cell.count > 0
+                                                        ? styles[`lv${heatLevel(cell.count, heatData?.maxCount ?? 0)}`]
+                                                        : "",
+                                                    cell.future ? styles.future : "",
+                                                    cell.today ? styles.today : "",
+                                                ]
+                                                    .filter(Boolean)
+                                                    .join(" ")}
+                                                title={t("dashboard.workbench.heatmap.cell", {
+                                                    date: cell.key,
+                                                    value: cell.count,
+                                                })}
+                                            />
+                                        ))}
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div className={styles.heatFooter}>
+                                <span>{t("dashboard.workbench.heatmap.month", { value: heatData?.heatTotal ?? 0 })}</span>
+                                <span>
+                                    {t("dashboard.workbench.heatmap.streak", {
+                                        value: heatData?.longestStreak ?? 0,
+                                    })}
+                                </span>
+                            </div>
+
+                            <div className={styles.recent}>
+                                <div className={styles.recentHead}>
+                                    <h3>{t("dashboard.workbench.recent.title")}</h3>
+                                    <Link to="/admin/articles">{t("dashboard.workbench.comments.all")}</Link>
+                                </div>
+                                {workbench.recent_articles.length === 0 ? (
+                                    <EmptyState variant="inline" title={t("dashboard.workbench.recent.empty")} />
+                                ) : (
+                                    workbench.recent_articles.map((article) => (
+                                        <div key={article.id} className={styles.recentItem}>
+                                            <Link to={`/article/${article.id}`} className={styles.recentTitle}>
+                                                {article.title}
+                                            </Link>
+                                            <span className={styles.recentMeta}>
+                                                {article.author} · {formatRelativeTime(Number(article.publish_time))}
+                                            </span>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </section>
+
+                        <div className={styles.rightColumn}>
+                            <section className={`${styles.card} ${styles.commentsCard}`}>
+                                <div className={styles.cardHead}>
+                                    <h2 className={styles.cardTitle}>
+                                        {t("dashboard.workbench.comments.title")}
+                                        {workbench.pending_comments.total > 0 && (
+                                            <span className={styles.countBadge}>{workbench.pending_comments.total}</span>
+                                        )}
+                                    </h2>
+                                    <Link to="/admin/comments" className={styles.cardLink}>
+                                        {t("dashboard.workbench.comments.all")}
+                                    </Link>
+                                </div>
+
+                                {workbench.pending_comments.list.length === 0 ? (
+                                    <EmptyState variant="inline" title={t("dashboard.workbench.comments.empty")} />
+                                ) : (
+                                    <div className={styles.commentList}>
+                                        {workbench.pending_comments.list.map((comment) => (
+                                            <article key={comment.id} className={styles.commentItem}>
+                                                <Avatar
+                                                    src={comment.author?.avatar}
+                                                    name={comment.author?.name || t("dashboard.workbench.comments.anonymous")}
+                                                    size={30}
+                                                />
+                                                <div className={styles.commentBody}>
+                                                    <div className={styles.commentHead}>
+                                                        <strong>
+                                                            {comment.author?.name || t("dashboard.workbench.comments.anonymous")}
+                                                        </strong>
+                                                        <span>{formatRelativeTime(comment.created_at)}</span>
+                                                    </div>
+                                                    <p className={styles.commentText}>{comment.content}</p>
+                                                    <div className={styles.commentFoot}>
+                                                        <Link to={`/article/${comment.article?.id}`} className={styles.articleLink}>
+                                                            《{comment.article?.title}》
+                                                        </Link>
+                                                        <div className={styles.commentActions}>
+                                                            <Button
+                                                                size="small"
+                                                                variant="light"
+                                                                color="success"
+                                                                loading={actionId === comment.id}
+                                                                disabled={actionId !== null && actionId !== comment.id}
+                                                                onClick={() => void handleCommentAction(comment.id, "approve")}
+                                                            >
+                                                                {t("dashboard.workbench.comments.approve")}
+                                                            </Button>
+                                                            <Button
+                                                                size="small"
+                                                                variant="light"
+                                                                color="error"
+                                                                disabled={actionId !== null}
+                                                                onClick={() => void handleCommentAction(comment.id, "reject")}
+                                                            >
+                                                                {t("dashboard.workbench.comments.reject")}
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </article>
+                                        ))}
+                                    </div>
+                                )}
+                            </section>
+
+                            <section className={`${styles.card} ${styles.feedbackCard}`}>
+                                <div className={styles.cardHead}>
+                                    <h2 className={styles.cardTitle}>
+                                        {t("dashboard.workbench.feedback.title")}
+                                        {workbench.latest_feedback.total > 0 && (
+                                            <span className={styles.countBadge}>{workbench.latest_feedback.total}</span>
+                                        )}
+                                    </h2>
+                                    <Link to="/admin/feedbacks" className={styles.cardLink}>
+                                        {t("dashboard.workbench.feedback.all")}
+                                    </Link>
+                                </div>
+
+                                {workbench.latest_feedback.list.length === 0 ? (
+                                    <EmptyState variant="inline" title={t("dashboard.workbench.feedback.empty")} />
+                                ) : (
+                                    <div className={styles.feedbackList}>
+                                        {workbench.latest_feedback.list.map((item) => (
+                                            <div key={item.id} className={styles.feedbackItem}>
+                                                <span className={`${styles.feedbackIcon} ${styles[item.type]}`}>
+                                                    {item.type === "bug" ? <FaBug /> : <FaLightbulb />}
+                                                </span>
+                                                <div className={styles.feedbackBody}>
+                                                    <p className={styles.feedbackText}>{item.content}</p>
+                                                    <span className={styles.feedbackMeta}>
+                                                        {item.type === "bug"
+                                                            ? t("dashboard.workbench.feedback.type.bug")
+                                                            : item.type === "feature"
+                                                              ? t("dashboard.workbench.feedback.type.feature")
+                                                              : t("dashboard.workbench.feedback.type.other")}
+                                                        {item.user_name ? ` · ${item.user_name}` : ""} ·{" "}
+                                                        {formatRelativeTime(item.created_at)}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </section>
+                        </div>
                     </div>
-                </div>
-            </div>
+
+                    <div className={styles.kpiBar}>
+                        {kpiItems.map((item) => {
+                            const content = (
+                                <>
+                                    <span className={styles.kpiLabel}>{item.label}</span>
+                                    <span className={styles.kpiValue}>{item.value.toLocaleString()}</span>
+                                    {renderDelta(item.change)}
+                                </>
+                            );
+                            return item.to ? (
+                                <Link key={item.key} to={item.to} className={styles.kpiItem}>
+                                    {content}
+                                </Link>
+                            ) : (
+                                <div key={item.key} className={styles.kpiItem}>
+                                    {content}
+                                </div>
+                            );
+                        })}
+                    </div>
+                </>
+            )}
         </div>
     );
 };

@@ -203,6 +203,34 @@ export interface ArticleStatsResponse {
 /**
  * 文章服务类
  */
+/**
+ * 每日推荐条目
+ */
+export interface DailyRecommendItem {
+    article_id: string | number;
+    user_id: string | number;
+    author: string;
+    author_avatar?: string;
+    title: string;
+    summary: string;
+    publish_time: number;
+    views: number;
+    praise: number;
+    favorites: number;
+    rank_no: number;
+    /** 逗号分隔的推荐理由，如 "praise,fresh" */
+    reason: string;
+}
+
+/**
+ * 每日推荐响应
+ */
+export interface DailyRecommendResponse {
+    date: string;
+    total: number;
+    articles: DailyRecommendItem[];
+}
+
 export class ArticleService {
     /**
      * 分页获取文章列表
@@ -220,6 +248,14 @@ export class ArticleService {
         }
 
         const response = await http.get<ListArticlesResponse>(url, config);
+        return response.data;
+    }
+
+    /**
+     * 获取每日推荐（匿名返回全局榜，登录用户返回个性化榜单）
+     */
+    static async listDailyRecommend(config?: HttpRequestConfig): Promise<DailyRecommendResponse> {
+        const response = await http.get<DailyRecommendResponse>("/articles/daily", config);
         return response.data;
     }
 
